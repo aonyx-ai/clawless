@@ -1,0 +1,41 @@
+---
+name: Dependencies
+
+"on":
+  pull_request:
+    paths:
+      - .github/workflows/dependencies.yml
+      - Earthfile
+  schedule:
+    # Run schedule every day at 4:44 UTC
+    - cron: "44 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  latest:
+    name: Latest versions
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install earthly
+        uses: earthly/actions-setup@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          version: 0.8
+
+      - name: Run tests with latest dependency versions
+        run: earthly --ci --push --remote-cache=ghcr.io/jdno/clawless-earthly-cache:check-latest-deps +check-latest-deps

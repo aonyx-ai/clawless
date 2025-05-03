@@ -1,0 +1,29 @@
+VERSION 0.8
+
+PRETTIER:
+    FUNCTION
+
+    ARG EXTENSION="*"
+    ARG FIX="false"
+
+    FROM node:22-alpine
+    WORKDIR /stone
+
+    # Install prettier
+    RUN npm install -g prettier
+
+    # Copy the source code into the container
+    COPY . .
+
+    # Check or fix the formatting of the source code
+    LET flag = "check"
+    IF [ "$FIX" = "true" ]
+        SET flag = "write"
+    END
+
+    RUN prettier --$flag --ignore-unknown "**/*.$EXTENSION"
+
+    # Save changes back to the local filesystem
+    IF [ "$FIX" = "true" ]
+        SAVE ARTIFACT ./* AS LOCAL .
+    END
