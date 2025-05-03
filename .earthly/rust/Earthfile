@@ -1,0 +1,139 @@
+VERSION 0.8
+
+IMPORT github.com/earthly/lib/rust AS rust
+
+CONTAINER:
+    FUNCTION
+
+    FROM rust:1.85.1-slim
+    WORKDIR /stone
+
+    # Initialize Rust
+    DO rust+INIT --keep_fingerprints=true
+
+    # Install clippy and rustfmt
+    RUN rustup component add clippy rustfmt
+
+COPY_RUST_SOURCES:
+    FUNCTION
+
+    # Copy the source code in a cache-friendly way
+    COPY --keep-ts Cargo.toml Cargo.lock ./
+    COPY --keep-ts --dir src ./
+
+DEPS_LATEST:
+    FUNCTION
+
+    DO +SOURCES
+
+    # Switch to beta toolchain
+    RUN rustup default beta
+
+    # Update the dependencies to the latest versions
+    DO rust+CARGO --args="update"
+
+    # Run tests to ensure the latest versions are compatible
+    ENV RUSTFLAGS="-D deprecated"
+    DO rust+CARGO --args="test --all-features --all-targets --locked"
+
+DEPS_MINIMAL:
+    FUNCTION
+
+    DO +SOURCES
+
+    # Switch to nightly toolchain
+    RUN rustup default nightly
+
+    # Set minimal versions for dependencies
+    DO rust+CARGO --args="update -Z direct-minimal-versions"
+
+    # Run tests to ensure the minimal versions are compatible
+    DO rust+CARGO --args="test --all-features --all-targets --locked"
+
+DOCS:
+    FUNCTION
+
+    DO +SOURCES
+
+    # Generate the documentation
+    DO rust+CARGO --args="doc --all-features --no-deps" --output="doc/.+"
+
+    # Save the documentation to the local filesystem
+    SAVE ARTIFACT target/doc AS LOCAL target/doc
+
+FEATURES:
+    FUNCTION
+
+    DO +SOURCES
+
+    # Install cargo-hack
+    DO rust+CARGO --args="install cargo-hack"
+
+    # Test combinations of features
+    DO rust+CARGO --args="hack --feature-powerset check --tests"
+
+FORMAT:
+    FUNCTION
+
+    ARG FIX="false"
+
+    DO +SOURCES
+
+    # Check or fix the formatting of the source code
+    IF [ "$FIX" = "true" ]
+        DO rust+CARGO --args="fmt --all"
+    ELSE
+        DO rust+CARGO --args="fmt --all --check"
+    END
+
+LINT:
+    FUNCTION
+
+    DO +SOURCES
+
+    # Check the code for linting errors
+    DO rust+CARGO --args="clippy --all-targets --all-features -- -D warnings"
+
+MSRV:
+    FUNCTION
+
+    ARG MSRV
+
+    FROM "rust:$MSRV-slim"
+
+    # Initialize Rust
+    DO rust+INIT --keep_fingerprints=true
+
+    # Copy the source code in a cache-friendly way
+    DO +COPY_RUST_SOURCES
+
+    # Check that the project compiles with the MSRV
+    DO rust+CARGO --args="+$MSRV check --all-features --all-targets"
+
+PUBLISH:
+    FUNCTION
+
+    DO +SOURCES
+
+    # Copy additional files for the release into the container
+    COPY README.md .
+
+    # Publish the crate to crates.io
+    DO rust+CARGO --secret CARGO_REGISTRY_TOKEN --args="cargo publish -v --all-features --token $CARGO_REGISTRY_TOKEN"
+
+SOURCES:
+    FUNCTION
+
+    DO +CONTAINER
+
+    # Copy the source code in a cache-friendly way
+    DO +COPY_RUST_SOURCES
+
+TEST:
+    FUNCTION
+
+    # Copy the source code in a cache-friendly way
+    DO +SOURCES
+
+    # Run the tests and measure the code coverage
+    DO rust+CARGO --args="test --all-features --all-targets --locked"

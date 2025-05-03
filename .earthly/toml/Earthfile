@@ -1,0 +1,24 @@
+VERSION 0.8
+
+FORMAT:
+    FUNCTION
+
+    ARG FIX="false"
+
+    FROM tamasfe/taplo:latest
+    WORKDIR /stone
+
+    # Copy the source code into the container
+    COPY . .
+
+    # Check or fix the formatting of the source code
+    IF [ "$FIX" = "true" ]
+       RUN taplo fmt
+    ELSE
+        RUN taplo fmt --check
+    END
+
+    # Save changes back to the local filesystem
+    IF [ "$FIX" = "true" ]
+        SAVE ARTIFACT ./* AS LOCAL .
+    END
