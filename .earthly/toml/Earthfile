@@ -1,12 +1,19 @@
 VERSION 0.8
 
+taplo:
+    FROM tamasfe/taplo:latest
+    SAVE ARTIFACT /taplo
+
 FORMAT:
     FUNCTION
 
     ARG FIX="false"
 
-    FROM tamasfe/taplo:latest
+    FROM alpine:latest
     WORKDIR /stone
+
+    # Copy the taplo binary into the container
+    COPY +taplo/taplo /usr/local/bin/taplo
 
     # Copy the source code into the container
     COPY . .
