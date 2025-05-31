@@ -1,0 +1,15 @@
+[package]
+name = "clawless"
+description = "A framework for building command-line applications"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+clap = { workspace = true }
+getset = { workspace = true }
+tokio = { workspace = true }
+typed-builder = { workspace = true }
