@@ -32,7 +32,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install earthly
-        uses: earthly/actions-setup@v1
+        uses: jdno/earthly-actions-setup@v2.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version: 0.8
