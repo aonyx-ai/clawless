@@ -1,16 +1,12 @@
-use clap::{command, Parser, Subcommand};
+use clap::{command, Parser};
 use getset::Getters;
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Parser, Getters)]
+use crate::commands::Commands;
+
+#[derive(Debug, Parser, Getters)]
 #[command(version)]
 pub struct App {
     #[command(subcommand)]
     #[getset(get = "pub")]
     pub command: Commands,
-}
-
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Subcommand)]
-pub enum Commands {
-    /// Create a new CLI with Clawless
-    New { name: String },
 }
