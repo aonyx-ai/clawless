@@ -1,0 +1,21 @@
+[package]
+name = "clawless-cli"
+description = "Generate and develop CLIs with Clawless"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "clawless"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+getset = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+trycmd = "0.15.9"

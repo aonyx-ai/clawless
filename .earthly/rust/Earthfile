@@ -5,7 +5,7 @@ IMPORT github.com/earthly/lib/rust AS rust
 CONTAINER:
     FUNCTION
 
-    FROM rust:1.85.1-slim
+    FROM rust:1.87.0-slim
     WORKDIR /stone
 
     # Initialize Rust
@@ -18,8 +18,8 @@ COPY_RUST_SOURCES:
     FUNCTION
 
     # Copy the source code in a cache-friendly way
-    COPY --keep-ts Cargo.toml Cargo.lock ./
-    COPY --keep-ts --dir src ./
+    COPY --keep-ts Cargo.toml Cargo.lock README.md ./
+    COPY --keep-ts --dir crates ./
 
 DEPS_LATEST:
     FUNCTION
@@ -114,9 +114,6 @@ PUBLISH:
     FUNCTION
 
     DO +SOURCES
-
-    # Copy additional files for the release into the container
-    COPY README.md .
 
     # Publish the crate to crates.io
     DO rust+CARGO --secret CARGO_REGISTRY_TOKEN --args="cargo publish -v --all-features --token $CARGO_REGISTRY_TOKEN"

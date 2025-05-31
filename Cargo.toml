@@ -1,15 +1,21 @@
-[package]
-name = "clawless-cutie"
-description = "A framework to build command-line applications with Rust"
-authors = ["aonyx"]
-edition = "2021"
+[workspace]
+members = ["crates/*"]
+
+# Opt-in to the new feature resolver introduced in Rust 1.51 and Edition 2021.
+# https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
+resolver = "2"
+
+[workspace.package]
 version = "0.0.0"
+edition = "2021"
+
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/jdno/clawless.git"
 
 # Earthly installs cargo-sweep@0.7.0 in CI, which requires 1.78.0.
 rust-version = "1.78.0"
 
-repository = "https://github.com/jdno/clawless.git"
-
-[dependencies]
-
-[dev-dependencies]
+[workspace.dependencies]
+clap = { version = "4", features = ["derive"] }
+getset = "0.1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
