@@ -24,14 +24,16 @@ where
 #[macro_export]
 macro_rules! clawless {
     // Accept a single argument, which is the enum of commands
-    ($commands:ident) => {
+    () => {
+        $crate::commands!();
+
         fn main() {
             use clap::Parser;
-            let app = $crate::App::<$commands>::parse();
+            let app = $crate::App::parse();
 
             $crate::run_async(async {
                 match app.command {
-                    $commands::New(args) => {
+                    Commands::New(args) => {
                         commands::new::run(&args).await;
                     }
                 }
