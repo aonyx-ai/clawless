@@ -1,5 +1,7 @@
-use clap::Args;
+use clap::{ArgMatches, Args, FromArgMatches};
 use getset::Getters;
+
+use crate::CommandRegistration;
 
 #[derive(Debug, Args, Getters)]
 pub struct NewArgs {
@@ -8,6 +10,16 @@ pub struct NewArgs {
     name: String,
 }
 
-pub async fn run(args: &NewArgs) {
+pub async fn run(args: NewArgs) {
     println!("Creating new CLI with name: {}", args.name());
 }
+
+pub async fn exec_run(args: ArgMatches) {
+    let args = NewArgs::from_arg_matches(&args).unwrap();
+    run(args).await;
+}
+
+inventory::submit!(CommandRegistration {
+    name: "new",
+    func: |args| Box::pin(exec_run(args)),
+});
