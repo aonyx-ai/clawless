@@ -1,8 +1,6 @@
 use clap::{ArgMatches, Args, Command, FromArgMatches};
 use getset::Getters;
 
-mod subcommand;
-
 struct SubcommandRegistration {
     name: &'static str,
     init: fn() -> Command,
@@ -11,21 +9,18 @@ struct SubcommandRegistration {
 inventory::collect!(SubcommandRegistration);
 
 #[derive(Debug, Args, Getters)]
-pub struct NewArgs {
+pub struct SubcommandArgs {
     #[arg(short, long)]
     #[getset(get = "pub")]
-    name: Option<String>,
+    name: String,
 }
 
-pub async fn run(args: NewArgs) {
-    println!(
-        "Creating new CLI with name: {}",
-        args.name().as_ref().unwrap()
-    );
+pub async fn run(args: SubcommandArgs) {
+    println!("Running a subcommand: {}", args.name());
 }
 
 pub fn init() -> Command {
-    let mut command = NewArgs::augment_args(Command::new("new"));
+    let mut command = SubcommandArgs::augment_args(Command::new("subcommand"));
 
     for subcommand in inventory::iter::<SubcommandRegistration> {
         command = command.subcommand((subcommand.init)());
@@ -35,18 +30,18 @@ pub fn init() -> Command {
 }
 
 pub async fn exec_run(args: ArgMatches) {
-    for command in inventory::iter::<SubcommandRegistration> {
-        if let Some(matches) = args.subcommand_matches(command.name) {
-            return (command.func)(matches.clone()).await;
+    for subcommand in inventory::iter::<SubcommandRegistration> {
+        if args.subcommand_name() == Some(subcommand.name) {
+            return (subcommand.func)(args.clone()).await;
         }
     }
 
-    let args = NewArgs::from_arg_matches(&args).unwrap();
+    let args = SubcommandArgs::from_arg_matches(&args).unwrap();
     run(args).await;
 }
 
 inventory::submit!(super::SubcommandRegistration {
-    name: "new",
+    name: "subcommand",
     init,
     func: |args| Box::pin(exec_run(args)),
 });

@@ -5,13 +5,13 @@ use clap::{ArgMatches, Command};
 
 mod commands;
 
-struct CommandRegistration {
+struct SubcommandRegistration {
     name: &'static str,
     init: fn() -> Command,
     func: fn(ArgMatches) -> Pin<Box<dyn Future<Output = ()>>>,
 }
 
-inventory::collect!(CommandRegistration);
+inventory::collect!(SubcommandRegistration);
 
 #[tokio::main]
 async fn main() {
@@ -20,14 +20,14 @@ async fn main() {
         .about("A framework for building command-line applications in Rust")
         .arg_required_else_help(true);
 
-    for command in inventory::iter::<CommandRegistration> {
+    for command in inventory::iter::<SubcommandRegistration> {
         app = app.subcommand((command.init)());
     }
 
-    let matches = app.get_matches();
+    let args = app.get_matches();
 
-    for command in inventory::iter::<CommandRegistration> {
-        if let Some(matches) = matches.subcommand_matches(command.name) {
+    for command in inventory::iter::<SubcommandRegistration> {
+        if let Some(matches) = args.subcommand_matches(command.name) {
             (command.func)(matches.clone()).await;
         }
     }
