@@ -1,6 +1,12 @@
 use clap::{Parser, Subcommand};
 use getset::Getters;
 
+pub use clawless_derive::command;
+
+// Re-export the inventory crate for use with the `clawless-derive` crate
+#[doc(hidden)]
+pub use inventory;
+
 #[derive(Debug, Parser, Getters)]
 #[command(version)]
 pub struct App<Commands>

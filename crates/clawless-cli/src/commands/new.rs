@@ -1,52 +1,15 @@
-use clap::{ArgMatches, Args, Command, FromArgMatches};
-use getset::Getters;
+use clap::Args;
+use clawless::command;
 
 mod subcommand;
 
-struct SubcommandRegistration {
-    name: &'static str,
-    init: fn() -> Command,
-    func: fn(ArgMatches) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()>>>,
-}
-inventory::collect!(SubcommandRegistration);
-
-#[derive(Debug, Args, Getters)]
+#[derive(Debug, Args)]
 pub struct NewArgs {
     #[arg(short, long)]
-    #[getset(get = "pub")]
     name: Option<String>,
 }
 
-pub async fn run(args: NewArgs) {
-    println!(
-        "Creating new CLI with name: {}",
-        args.name().as_ref().unwrap()
-    );
+#[command]
+pub async fn new(args: NewArgs) {
+    println!("Creating new CLI with name: {}", args.name.unwrap());
 }
-
-pub fn init() -> Command {
-    let mut command = NewArgs::augment_args(Command::new("new"));
-
-    for subcommand in inventory::iter::<SubcommandRegistration> {
-        command = command.subcommand((subcommand.init)());
-    }
-
-    command
-}
-
-pub async fn exec_run(args: ArgMatches) {
-    for command in inventory::iter::<SubcommandRegistration> {
-        if let Some(matches) = args.subcommand_matches(command.name) {
-            return (command.func)(matches.clone()).await;
-        }
-    }
-
-    let args = NewArgs::from_arg_matches(&args).unwrap();
-    run(args).await;
-}
-
-inventory::submit!(super::SubcommandRegistration {
-    name: "new",
-    init,
-    func: |args| Box::pin(exec_run(args)),
-});
