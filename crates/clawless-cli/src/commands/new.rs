@@ -4,12 +4,7 @@ use clawless::command;
 mod subcommand;
 
 #[derive(Debug, Args)]
-pub struct NewArgs {
-    #[arg(short, long)]
-    name: Option<String>,
-}
+pub struct NewArgs {}
 
-#[command]
-pub async fn new(args: NewArgs) {
-    println!("Creating new CLI with name: {}", args.name.unwrap());
-}
+#[command(noop = true)]
+pub async fn new(_args: NewArgs) {}
