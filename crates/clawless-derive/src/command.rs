@@ -1,10 +1,16 @@
 use darling::ast::NestedMeta;
 use darling::FromMeta;
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_macro_input, FnArg, Ident, ItemFn, PatType, Type};
+use syn::{FnArg, Ident, ItemFn, PatType, Type};
 
-use crate::INVENTORY_NAME;
+use crate::inventory::inventory_name;
+
+pub struct CommandGenerator {
+    attrs: Attributes,
+    input: ItemFn,
+    ident: Ident,
+}
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, FromMeta, Default)]
 struct Attributes {
@@ -12,65 +18,107 @@ struct Attributes {
     noop: bool,
 }
 
-pub fn command_impl(attrs: TokenStream, input: TokenStream) -> TokenStream {
-    let input_fn = parse_macro_input!(input as ItemFn);
+impl CommandGenerator {
+    pub fn new(attrs: TokenStream, input: ItemFn) -> Self {
+        let attrs = parse_attributes(attrs);
+        let ident = input.sig.ident.clone();
 
-    let command_ident = input_fn.sig.ident.clone();
-    let command_name = command_ident.to_string();
-    let init_fn_name = format_ident!("{}_init", command_ident);
-    let wrapper_fn_name = format_ident!("{}_exec", command_ident);
-
-    let inventory_name = format_ident!("{}", INVENTORY_NAME);
-
-    let macro_attrs = parse_attributes(attrs);
-
-    let args_type = extract_function_argument_type(&input_fn);
-    let command_initialization =
-        generate_command_initialization(&args_type, &command_name, &macro_attrs);
-    let wrapper_function_body = generate_wrapper_fn_body(&args_type, &command_ident);
-
-    let output = quote! {
-        struct #inventory_name {
-            name: &'static str,
-            init: fn() -> clap::Command,
-            func: fn(clap::ArgMatches) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()>>>,
+        Self {
+            attrs,
+            input,
+            ident,
         }
-        inventory::collect!(#inventory_name);
+    }
 
-        #input_fn
+    pub fn ident(&self) -> Ident {
+        self.ident.clone()
+    }
 
-        pub fn #init_fn_name() -> clap::Command {
-            let mut command = #command_initialization;
+    pub fn initialization_function_name(&self) -> Ident {
+        format_ident!("{}_init", self.ident)
+    }
 
-            for subcommand in inventory::iter::<#inventory_name> {
-                command = command.subcommand((subcommand.init)());
-            }
+    pub fn wrapper_function_name(&self) -> Ident {
+        format_ident!("{}_exec", self.ident)
+    }
 
-            command
-        }
+    pub fn initialization_function(&self) -> TokenStream {
+        let function_name = self.initialization_function_name();
+        let command_new = self.command_new();
+        let inventory_name = inventory_name();
 
-        pub async fn #wrapper_fn_name(args: clap::ArgMatches) {
-            for subcommand in inventory::iter::<#inventory_name> {
-                if let Some(matches) = args.subcommand_matches(subcommand.name) {
-                    return (subcommand.func)(matches.clone()).await;
+        quote! {
+            pub fn #function_name() -> clap::Command {
+                let mut command = #command_new;
+
+                for subcommand in inventory::iter::<#inventory_name> {
+                    command = command.subcommand((subcommand.init)());
                 }
-            }
 
-            #wrapper_function_body
+                command
+            }
+        }
+    }
+
+    pub fn wrapper_function(&self) -> TokenStream {
+        let wrapper_function_name = self.wrapper_function_name();
+        let wrapper_function_body = self.wrapper_function_body();
+        let inventory_name = inventory_name();
+
+        quote! {
+            pub async fn #wrapper_function_name(args: clap::ArgMatches) {
+                for subcommand in inventory::iter::<#inventory_name> {
+                    if let Some(matches) = args.subcommand_matches(subcommand.name) {
+                        return (subcommand.func)(matches.clone()).await;
+                    }
+                }
+
+                #wrapper_function_body
+            }
+        }
+    }
+
+    fn command_new(&self) -> TokenStream {
+        let args_type = extract_function_argument_type(&self.input);
+        let command_name = self.ident.to_string();
+
+        let mut command = match args_type {
+            Some(ty) => quote! {
+                #ty::augment_args(clap::Command::new(#command_name))
+            },
+            None => quote! {
+                clap::Command::new(#command_name)
+            },
+        };
+
+        if self.attrs.noop {
+            command = quote! {
+                #command.arg_required_else_help(true)
+            };
         }
 
-        inventory::submit!(super::#inventory_name {
-            name: #command_name,
-            init: #init_fn_name,
-            func: |args| Box::pin(#wrapper_fn_name(args)),
-        });
-    };
+        command
+    }
 
-    output.into()
+    fn wrapper_function_body(&self) -> TokenStream {
+        let args_type = extract_function_argument_type(&self.input);
+        let command = self.ident();
+
+        match args_type {
+            Some(ty) => quote! {
+                use clap::FromArgMatches;
+                let args = #ty::from_arg_matches(&args).unwrap();
+                #command(args).await;
+            },
+            None => quote! {
+                #command().await;
+            },
+        }
+    }
 }
 
 fn parse_attributes(attrs: TokenStream) -> Attributes {
-    let argument_list = NestedMeta::parse_meta_list(attrs.into()).unwrap();
+    let argument_list = NestedMeta::parse_meta_list(attrs).unwrap();
     Attributes::from_list(&argument_list).unwrap()
 }
 
@@ -86,64 +134,45 @@ fn extract_function_argument_type(input_fn: &ItemFn) -> Option<Box<Type>> {
         .next()
 }
 
-fn generate_command_initialization(
-    args_type: &Option<Box<Type>>,
-    command_name: &str,
-    macro_attrs: &Attributes,
-) -> proc_macro2::TokenStream {
-    let mut command = match args_type {
-        Some(ty) => quote! {
-            #ty::augment_args(clap::Command::new(#command_name))
-        },
-        None => quote! {
-            clap::Command::new(#command_name)
-        },
-    };
-
-    if macro_attrs.noop {
-        command = quote! {
-            #command.arg_required_else_help(true)
-        };
-    }
-
-    command
-}
-
-fn generate_wrapper_fn_body(
-    args_type: &Option<Box<Type>>,
-    command_ident: &Ident,
-) -> proc_macro2::TokenStream {
-    match args_type {
-        Some(ty) => quote! {
-            use clap::FromArgMatches;
-            let args = #ty::from_arg_matches(&args).unwrap();
-            #command_ident(args).await;
-        },
-        None => quote! {
-            #command_ident().await;
-        },
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use quote::ToTokens;
-    use syn::{Ident, Path, TypePath};
 
     use super::*;
 
-    // #[test]
-    // fn parse_attributes_with_noop() {
-    //     let attrs = quote! {
-    //         #[command(noop = true)]
-    //         pub async fn foo() {}
-    //     };
+    fn generator_with_args() -> CommandGenerator {
+        let input = quote! {
+            fn foo(args: Args) {}
+        };
 
-    //     let actual = parse_attributes(attrs.into());
-    //     let expected = Attributes { noop: true };
+        let input_function = syn::parse2::<ItemFn>(input).unwrap();
 
-    //     assert_eq!(actual, expected);
-    // }
+        CommandGenerator::new(TokenStream::new(), input_function)
+    }
+
+    fn generator_with_args_and_noop() -> CommandGenerator {
+        let attrs = quote! {
+            noop = true
+        };
+
+        let input = quote! {
+            fn foo(args: Args) {}
+        };
+
+        let input_function = syn::parse2::<ItemFn>(input).unwrap();
+
+        CommandGenerator::new(attrs, input_function)
+    }
+
+    fn generator_without_args() -> CommandGenerator {
+        let input = quote! {
+            fn foo() {}
+        };
+
+        let input_function = syn::parse2::<ItemFn>(input).unwrap();
+
+        CommandGenerator::new(TokenStream::new(), input_function)
+    }
 
     #[test]
     fn extract_function_argument_type_with_args() {
@@ -170,15 +199,10 @@ mod tests {
     }
 
     #[test]
-    fn generate_command_initialization_with_args() {
-        let args_type = Some(Box::new(Type::Path(TypePath {
-            qself: None,
-            path: Path::from(Ident::new("Args", proc_macro2::Span::call_site())),
-        })));
-        let command_name = "foo";
+    fn command_new_with_args() {
+        let generator = generator_with_args();
 
-        let actual =
-            generate_command_initialization(&args_type, command_name, &Attributes { noop: false });
+        let actual = generator.command_new();
         let expected = quote! {
             Args::augment_args(clap::Command::new("foo"))
         };
@@ -187,28 +211,34 @@ mod tests {
     }
 
     #[test]
-    fn generate_command_initialization_without_args() {
-        let args_type = None;
-        let command_name = "foo";
+    fn command_new_without_args() {
+        let generator = generator_without_args();
 
-        let actual =
-            generate_command_initialization(&args_type, command_name, &Attributes { noop: true });
+        let actual = generator.command_new();
         let expected = quote! {
-            clap::Command::new("foo").arg_required_else_help(true)
+            clap::Command::new("foo")
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
     }
 
     #[test]
-    fn generate_wrapper_fn_body_with_args() {
-        let args_type = Some(Box::new(Type::Path(TypePath {
-            qself: None,
-            path: Path::from(Ident::new("Args", proc_macro2::Span::call_site())),
-        })));
-        let command_name = format_ident!("foo");
+    fn command_new_with_args_and_noop() {
+        let generator = generator_with_args_and_noop();
 
-        let actual = generate_wrapper_fn_body(&args_type, &command_name);
+        let actual = generator.command_new();
+        let expected = quote! {
+            Args::augment_args(clap::Command::new("foo")).arg_required_else_help(true)
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn wrapper_function_body_with_args() {
+        let generator = generator_with_args();
+
+        let actual = generator.wrapper_function_body();
         let expected = quote! {
             use clap::FromArgMatches;
             let args = Args::from_arg_matches(&args).unwrap();
@@ -219,11 +249,10 @@ mod tests {
     }
 
     #[test]
-    fn generate_wrapper_fn_body_without_args() {
-        let args_type = None;
-        let command_name = Ident::new("foo", proc_macro2::Span::call_site());
+    fn wrapper_function_body_without_args() {
+        let generator = generator_without_args();
 
-        let actual = generate_wrapper_fn_body(&args_type, &command_name);
+        let actual = generator.wrapper_function_body();
         let expected = quote! {
             foo().await;
         };

@@ -1,0 +1,47 @@
+use proc_macro2::TokenStream;
+use quote::{format_ident, quote};
+use syn::Ident;
+
+use crate::command::CommandGenerator;
+
+const INVENTORY_NAME: &str = "SubcommandRegistration";
+
+pub struct InventoryGenerator {}
+
+impl InventoryGenerator {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn inventory(&self) -> TokenStream {
+        let inventory_name = inventory_name();
+
+        quote! {
+            struct #inventory_name {
+                name: &'static str,
+                init: fn() -> clap::Command,
+                func: fn(clap::ArgMatches) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()>>>,
+            }
+            inventory::collect!(#inventory_name);
+        }
+    }
+
+    pub fn submit_command(&self, command_generator: &CommandGenerator) -> TokenStream {
+        let inventory_name = inventory_name();
+        let command = command_generator.ident().to_string();
+        let init_fn_name = command_generator.initialization_function_name();
+        let wrapper_fn_name = command_generator.wrapper_function_name();
+
+        quote! {
+            inventory::submit!(super::#inventory_name {
+                name: #command,
+                init: #init_fn_name,
+                func: |args| Box::pin(#wrapper_fn_name(args)),
+            });
+        }
+    }
+}
+
+pub fn inventory_name() -> Ident {
+    format_ident!("{}", INVENTORY_NAME)
+}
