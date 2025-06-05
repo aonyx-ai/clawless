@@ -1,3 +1,3 @@
 pub mod new;
 
-type SubcommandRegistration = super::SubcommandRegistration;
+clawless::app!({ name: "clawless" });

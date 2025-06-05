@@ -2,11 +2,19 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, ItemFn};
 
+use crate::app::AppGenerator;
 use crate::command::CommandGenerator;
 use crate::inventory::InventoryGenerator;
 
+mod app;
 mod command;
 mod inventory;
+
+#[proc_macro]
+pub fn app(input: TokenStream) -> TokenStream {
+    let app_generator = AppGenerator::new(input.into());
+    app_generator.app_function().into()
+}
 
 #[proc_macro_attribute]
 pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
