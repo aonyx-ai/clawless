@@ -43,3 +43,16 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
 
     output.into()
 }
+
+#[proc_macro]
+pub fn main(_input: TokenStream) -> TokenStream {
+    let output = quote! {
+        #[tokio::main]
+        async fn main() {
+            let app = crate::commands::clawless_init();
+            crate::commands::clawless_exec(app.get_matches()).await;
+        }
+    };
+
+    output.into()
+}

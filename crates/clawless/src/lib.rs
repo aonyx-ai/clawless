@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use getset::Getters;
 
-pub use clawless_derive::{app, command};
+pub use clawless_derive::{app, command, main};
 
 // Re-export the inventory crate for use with the `clawless-derive` crate
 #[doc(hidden)]
