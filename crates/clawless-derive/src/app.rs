@@ -11,7 +11,7 @@ impl AppGenerator {
 
     pub fn app_function(&self) -> TokenStream {
         quote! {
-            #[clawless::command(noop = true)]
+            #[clawless::command(noop = true, root = true)]
             pub async fn clawless() {}
         }
     }
@@ -27,7 +27,7 @@ mod tests {
 
         let actual = generator.app_function();
         let expected = quote! {
-            #[clawless::command(noop = true)]
+            #[clawless::command(noop = true, root = true)]
             pub async fn clawless() {}
         };
 

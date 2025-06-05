@@ -6,11 +6,13 @@ use crate::command::CommandGenerator;
 
 const INVENTORY_NAME: &str = "SubcommandRegistration";
 
-pub struct InventoryGenerator {}
+pub struct InventoryGenerator<'a> {
+    command_generator: &'a CommandGenerator,
+}
 
-impl InventoryGenerator {
-    pub fn new() -> Self {
-        Self {}
+impl<'a> InventoryGenerator<'a> {
+    pub fn new(command_generator: &'a CommandGenerator) -> Self {
+        Self { command_generator }
     }
 
     pub fn inventory(&self) -> TokenStream {
@@ -26,11 +28,15 @@ impl InventoryGenerator {
         }
     }
 
-    pub fn submit_command(&self, command_generator: &CommandGenerator) -> TokenStream {
+    pub fn submit_command(&self) -> TokenStream {
+        if self.command_generator.is_root() {
+            return quote! {};
+        }
+
         let inventory_name = inventory_name();
-        let command = command_generator.ident().to_string();
-        let init_fn_name = command_generator.initialization_function_name();
-        let wrapper_fn_name = command_generator.wrapper_function_name();
+        let command = self.command_generator.ident().to_string();
+        let init_fn_name = self.command_generator.initialization_function_name();
+        let wrapper_fn_name = self.command_generator.wrapper_function_name();
 
         quote! {
             inventory::submit!(super::#inventory_name {

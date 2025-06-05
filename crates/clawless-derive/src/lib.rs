@@ -21,10 +21,10 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
     let input_function = parse_macro_input!(input as ItemFn);
 
     let command_generator = CommandGenerator::new(attrs.into(), input_function.clone());
-    let inventory_generator = InventoryGenerator::new();
+    let inventory_generator = InventoryGenerator::new(&command_generator);
 
     let inventory_struct_for_subcommands = inventory_generator.inventory();
-    let submit_command_to_inventory = inventory_generator.submit_command(&command_generator);
+    let submit_command_to_inventory = inventory_generator.submit_command();
 
     let initialization_function_for_command = command_generator.initialization_function();
     let wrapper_function_for_command = command_generator.wrapper_function();

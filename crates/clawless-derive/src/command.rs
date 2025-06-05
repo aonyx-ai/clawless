@@ -16,6 +16,8 @@ pub struct CommandGenerator {
 struct Attributes {
     #[darling(default)]
     noop: bool,
+    #[darling(default)]
+    root: bool,
 }
 
 impl CommandGenerator {
@@ -32,6 +34,10 @@ impl CommandGenerator {
 
     pub fn ident(&self) -> Ident {
         self.ident.clone()
+    }
+
+    pub fn is_root(&self) -> bool {
+        self.attrs.root
     }
 
     pub fn initialization_function_name(&self) -> Ident {
