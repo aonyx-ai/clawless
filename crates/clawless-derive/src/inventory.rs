@@ -24,7 +24,7 @@ impl<'a> InventoryGenerator<'a> {
                 init: fn() -> clap::Command,
                 func: fn(clap::ArgMatches) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()>>>,
             }
-            inventory::collect!(#inventory_name);
+            clawless::inventory::collect!(#inventory_name);
         }
     }
 
@@ -39,7 +39,7 @@ impl<'a> InventoryGenerator<'a> {
         let wrapper_fn_name = self.command_generator.wrapper_function_name();
 
         quote! {
-            inventory::submit!(super::#inventory_name {
+            clawless::inventory::submit!(super::#inventory_name {
                 name: #command,
                 init: #init_fn_name,
                 func: |args| Box::pin(#wrapper_fn_name(args)),

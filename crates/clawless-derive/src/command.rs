@@ -57,7 +57,7 @@ impl CommandGenerator {
             pub fn #function_name() -> clap::Command {
                 let mut command = #command_new;
 
-                for subcommand in inventory::iter::<#inventory_name> {
+                for subcommand in clawless::inventory::iter::<#inventory_name> {
                     command = command.subcommand((subcommand.init)());
                 }
 
@@ -73,7 +73,7 @@ impl CommandGenerator {
 
         quote! {
             pub async fn #wrapper_function_name(args: clap::ArgMatches) {
-                for subcommand in inventory::iter::<#inventory_name> {
+                for subcommand in clawless::inventory::iter::<#inventory_name> {
                     if let Some(matches) = args.subcommand_matches(subcommand.name) {
                         return (subcommand.func)(matches.clone()).await;
                     }

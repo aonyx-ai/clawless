@@ -15,9 +15,6 @@ path = "src/main.rs"
 [dependencies]
 clap = { workspace = true }
 clawless = { workspace = true }
-getset = { workspace = true }
-inventory = "0.3.20"
-tokio = { workspace = true }
 
 [dev-dependencies]
 trycmd = "0.15.9"
