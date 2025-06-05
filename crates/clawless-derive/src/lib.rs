@@ -11,8 +11,8 @@ mod command;
 mod inventory;
 
 #[proc_macro]
-pub fn app(input: TokenStream) -> TokenStream {
-    let app_generator = AppGenerator::new(input.into());
+pub fn app(_input: TokenStream) -> TokenStream {
+    let app_generator = AppGenerator::new();
     app_generator.app_function().into()
 }
 

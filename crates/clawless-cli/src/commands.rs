@@ -1,3 +1,3 @@
 pub mod new;
 
-clawless::app!({ name: "clawless" });
+clawless::app!();
