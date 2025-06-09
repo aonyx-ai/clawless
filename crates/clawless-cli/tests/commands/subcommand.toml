@@ -1,0 +1,4 @@
+args = ["new", "subcommand", "--name", "clawless"]
+bin.name = "clawless"
+fs.sandbox = true
+status.code = 0

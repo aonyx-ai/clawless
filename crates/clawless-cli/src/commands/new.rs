@@ -1,13 +1,10 @@
 use clap::Args;
-use getset::Getters;
+use clawless::command;
 
-#[derive(Debug, Args, Getters)]
-pub struct NewArgs {
-    #[arg(index = 1)]
-    #[getset(get = "pub")]
-    name: String,
-}
+mod subcommand;
 
-pub async fn run(args: &NewArgs) {
-    println!("Creating new CLI with name: {}", args.name());
-}
+#[derive(Debug, Args)]
+pub struct NewArgs {}
+
+#[command(noop = true)]
+pub async fn new(_args: NewArgs) {}

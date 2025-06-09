@@ -15,12 +15,6 @@ path = "src/main.rs"
 [dependencies]
 clap = { workspace = true }
 clawless = { workspace = true }
-getset = { workspace = true }
 
 [dev-dependencies]
 trycmd = "0.15.9"
-
-[build-dependencies]
-convert_case = "0.8.0"
-proc-macro2 = "1.0.95"
-quote = "1.0.40"

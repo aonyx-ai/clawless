@@ -10,6 +10,8 @@ rust-version.workspace = true
 
 [dependencies]
 clap = { workspace = true }
+clawless-derive = { workspace = true }
+inventory = { workspace = true }
 getset = { workspace = true }
 tokio = { workspace = true }
 typed-builder = { workspace = true }

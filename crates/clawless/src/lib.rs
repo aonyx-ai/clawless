@@ -1,16 +1,8 @@
-use clap::{Parser, Subcommand};
-use getset::Getters;
+pub use clawless_derive::{app, command};
 
-#[derive(Debug, Parser, Getters)]
-#[command(version)]
-pub struct App<Commands>
-where
-    Commands: Subcommand,
-{
-    #[command(subcommand)]
-    #[getset(get = "pub")]
-    pub command: Commands,
-}
+// Re-export the inventory crate for use with the `clawless-derive` crate
+#[doc(hidden)]
+pub use inventory;
 
 /// Run an async function in the Clawless runtime
 pub fn run_async<F>(future: F)
@@ -22,29 +14,12 @@ where
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)] // The use of `crate` is intentional
 macro_rules! clawless {
-    // Accept a single argument, which is the enum of commands
     () => {
-        $crate::commands!();
-
-        fn main() {
-            use clap::Parser;
-            let app = $crate::App::parse();
-
-            $crate::run_async(async {
-                match app.command {
-                    Commands::New(args) => {
-                        commands::new::run(&args).await;
-                    }
-                }
-            });
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! commands {
-    () => {
-        include!(concat!(env!("OUT_DIR"), "/commands.rs"));
+        $crate::run_async(async {
+            let app = crate::commands::clawless_init();
+            crate::commands::clawless_exec(app.get_matches()).await;
+        });
     };
 }

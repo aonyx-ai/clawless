@@ -1,4 +1,4 @@
-args = ["new", "clawless"]
+args = ["new"]
 bin.name = "clawless"
 fs.sandbox = true
-status.code = 0
+status.code = 2
