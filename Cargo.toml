@@ -16,7 +16,7 @@ repository = "https://github.com/jdno/clawless.git"
 rust-version = "1.78.0"
 
 [workspace.dependencies]
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4.1", features = ["derive"] }
 clawless = { path = "crates/clawless" }
 clawless-cli = { path = "crates/clawless-cli" }
 clawless-derive = { path = "crates/clawless-derive" }
