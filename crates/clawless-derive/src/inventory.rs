@@ -4,7 +4,7 @@ use syn::Ident;
 
 use crate::command::CommandGenerator;
 
-const INVENTORY_NAME: &str = "SubcommandRegistration";
+const INVENTORY_NAME: &str = "ClawlessSubcommands";
 
 pub struct InventoryGenerator<'a> {
     command_generator: &'a CommandGenerator,
