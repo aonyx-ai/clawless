@@ -14,11 +14,12 @@ where
 }
 
 #[macro_export]
+#[allow(clippy::crate_in_macro_def)] // The use of `crate` is intentional
 macro_rules! clawless {
     () => {
         $crate::run_async(async {
-            let app = commands::clawless_init();
-            commands::clawless_exec(app.get_matches()).await;
+            let app = crate::commands::clawless_init();
+            crate::commands::clawless_exec(app.get_matches()).await;
         });
     };
 }
