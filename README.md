@@ -1,6 +1,17 @@
 # 🦦 Clawless
 
-`clawless` is a framework for building command-line applications with Rust.
+Clawless is a framework for building command-line applications with Rust. Its
+goal is to provide high-level building blocks and well-designed conventions so
+that users can focus on their applications.
+
+Check out the [`clawless`](./crates/clawless/) crate to learn more about using
+the framework for your own projects.
+
+## Project Status
+
+Clawless is in a very early prototyping phase and not considered ready for
+production use. Follow the project and check out its open issues to understand
+the frameworks's current limitations and future roadmap.
 
 ## License
 
