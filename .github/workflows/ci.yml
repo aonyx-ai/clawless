@@ -68,7 +68,7 @@ jobs:
 
       - name: Run check with Earthly
         # zizmor: ignore[template-injection]
-        run: earthly --allow-privileged --ci --push --remote-cache=ghcr.io/jdno/clawless-earthly-cache:${{ matrix.target }} +${{ matrix.target }}
+        run: earthly --allow-privileged --ci --push --remote-cache=ghcr.io/aonyx-rs/clawless-earthly-cache:${{ matrix.target }} +${{ matrix.target }}
 
   success:
     name: All checks succeeded
