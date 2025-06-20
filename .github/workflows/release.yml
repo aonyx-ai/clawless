@@ -33,7 +33,12 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version: 0.8
 
-      - name: Publish with Earthly
+      - name: Publish clawless-derive
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
-        run: earthly --ci --push --remote-cache=ghcr.io/aonyx-rs/clawless-earthly-cache:publish-crates --secret CARGO_REGISTRY_TOKEN  +publish-crates
+        run: earthly --ci --push --remote-cache=ghcr.io/aonyx-rs/clawless-earthly-cache:publish-crates --secret CARGO_REGISTRY_TOKEN  +publish-crate --CRATE="clawless-derive"
+
+      - name: Publish clawless
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
+        run: earthly --ci --push --remote-cache=ghcr.io/aonyx-rs/clawless-earthly-cache:publish-crates --secret CARGO_REGISTRY_TOKEN  +publish-crate --CRATE="clawless"
