@@ -113,10 +113,13 @@ MSRV:
 PUBLISH:
     FUNCTION
 
+    # Pass the name of the crate to publish
+    ARG CRATE
+
     DO +SOURCES
 
     # Publish the crate to crates.io
-    DO rust+CARGO --secret CARGO_REGISTRY_TOKEN --args="cargo publish -v --all-features --token $CARGO_REGISTRY_TOKEN"
+    RUN --secret CARGO_REGISTRY_TOKEN cargo publish -p $CRATE -v --all-features --token $CARGO_REGISTRY_TOKEN
 
 SOURCES:
     FUNCTION

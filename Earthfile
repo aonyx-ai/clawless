@@ -88,8 +88,9 @@ prettier:
     ARG FIX="false"
     DO ./.earthly/prettier+PRETTIER --FIX="$FIX"
 
-publish-crate:
-    DO ./.earthly/rust+PUBLISH
+publish-crates:
+    DO ./.earthly/rust+PUBLISH --CRATE="clawless-derive"
+    DO ./.earthly/rust+PUBLISH --CRATE="clawless"
 
 test-rust:
     DO ./.earthly/rust+TEST

@@ -17,9 +17,6 @@ rust-version = "1.78.0"
 
 [workspace.dependencies]
 clap = { version = "4.1", features = ["derive"] }
-clawless = { path = "crates/clawless" }
-clawless-cli = { path = "crates/clawless-cli" }
-clawless-derive = { path = "crates/clawless-derive" }
 inventory = "0.3"
 getset = "0.1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
