@@ -10,15 +10,20 @@ jobs:
     name: Enumerate Earthly targets
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+
     outputs:
       matrix: ${{ steps.export-targets.outputs.targets }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+        with:
+          persist-credentials: false
 
       - name: Install earthly
-        uses: jdno/earthly-actions-setup@v2.0.0
+        uses: jdno/earthly-actions-setup@151d424aaf3ae0ad63c069c0ef51f5dd65c96e76 # 2.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version: 0.8
@@ -44,31 +49,37 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+        with:
+          persist-credentials: false
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # 3.4.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install earthly
-        uses: jdno/earthly-actions-setup@v2.0.0
+        uses: jdno/earthly-actions-setup@151d424aaf3ae0ad63c069c0ef51f5dd65c96e76 # 2.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version: 0.8
 
       - name: Run check with Earthly
+        # zizmor: ignore[template-injection]
         run: earthly --allow-privileged --ci --push --remote-cache=ghcr.io/jdno/clawless-earthly-cache:${{ matrix.target }} +${{ matrix.target }}
 
   success:
     name: All checks succeeded
     runs-on: ubuntu-latest
 
+    permissions: {}
+
     needs: checks
     if: always()
 
     steps:
       - name: Check if all checks succeeded
+        # zizmor: ignore[template-injection]
         run: jq --exit-status 'all(.result == "success")' <<< '${{ toJson(needs) }}'
