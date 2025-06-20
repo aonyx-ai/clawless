@@ -1,0 +1,24 @@
+---
+changelog:
+  exclude:
+    labels:
+      - R-ignore
+  categories:
+    - title: Security
+      labels:
+        - R-security
+    - title: Added
+      labels:
+        - R-added
+    - title: Changed
+      labels:
+        - R-changed
+    - title: Deprecated
+      labels:
+        - R-deprecated
+    - title: Removed
+      labels:
+        - R-removed
+    - title: Fixed
+      labels:
+        - R-fixed
