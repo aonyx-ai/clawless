@@ -116,10 +116,19 @@ PUBLISH:
     # Pass the name of the crate to publish
     ARG CRATE
 
+    # Try a release without actually publishing to crates.io
+    ARG DRY_RUN="false"
+
     DO +SOURCES
 
     # Publish the crate to crates.io
-    RUN --secret CARGO_REGISTRY_TOKEN cargo publish -p $CRATE -v --all-features --token $CARGO_REGISTRY_TOKEN
+    LET command="cargo publish -p $CRATE -v --all-features"
+
+    IF [ "$DRY_RUN" = "true" ]
+        RUN $command --dry-run
+    ELSE
+        RUN --secret CARGO_REGISTRY_TOKEN $command --token $CARGO_REGISTRY_TOKEN
+    END
 
 SOURCES:
     FUNCTION
