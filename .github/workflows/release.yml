@@ -36,4 +36,4 @@ jobs:
       - name: Publish with Earthly
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
-        run: earthly --ci --push --remote-cache=ghcr.io/jdno/clawless-earthly-cache:publish-crates --secret CARGO_REGISTRY_TOKEN  +publish-crates
+        run: earthly --ci --push --remote-cache=ghcr.io/aonyx-rs/clawless-earthly-cache:publish-crates --secret CARGO_REGISTRY_TOKEN  +publish-crates
