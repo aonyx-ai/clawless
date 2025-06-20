@@ -15,6 +15,7 @@ checks:
     BUILD +format-rust --FIX="false"
     BUILD +format-toml --FIX="false"
     BUILD +format-yaml --FIX="false"
+    BUILD +lint-github-actions
     BUILD +lint-markdown
     BUILD +lint-rust
     BUILD +lint-yaml
@@ -30,6 +31,7 @@ pre-commit:
         BUILD +format-toml
     END
     BUILD +format-rust
+    BUILD +lint-github-actions
     BUILD +lint-markdown
     BUILD +lint-rust
     BUILD +lint-yaml
@@ -69,6 +71,9 @@ format-toml:
 format-yaml:
     ARG FIX="false"
     DO ./.earthly/prettier+PRETTIER --EXTENSION="{yaml,yml}" --FIX="$FIX"
+
+lint-github-actions:
+    DO ./.earthly/github+LINT
 
 lint-markdown:
     DO ./.earthly/markdown+LINT
