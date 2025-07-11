@@ -1,19 +1,8 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: ["config:base"],
-
-  assignees: ["jdno"],
-  reviewers: ["jdno"],
-
-  automerge: true,
-  dependencyDashboard: false,
-  semanticCommits: "disabled",
-
-  "pre-commit": {
-    enabled: true,
-  },
+  extends: ["github>aonyx-rs/renovate-config"],
 
   dockerfile: {
-    fileMatch: ["^Earthfile$"],
+    fileMatch: ["Earthfile$"],
   },
 }
