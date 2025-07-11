@@ -5,7 +5,7 @@ IMPORT github.com/earthly/lib/rust AS rust
 CONTAINER:
     FUNCTION
 
-    FROM rust:1.87.0-slim
+    FROM rust:1.88.0-slim
     WORKDIR /stone
 
     # Initialize Rust
