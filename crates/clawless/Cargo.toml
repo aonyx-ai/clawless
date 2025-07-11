@@ -10,7 +10,7 @@ rust-version.workspace = true
 
 [dependencies]
 clap = { workspace = true }
-clawless-derive = { path = "../clawless-derive", version = "=0.1.0" }
+clawless-derive = { path = "../clawless-derive", version = "=0.2.0" }
 inventory = { workspace = true }
 getset = { workspace = true }
 tokio = { workspace = true }
