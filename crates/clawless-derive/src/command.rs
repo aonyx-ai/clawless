@@ -2,7 +2,7 @@ use darling::ast::NestedMeta;
 use darling::FromMeta;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{FnArg, Ident, ItemFn, PatType, Type};
+use syn::{Expr, FnArg, Ident, ItemFn, Lit, Meta, PatType, Type};
 
 use crate::inventory::inventory_name;
 
@@ -18,6 +18,12 @@ struct Attributes {
     noop: bool,
     #[darling(default)]
     root: bool,
+}
+
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+struct Documentation {
+    short: String,
+    long: String,
 }
 
 impl CommandGenerator {
@@ -85,8 +91,9 @@ impl CommandGenerator {
     }
 
     fn command_new(&self) -> TokenStream {
-        let args_type = extract_function_argument_type(&self.input);
         let command_name = self.ident.to_string();
+        let args_type = extract_function_argument_type(&self.input);
+        let docs = extract_function_documentation(&self.input);
 
         let mut command = match args_type {
             Some(ty) => quote! {
@@ -96,6 +103,18 @@ impl CommandGenerator {
                 clap::Command::new(#command_name)
             },
         };
+
+        if self.is_root() {
+            command = quote! {
+                #command.about(clap::crate_description!())
+            };
+        } else if let Some(docs) = docs {
+            let Documentation { short, long } = docs;
+
+            command = quote! {
+                #command.about(#short).long_about(#long)
+            };
+        }
 
         if self.attrs.noop {
             command = quote! {
@@ -140,8 +159,36 @@ fn extract_function_argument_type(input_fn: &ItemFn) -> Option<Box<Type>> {
         .next()
 }
 
+fn extract_function_documentation(input_fn: &ItemFn) -> Option<Documentation> {
+    let mut docs = Vec::new();
+
+    for attr in input_fn.attrs.iter() {
+        if let Meta::NameValue(meta) = &attr.meta {
+            if !attr.meta.path().is_ident("doc") {
+                continue;
+            }
+
+            if let Expr::Lit(expr) = &meta.value {
+                if let Lit::Str(lit) = &expr.lit {
+                    docs.push(lit.value().trim().to_string());
+                }
+            }
+        }
+    }
+
+    if docs.is_empty() {
+        None
+    } else {
+        Some(Documentation {
+            short: docs[0].clone(),
+            long: docs.join("\n"),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use indoc::indoc;
     use quote::ToTokens;
 
     use super::*;
@@ -202,6 +249,50 @@ mod tests {
         let args_type = extract_function_argument_type(&input_fn);
 
         assert_eq!(None, args_type);
+    }
+
+    #[test]
+    fn extract_function_documentation_with_single_line_comment() {
+        let input = quote! {
+            /// This is a test function
+            fn foo() {}
+        };
+
+        let input_fn = syn::parse2(input).unwrap();
+        let documentation = extract_function_documentation(&input_fn);
+
+        assert_eq!(
+            Some(Documentation {
+                short: "This is a test function".to_string(),
+                long: "This is a test function".to_string(),
+            }),
+            documentation
+        );
+    }
+
+    #[test]
+    fn extract_function_documentation_with_multiple_line_comment() {
+        let comment = indoc! { r#"
+            This is a test comment
+            with multiple lines"#
+        };
+
+        let input = quote! {
+            /// This is a test comment
+            /// with multiple lines
+            fn foo() {}
+        };
+
+        let input_fn = syn::parse2(input).unwrap();
+        let documentation = extract_function_documentation(&input_fn);
+
+        assert_eq!(
+            Some(Documentation {
+                short: "This is a test comment".to_string(),
+                long: comment.to_string(),
+            }),
+            documentation
+        );
     }
 
     #[test]

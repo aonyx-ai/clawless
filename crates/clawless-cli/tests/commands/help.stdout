@@ -1,5 +1,7 @@
 Create a new project
 
+This command creates a new project and sets it up for clawless.
+
 Usage: clawless new [COMMAND]
 
 Commands:
@@ -7,4 +9,5 @@ Commands:
   help        Print this message or the help of the given subcommand(s)
 
 Options:
-  -h, --help  Print help (see more with '--help')
+  -h, --help
+          Print help (see a summary with '-h')
