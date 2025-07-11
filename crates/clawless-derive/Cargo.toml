@@ -12,8 +12,8 @@ rust-version.workspace = true
 proc-macro = true
 
 [dependencies]
-darling = "0.20"
+darling = "0.21"
 getset = { workspace = true }
-proc-macro2 = "1.0.74"
+proc-macro2 = "1.0.86"
 quote = "1.0.35"
 syn = { version = "2.0.46", features = ["full"] }
