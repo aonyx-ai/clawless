@@ -78,7 +78,7 @@ impl CommandGenerator {
         let inventory_name = inventory_name();
 
         quote! {
-            pub async fn #wrapper_function_name(args: clap::ArgMatches) {
+            pub async fn #wrapper_function_name(args: clap::ArgMatches) -> clawless::Result {
                 for subcommand in clawless::inventory::iter::<#inventory_name> {
                     if let Some(matches) = args.subcommand_matches(subcommand.name) {
                         return (subcommand.func)(matches.clone()).await;
@@ -133,10 +133,10 @@ impl CommandGenerator {
             Some(ty) => quote! {
                 use clap::FromArgMatches;
                 let args = #ty::from_arg_matches(&args).unwrap();
-                #command(args).await;
+                #command(args).await
             },
             None => quote! {
-                #command().await;
+                #command().await
             },
         }
     }
@@ -339,7 +339,7 @@ mod tests {
         let expected = quote! {
             use clap::FromArgMatches;
             let args = Args::from_arg_matches(&args).unwrap();
-            foo(args).await;
+            foo(args).await
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
@@ -351,7 +351,7 @@ mod tests {
 
         let actual = generator.wrapper_function_body();
         let expected = quote! {
-            foo().await;
+            foo().await
         };
 
         assert_eq!(actual.to_string(), expected.to_string());

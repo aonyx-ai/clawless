@@ -16,6 +16,7 @@ repository = "https://github.com/aonyx-rs/clawless.git"
 rust-version = "1.78.0"
 
 [workspace.dependencies]
+anyhow = "1"
 clap = { version = "4.3", features = ["cargo", "derive"] }
 inventory = "0.3"
 getset = "0.1"

@@ -12,7 +12,9 @@ impl AppGenerator {
     pub fn app_function(&self) -> TokenStream {
         quote! {
             #[clawless::command(noop = true, root = true)]
-            pub async fn clawless() {}
+            pub async fn clawless() -> clawless::Result {
+                Ok(())
+            }
         }
     }
 }
@@ -28,7 +30,9 @@ mod tests {
         let actual = generator.app_function();
         let expected = quote! {
             #[clawless::command(noop = true, root = true)]
-            pub async fn clawless() {}
+            pub async fn clawless() -> clawless::Result {
+                Ok(())
+            }
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
