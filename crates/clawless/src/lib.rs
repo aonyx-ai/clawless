@@ -3,6 +3,10 @@
 
 pub use clawless_derive::{app, command};
 
+pub use self::error::{Context, Error, Result};
+
+mod error;
+
 // Re-export the inventory crate for use with the `clawless-derive` crate
 #[doc(hidden)]
 pub use inventory;
@@ -15,10 +19,10 @@ pub use inventory;
 #[doc(hidden)]
 pub fn run_async<F>(future: F)
 where
-    F: std::future::Future<Output = ()>,
+    F: std::future::Future<Output = Result>,
 {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    rt.block_on(future);
+    rt.block_on(future).unwrap();
 }
 
 /// Initialize and run a Clawless application
@@ -46,7 +50,7 @@ macro_rules! clawless {
     () => {
         $crate::run_async(async {
             let app = crate::commands::clawless_init();
-            crate::commands::clawless_exec(app.get_matches()).await;
+            crate::commands::clawless_exec(app.get_matches()).await
         });
     };
 }

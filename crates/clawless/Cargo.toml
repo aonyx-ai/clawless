@@ -9,6 +9,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
 clap = { workspace = true }
 clawless-derive = { path = "../clawless-derive", version = "=0.2.0" }
 inventory = { workspace = true }
