@@ -3,7 +3,7 @@ VERSION 0.8
 LINT:
     FUNCTION
 
-    FROM ghcr.io/zizmorcore/zizmor:1.14.2
+    FROM ghcr.io/zizmorcore/zizmor:1.15.0
     WORKDIR /clawless
 
     # Copy the source code into the container
