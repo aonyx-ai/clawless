@@ -1,5 +1,5 @@
 use clap::Args;
-use clawless::{command, Result};
+use clawless::{command, CommandResult};
 
 /// Arguments for the `greet` command
 ///
@@ -17,7 +17,7 @@ pub struct GreetArgs {
 /// This command prints a greeting message to the console using the provided name. If no name is
 /// given, the greeting default to "Hello, World!".
 #[command]
-pub async fn greet(args: GreetArgs) -> Result {
+pub async fn greet(args: GreetArgs) -> CommandResult {
     println!("Hello, {}!", args.name);
     Ok(())
 }

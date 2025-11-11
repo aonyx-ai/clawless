@@ -1,5 +1,5 @@
 use clap::Args;
-use clawless::{command, Result};
+use clawless::{command, CommandResult};
 
 mod subcommand;
 
@@ -10,6 +10,6 @@ pub struct NewArgs {}
 ///
 /// This command creates a new project and sets it up for clawless.
 #[command(noop = true)]
-pub async fn new(_args: NewArgs) -> Result {
+pub async fn new(_args: NewArgs) -> CommandResult {
     Ok(())
 }

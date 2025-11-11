@@ -3,7 +3,7 @@
 
 pub use clawless_derive::{command, main};
 
-pub use self::error::{Context, Error, Result};
+pub use self::error::{CommandResult, Error, ErrorContext};
 
 mod error;
 

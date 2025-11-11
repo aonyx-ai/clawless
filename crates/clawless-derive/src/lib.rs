@@ -28,7 +28,7 @@ mod inventory;
 pub fn main(_input: TokenStream) -> TokenStream {
     let output = quote! {
         #[clawless::command(noop = true, root = true)]
-        async fn clawless() -> clawless::Result {
+        async fn clawless() -> clawless::CommandResult {
             Ok(())
         }
 

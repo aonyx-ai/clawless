@@ -1,5 +1,5 @@
 use clap::Args;
-use clawless::{command, Result};
+use clawless::{command, CommandResult};
 
 #[derive(Debug, Args)]
 pub struct SubcommandArgs {
@@ -8,7 +8,7 @@ pub struct SubcommandArgs {
 }
 
 #[command]
-pub async fn subcommand(args: SubcommandArgs) -> Result {
+pub async fn subcommand(args: SubcommandArgs) -> CommandResult {
     println!("Running a subcommand: {}", args.name);
     Ok(())
 }

@@ -78,7 +78,7 @@ impl CommandGenerator {
         let inventory_name = inventory_name();
 
         quote! {
-            pub async fn #wrapper_function_name(args: clap::ArgMatches) -> clawless::Result {
+            pub async fn #wrapper_function_name(args: clap::ArgMatches) -> clawless::CommandResult {
                 for subcommand in clawless::inventory::iter::<#inventory_name> {
                     if let Some(matches) = args.subcommand_matches(subcommand.name) {
                         return (subcommand.func)(matches.clone()).await;
