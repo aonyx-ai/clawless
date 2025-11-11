@@ -19,7 +19,7 @@ COPY_RUST_SOURCES:
 
     # Copy the source code in a cache-friendly way
     COPY --keep-ts Cargo.toml Cargo.lock README.md ./
-    COPY --keep-ts --dir crates ./
+    COPY --keep-ts --dir crates examples ./
 
 DEPS_LATEST:
     FUNCTION
