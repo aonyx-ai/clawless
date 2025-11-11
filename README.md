@@ -11,7 +11,7 @@ the framework for your own projects.
 
 Clawless is in a very early prototyping phase and not considered ready for
 production use. Follow the project and check out its open issues to understand
-the frameworks's current limitations and future roadmap.
+the framework's current limitations and future roadmap.
 
 ## License
 

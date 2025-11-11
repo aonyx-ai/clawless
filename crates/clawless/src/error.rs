@@ -29,7 +29,7 @@ pub use anyhow::Context as ErrorContext;
 ///
 /// The `CommandResult` is a type alias for `anyhow::Result<()>`, which provides
 /// a more ergonomic way to handle arbitrary errors. Since it isn't possible to
-/// recover the error anyway, we do not need to provide a specific error type
+/// recover from the error, we do not need to provide a specific error type
 /// that a caller could handle gracefully. Similarly, commands do not need to
 /// return a value, thus the result is always `Result<()>`.
 pub type CommandResult = anyhow::Result<()>;

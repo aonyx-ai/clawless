@@ -20,22 +20,15 @@ the crate, open `src/main.rs` and replace the generated contents with the
 following snippet:
 
 ```rust,ignore
-clawless::main()!;
+clawless::main!();
 ```
 
-You can now start creating commands for your application. Inside `src/main.rs`,
-add the following line at the top:
-
-```rust
-pub mod command;
-```
-
-Then go ahead, create `src/command.rs`, and add a struct and a function to
-the file:
+You can now start creating commands for your application by creating command
+modules. Create `src/command.rs`, and add a struct and a function to the file:
 
 ```rust
 use clap::Args;
-use clawless::command;
+use clawless::{command, CommandResult};
 
 #[derive(Debug, Args)]
 pub struct CommandArgs {
@@ -44,8 +37,9 @@ pub struct CommandArgs {
 }
 
 #[command]
-pub async fn command(args: CommandArgs) {
+pub async fn command(args: CommandArgs) -> CommandResult {
     println!("Running a command: {}", args.name);
+    Ok(())
 }
 ```
 
