@@ -5,31 +5,43 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, ItemFn};
 
-use crate::app::AppGenerator;
 use crate::command::CommandGenerator;
 use crate::inventory::InventoryGenerator;
 
-mod app;
 mod command;
 mod inventory;
 
-/// Generate a Clawless application
+/// Initialize and run a Clawless application
 ///
-/// This macro generates an empty Clawless application that can be extended with
-/// subcommands. It is supposed to be called in a module called `commands`,
-/// with commands defined in submodules.
+/// This macro generates the entry point for a Clawless application and a `main` function to run it.
+/// Commands can be implemented in submodules and will be automatically registered as subcommands of
+/// the CLI.
 ///
 /// # Example
 ///
 /// ```rust,ignore
-/// mod commands {
-///     clawless::app!();
-/// }
+/// mod greet;
+///
+/// clawless::main!();
 /// ```
 #[proc_macro]
-pub fn app(_input: TokenStream) -> TokenStream {
-    let app_generator = AppGenerator::new();
-    app_generator.app_function().into()
+pub fn main(_input: TokenStream) -> TokenStream {
+    let output = quote! {
+        #[clawless::command(noop = true, root = true)]
+        async fn clawless() -> clawless::Result {
+            Ok(())
+        }
+
+        fn main() {
+            let rt = clawless::tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async {
+                let app = clawless_init();
+                clawless_exec(app.get_matches()).await
+            })
+            .unwrap();
+        }
+    };
+    output.into()
 }
 
 /// Add a command to a Clawless application

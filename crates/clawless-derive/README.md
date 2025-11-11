@@ -4,8 +4,8 @@
 the `clawless-derive` crate implements the procedural macros that power this
 framework.
 
-The crate defines the `app!` macro and the `#[command]` macro attribute, which
-the `clawless` crate re-exports. The `app!` macro generates a noop `#[command]`
+The crate defines the `main!` macro and the `#[command]` macro attribute, which
+the `clawless` crate re-exports. The `main!` macro generates a noop `#[command]`
 as the root of the command-line application, while the `#[command]` macro
 attribute does the heavy lifting of creating a command and registering it with
 its parent.
