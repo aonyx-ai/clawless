@@ -25,8 +25,8 @@ build-docs:
 check-latest-deps:
     #!/usr/bin/env bash
 
-    # Abort if git is not clean
-    if [[ -n $(git status --porcelain) ]]; then
+    # Abort if git is not clean (but ignore Flox's manifest.lock)
+    if [[ -n $(git status --porcelain -- ':!.flox/env/manifest.lock') ]]; then
         echo "Git working directory is not clean. Commit or stash changes before running this recipe. Aborting."
         git status --porcelain
         exit 1
@@ -42,11 +42,10 @@ check-latest-deps:
 check-mininum-deps:
     #!/usr/bin/env bash
 
-    # Abort if git is not clean
-    if [[ -n $(git status --porcelain) ]]; then
+    # Abort if git is not clean (but ignore Flox's manifest.lock)
+    if [[ -n $(git status --porcelain -- ':!.flox/env/manifest.lock') ]]; then
         echo "Git working directory is not clean. Commit or stash changes before running this recipe. Aborting."
         git status --porcelain
-        git diff
         exit 1
     fi
 
