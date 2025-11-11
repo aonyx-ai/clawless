@@ -49,17 +49,14 @@ check-minimal-deps:
         exit 1
     fi
 
-    # Switch to the nightly toolchain
-    rustup override set nightly
+    # Install the nightly toolchain if not already installed
+    rustup install nightly
 
     # Update dependencies to minimal versions
-    cargo update -Z direct-minimal-versions
+    rustup run nightly cargo update -Z direct-minimal-versions
 
     # Run tests to ensure the minimal versions are compatible
-    RUSTFLAGS="-D deprecated" cargo test --all-features --all-targets --locked
-
-    # Remove the toolchain override
-    rustup override unset
+    RUSTFLAGS="-D deprecated" rustup run nightly cargo test --all-features --all-targets --locked
 
 # Check that clawless builds with the MSRV
 check-msrv:
@@ -68,14 +65,11 @@ check-msrv:
     # Get the MSRV from the Cargo.toml
     MSRV=$(cat Cargo.toml | grep 'rust-version =' | head -n 1 | cut -d '"' -f 2)
 
-    # Switch to the MSRV toolchain
-    rustup override set $MSRV
+    # Install the MSRV toolchain if not already installed
+    rustup install "${MSRV}"
 
     # Run tests using the MSRV
-    RUSTFLAGS="-D deprecated" cargo check --all-features --all-targets
-
-    # Remove the toolchain override
-    rustup override unset
+    RUSTFLAGS="-D deprecated" rustup run "${MSRV}" cargo check --all-features --all-targets
 
 # Format JSON files
 format-json fix="false": (prettier fix "{json,json5}")
