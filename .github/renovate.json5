@@ -1,8 +1,4 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["github>aonyx-ai/renovate-config"],
-
-  dockerfile: {
-    fileMatch: ["Earthfile$"],
-  },
 }

@@ -1,0 +1,58 @@
+# Flox manifest version managed by Flox CLI
+version = 1
+
+[install]
+# The Rust toolchain with cargo, clippy, rustc, and rustfmt.
+cargo.pkg-group = "rust-toolchain"
+cargo.pkg-path = "cargo"
+clippy.pkg-group = "rust-toolchain"
+clippy.pkg-path = "clippy"
+rustc.pkg-group = "rust-toolchain"
+rustc.pkg-path = "rustc"
+rustfmt.pkg-group = "rust-toolchain"
+rustfmt.pkg-path = "rustfmt"
+
+# The standard library links against this package on macOS.
+libiconv.pkg-path = "libiconv"
+libiconv.systems = ["aarch64-darwin", "x86_64-darwin"]
+
+# This package provides the source code for the standard library, which is used
+# by rust-analyzer below to provide diagnostics and documentation.
+rust-lib-src.pkg-group = "rust-toolchain"
+rust-lib-src.pkg-path = "rustPlatform.rustLibSrc"
+
+# rust-analyzer is usually updated on a different cadence from the Rust
+# toolchain and thus goes in its own group.
+rust-analyzer.pkg-group = "rust-analyzer"
+rust-analyzer.pkg-path = "rust-analyzer"
+
+# We install gcc and clang as linkers for Rust.
+clang.pkg-path = "clang"
+clang.systems = ["aarch64-darwin", "x86_64-darwin"]
+gcc.pkg-path = "gcc"
+gcc.systems = ["aarch64-linux", "x86_64-linux"]
+
+# Local development tools
+git.pkg-path = "git"
+just.pkg-path = "just"
+markdownlint-cli.pkg-path = "markdownlint-cli"
+parallel.pkg-path = "parallel"
+pre-commit.pkg-path = "pre-commit"
+prettier.pkg-path = "prettier"
+taplo.pkg-path = "taplo"
+yamllint.pkg-path = "yamllint"
+zizmor.pkg-path = "zizmor"
+
+[vars]
+
+[hook]
+
+[profile]
+
+[services]
+
+[include]
+
+[build]
+
+[options]

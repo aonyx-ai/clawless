@@ -5,9 +5,15 @@ name: Continuous Integration
   pull_request:
   workflow_dispatch:
 
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   targets:
-    name: Enumerate Earthly targets
+    name: Enumerate Just recipes
     runs-on: ubuntu-latest
 
     permissions:
@@ -22,22 +28,20 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install earthly
-        uses: jdno/earthly-actions-setup@151d424aaf3ae0ad63c069c0ef51f5dd65c96e76 # 2.0.0
+      - name: Install Just
+        uses: taiki-e/install-action@6f9c7cc51aa54b13cbcbd12f8bbf69d8ba405b4b # 2.62.47
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          version: 0.8
+          tool: just
 
       - name: Export targets
         id: export-targets
-        run: echo "targets=$(earthly ls | jq -cnR '[inputs | sub("\\+"; "") | select(startswith("check-") or startswith("format-") or startswith("lint-") or startswith("test-"))]')" >> "$GITHUB_OUTPUT"
+        run: echo "targets=$(just --list | awk '/build-|check-|format-|lint-|test-/{print $1}' | jq -cnR '[inputs]')" >> "$GITHUB_OUTPUT"
 
   checks:
     name: ${{ matrix.target }}
     runs-on: ubuntu-latest
 
     permissions:
-      packages: write
       contents: read
 
     needs: targets
@@ -53,22 +57,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # 3.6.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Flox
+        uses: flox/install-flox-action@819183ecd53757be53d66f492eeb7d689687a66b # 2.1.0
 
-      - name: Install earthly
-        uses: jdno/earthly-actions-setup@151d424aaf3ae0ad63c069c0ef51f5dd65c96e76 # 2.0.0
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          version: 0.8
+      - name: Remove Flox installer (if it exists)
+        run: rm -f flox.x86_64-linux.deb
 
-      - name: Run check with Earthly
-        # zizmor: ignore[template-injection]
-        run: earthly --allow-privileged --ci --push --remote-cache=ghcr.io/aonyx-ai/clawless-earthly-cache:${{ matrix.target }} +${{ matrix.target }}
+      - name: Run check with Just
+        uses: flox/activate-action@bdcbcf8d84af6f503e588ae4125e48133787df95 # 1.0.0
+        with:
+          command: just ${{ matrix.target }}
 
   success:
     name: All checks succeeded
@@ -81,5 +79,7 @@ jobs:
 
     steps:
       - name: Check if all checks succeeded
+        # `needs` is a list of job names, which themselves are generated from
+        # the output of `just --list`, so we ignore the template injection here.
         # zizmor: ignore[template-injection]
         run: jq --exit-status 'all(.result == "success")' <<< '${{ toJson(needs) }}'
