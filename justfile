@@ -38,8 +38,8 @@ check-latest-deps:
     # Run tests to ensure the latest versions are compatible
     RUSTFLAGS="-D deprecated" cargo test --all-features --all-targets --locked
 
-# Check that clawless builds with the minimum dependencies
-check-mininum-deps:
+# Check that clawless builds with the minimal dependencies
+check-minimal-deps:
     #!/usr/bin/env bash
 
     # Abort if git is not clean (but ignore Flox's manifest.lock)
@@ -49,11 +49,17 @@ check-mininum-deps:
         exit 1
     fi
 
-    # Update dependencies to minimum versions
-    cargo +nightly update -Z minimal-versions
+    # Switch to the nightly toolchain
+    rustup override set nightly
 
-    # Run tests to ensure the minimum versions are compatible
-    RUSTFLAGS="-D deprecated" cargo +nightly test --all-features --all-targets --locked
+    # Update dependencies to minimal versions
+    cargo update -Z direct-minimal-versions
+
+    # Run tests to ensure the minimal versions are compatible
+    RUSTFLAGS="-D deprecated" cargo test --all-features --all-targets --locked
+
+    # Remove the toolchain override
+    rustup override unset
 
 # Check that clawless builds with the MSRV
 check-msrv:
@@ -68,7 +74,7 @@ check-msrv:
     # Run tests using the MSRV
     RUSTFLAGS="-D deprecated" cargo check --all-features --all-targets
 
-    # Remove the override
+    # Remove the toolchain override
     rustup override unset
 
 # Format JSON files
