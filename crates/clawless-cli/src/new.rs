@@ -1,5 +1,5 @@
 use clap::Args;
-use clawless::{command, CommandResult};
+use clawless::{CommandResult, command};
 
 mod subcommand;
 

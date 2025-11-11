@@ -1,19 +1,19 @@
 [workspace]
 members = ["crates/*", "examples/*"]
 
-# Opt-in to the new feature resolver introduced in Rust 1.51 and Edition 2021.
+# Opt-in to the new feature resolver introduced in Rust 1.85 and Edition 2024.
 # https://doc.rust-lang.org/cargo/reference/resolver.html#resolver-versions
-resolver = "2"
+resolver = "3"
 
 [workspace.package]
 version = "0.2.0"
-edition = "2021"
+edition = "2024"
 
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/aonyx-ai/clawless.git"
 
-# Earthly installs cargo-sweep@0.7.0 in CI, which requires 1.78.0.
-rust-version = "1.78.0"
+# Rust edition 2024 requires a minimum Rust version of 1.85.0
+rust-version = "1.85.0"
 
 [workspace.dependencies]
 anyhow = "1.0.14"
