@@ -10,7 +10,7 @@ version = "0.2.0"
 edition = "2021"
 
 license = "Apache-2.0 OR MIT"
-repository = "https://github.com/aonyx-rs/clawless.git"
+repository = "https://github.com/aonyx-ai/clawless.git"
 
 # Earthly installs cargo-sweep@0.7.0 in CI, which requires 1.78.0.
 rust-version = "1.78.0"
