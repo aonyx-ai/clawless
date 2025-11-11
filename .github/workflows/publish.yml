@@ -34,7 +34,7 @@ jobs:
 
       - name: Authenticate with crates.io
         id: auth
-        uses: rust-lang/crates-io-auth-action@e919bc7605cde86df457cf5b93c5e103838bd879 # 1.0.1
+        uses: rust-lang/crates-io-auth-action@b7e9a28eded4986ec6b1fa40eeee8f8f165559ec # 1.0.3
 
       - name: Publish crate
         uses: flox/activate-action@bdcbcf8d84af6f503e588ae4125e48133787df95 # 1.0.0
