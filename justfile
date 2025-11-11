@@ -46,6 +46,7 @@ check-mininum-deps:
     if [[ -n $(git status --porcelain) ]]; then
         echo "Git working directory is not clean. Commit or stash changes before running this recipe. Aborting."
         git status --porcelain
+        git diff
         exit 1
     fi
 
