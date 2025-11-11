@@ -20,33 +20,18 @@ the crate, open `src/main.rs` and replace the generated contents with the
 following snippet:
 
 ```rust,ignore
-use clawless::clawless;
-
-mod commands;
-
-fn main() {
-    clawless!()
-}
+clawless::main()!;
 ```
 
-Go ahead and create the `src/commands.rs` module, and add the following line to
-set up the Clawless application:
-
-```rust
-clawless::app!();
-```
-
-You can now start adding commands to the application by creating submodules in
-`commands`, adding a function, and tagging it as a command.
-
-First, register a new submodule in `src/commands.rs`:
+You can now start creating commands for your application. Inside `src/main.rs`,
+add the following line at the top:
 
 ```rust
 pub mod command;
 ```
 
-Create `src/commands/command.rs`, and then add a struct and a function to the
-file:
+Then go ahead, create `src/command.rs`, and add a struct and a function to
+the file:
 
 ```rust
 use clap::Args;

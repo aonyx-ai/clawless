@@ -1,3 +1,0 @@
-mod greet;
-
-clawless::app!();

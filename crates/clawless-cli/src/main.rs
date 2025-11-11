@@ -1,7 +1,3 @@
-use clawless::clawless;
+mod new;
 
-mod commands;
-
-fn main() {
-    clawless!()
-}
+clawless::main!();
