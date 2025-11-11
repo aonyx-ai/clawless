@@ -3,7 +3,7 @@ VERSION 0.8
 LINT:
     FUNCTION
 
-    FROM node:22-alpine
+    FROM node:24-alpine
     WORKDIR /stone
 
     # Install markdownlint
