@@ -1,0 +1,21 @@
+[package]
+name = "hello-world"
+description = "A simple Hello World example for clawless"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+# We do not want to publish examples to crates.io, since they provide no value
+# or functionality on their own.
+publish = false
+
+[dependencies]
+clap = { workspace = true }
+clawless = { workspace = true }
+
+[dev-dependencies]
+assert_cmd = "2.1.1"
+predicates = "3.1.3"
