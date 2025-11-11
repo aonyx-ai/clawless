@@ -49,6 +49,9 @@ check-minimal-deps:
         exit 1
     fi
 
+    # Install the nightly toolchain if not already installed
+    rustup install nightly
+
     # Update dependencies to minimal versions
     rustup run nightly cargo update -Z direct-minimal-versions
 
