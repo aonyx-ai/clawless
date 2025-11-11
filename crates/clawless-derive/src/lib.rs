@@ -47,18 +47,19 @@ pub fn main(_input: TokenStream) -> TokenStream {
 /// Add a command to a Clawless application
 ///
 /// This macro attribute can be used to register a function as a (sub)command in
-/// Clawless application. The name of the function will be used as the name of
+/// a Clawless application. The name of the function will be used as the name of
 /// the command, and it will be automatically registered as a subcommand under
 /// its parent module.
 ///
-/// Command functions expect a single argument, which is a `clap::Args` struct
-/// with arguments that will be passed to the command.
+/// Command functions can optionally accept a single argument, which must be a
+/// `clap::Args` struct with arguments that will be passed to the command. If no
+/// argument is provided, the command takes no parameters.
 ///
 /// # Example
 ///
 /// ```rust,ignore
 /// use clap::Args;
-/// use clawless::command;
+/// use clawless::{command, CommandResult};
 ///
 /// #[derive(Debug, Args)]
 /// pub struct CommandArgs {
@@ -67,8 +68,9 @@ pub fn main(_input: TokenStream) -> TokenStream {
 /// }
 ///
 /// #[command]
-/// pub async fn command(args: CommandArgs) {
+/// pub async fn command(args: CommandArgs) -> CommandResult {
 ///     println!("Running a command: {}", args.name);
+///     Ok(())
 /// }
 /// ```
 #[proc_macro_attribute]
