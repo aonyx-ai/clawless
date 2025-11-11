@@ -36,9 +36,9 @@ jobs:
       - name: Publish clawless-derive
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
-        run: earthly --ci --push --remote-cache=ghcr.io/aonyx-rs/clawless-earthly-cache:publish-crates --secret CARGO_REGISTRY_TOKEN  +publish-crate --CRATE="clawless-derive"
+        run: earthly --ci --push --remote-cache=ghcr.io/aonyx-ai/clawless-earthly-cache:publish-crates --secret CARGO_REGISTRY_TOKEN  +publish-crate --CRATE="clawless-derive"
 
       - name: Publish clawless
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
-        run: earthly --ci --push --remote-cache=ghcr.io/aonyx-rs/clawless-earthly-cache:publish-crates --secret CARGO_REGISTRY_TOKEN  +publish-crate --CRATE="clawless"
+        run: earthly --ci --push --remote-cache=ghcr.io/aonyx-ai/clawless-earthly-cache:publish-crates --secret CARGO_REGISTRY_TOKEN  +publish-crate --CRATE="clawless"

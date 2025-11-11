@@ -40,4 +40,4 @@ jobs:
           version: 0.8
 
       - name: Run tests with latest dependency versions
-        run: earthly --ci --push --remote-cache=ghcr.io/aonyx-rs/clawless-earthly-cache:check-latest-deps +check-latest-deps
+        run: earthly --ci --push --remote-cache=ghcr.io/aonyx-ai/clawless-earthly-cache:check-latest-deps +check-latest-deps

@@ -20,5 +20,5 @@ and this project adheres to
 
 - Initial prototype featuring the `clawless!`, `app!`, and `#[command]` macros
 
-[0.2.0]: https://github.com/aonyx-rs/clawless/releases/tag/v0.2.0
-[0.1.0]: https://github.com/aonyx-rs/clawless/releases/tag/v0.1.0
+[0.2.0]: https://github.com/aonyx-ai/clawless/releases/tag/v0.2.0
+[0.1.0]: https://github.com/aonyx-ai/clawless/releases/tag/v0.1.0
