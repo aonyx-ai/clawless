@@ -28,6 +28,7 @@ check-latest-deps:
     # Abort if git is not clean
     if [[ -n $(git status --porcelain) ]]; then
         echo "Git working directory is not clean. Commit or stash changes before running this recipe. Aborting."
+        git status --porcelain
         exit 1
     fi
 
@@ -44,6 +45,7 @@ check-mininum-deps:
     # Abort if git is not clean
     if [[ -n $(git status --porcelain) ]]; then
         echo "Git working directory is not clean. Commit or stash changes before running this recipe. Aborting."
+        git status --porcelain
         exit 1
     fi
 
