@@ -1,8 +1,8 @@
 # pre-commit configuration
 #
 # We use pre-commit to enforce a consistent style in our repositories. The hooks
-# check for a few common issues with files, and then execute the `+pre-commit`
-# target in Earthly to run the same checks as the CI pipeline.
+# check for a few common issues with files, and then execute the
+# `just pre-commit` to run formatters and linters.
 #
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
@@ -14,13 +14,15 @@ repos:
       - id: check-added-large-files
       - id: check-case-conflict
       - id: end-of-file-fixer
+        exclude: ^.flox/env/manifest.lock$
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
-        exclude: ".*(stderr|stdout)$"
-  - repo: https://github.com/hongkongkiwi/earthly-precommit
-    rev: v0.0.5
+        exclude: .*(stdout|stderr)$
+  - repo: local
     hooks:
-      - id: earthly-target
-        name: run Earthly checks
-        args: ["./Earthfile", "+pre-commit", "--FIX=true"]
-        files: .*
+      - id: just
+        name: just
+        entry: just
+        args: ["pre-commit"]
+        language: system
+        pass_filenames: false
