@@ -62,8 +62,14 @@ check-msrv:
     # Get the MSRV from the Cargo.toml
     MSRV=$(cat Cargo.toml | grep 'rust-version =' | head -n 1 | cut -d '"' -f 2)
 
+    # Switch to the MSRV toolchain
+    rustup override set $MSRV
+
     # Run tests using the MSRV
-    RUSTFLAGS="-D deprecated" cargo +"$MSRV" check --all-features --all-targets
+    RUSTFLAGS="-D deprecated" cargo check --all-features --all-targets
+
+    # Remove the override
+    rustup override unset
 
 # Format JSON files
 format-json fix="false": (prettier fix "{json,json5}")
