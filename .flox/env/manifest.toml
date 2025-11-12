@@ -21,6 +21,7 @@ gcc.pkg-path = "gcc"
 gcc.systems = ["aarch64-linux", "x86_64-linux"]
 
 # Local development tools
+cargo-udeps.pkg-path = "cargo-udeps"
 git.pkg-path = "git"
 just.pkg-path = "just"
 markdownlint-cli.pkg-path = "markdownlint-cli"

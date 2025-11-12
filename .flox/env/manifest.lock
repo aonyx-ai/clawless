@@ -3,6 +3,9 @@
   "manifest": {
     "version": 1,
     "install": {
+      "cargo-udeps": {
+        "pkg-path": "cargo-udeps"
+      },
       "clang": {
         "pkg-path": "clang",
         "systems": [
@@ -172,6 +175,122 @@
       },
       "system": "x86_64-linux",
       "group": "rust-toolchain",
+      "priority": 5
+    },
+    {
+      "attr_path": "cargo-udeps",
+      "broken": false,
+      "derivation": "/nix/store/va570xk5pq3m10g6454z1aznldqdsif8-cargo-udeps-0.1.59.drv",
+      "description": "Find unused dependencies in Cargo.toml",
+      "install_id": "cargo-udeps",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "name": "cargo-udeps-0.1.59",
+      "pname": "cargo-udeps",
+      "rev": "b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "rev_count": 888552,
+      "rev_date": "2025-11-02T19:18:41Z",
+      "scrape_date": "2025-11-04T00:35:18.218411Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.1.59",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/lh6p2j1ggyyr1y3g8gxd4p8byn9b4vh2-cargo-udeps-0.1.59"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "cargo-udeps",
+      "broken": false,
+      "derivation": "/nix/store/370w3qsv3s59xmzfjpcx4xyjxqpj9vnj-cargo-udeps-0.1.59.drv",
+      "description": "Find unused dependencies in Cargo.toml",
+      "install_id": "cargo-udeps",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "name": "cargo-udeps-0.1.59",
+      "pname": "cargo-udeps",
+      "rev": "b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "rev_count": 888552,
+      "rev_date": "2025-11-02T19:18:41Z",
+      "scrape_date": "2025-11-05T16:28:57.480156Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.1.59",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/g49ygvz93yl5lhgfvala9lc8liycx4m6-cargo-udeps-0.1.59"
+      },
+      "system": "aarch64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "cargo-udeps",
+      "broken": false,
+      "derivation": "/nix/store/8kgazp7xvs6jjxkl7lpdk2fbzmg9ljll-cargo-udeps-0.1.59.drv",
+      "description": "Find unused dependencies in Cargo.toml",
+      "install_id": "cargo-udeps",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "name": "cargo-udeps-0.1.59",
+      "pname": "cargo-udeps",
+      "rev": "b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "rev_count": 888552,
+      "rev_date": "2025-11-02T19:18:41Z",
+      "scrape_date": "2025-11-05T16:54:57.256185Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.1.59",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/r94xl9sasrx19rvcggamvh0k11aq8v2l-cargo-udeps-0.1.59"
+      },
+      "system": "x86_64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "cargo-udeps",
+      "broken": false,
+      "derivation": "/nix/store/wahhy1pdwnp5a4lmkvvs59ry1h23s6la-cargo-udeps-0.1.59.drv",
+      "description": "Find unused dependencies in Cargo.toml",
+      "install_id": "cargo-udeps",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "name": "cargo-udeps-0.1.59",
+      "pname": "cargo-udeps",
+      "rev": "b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "rev_count": 888552,
+      "rev_date": "2025-11-02T19:18:41Z",
+      "scrape_date": "2025-11-05T17:20:46.767956Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.1.59",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/0qm7ajnyl617zgllxd84854v0w1z6k6j-cargo-udeps-0.1.59"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
       "priority": 5
     },
     {
