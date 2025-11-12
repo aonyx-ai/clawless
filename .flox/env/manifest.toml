@@ -2,15 +2,8 @@
 version = 1
 
 [install]
-# The Rust toolchain with cargo, clippy, rustc, and rustfmt.
-cargo.pkg-group = "rust-toolchain"
-cargo.pkg-path = "cargo"
-clippy.pkg-group = "rust-toolchain"
-clippy.pkg-path = "clippy"
-rustc.pkg-group = "rust-toolchain"
-rustc.pkg-path = "rustc"
-rustfmt.pkg-group = "rust-toolchain"
-rustfmt.pkg-path = "rustfmt"
+# Rustup installs rustc, cargo, clippy, rust-analyzer, and rustfmt
+rustup.pkg-path = "rustup"
 
 # The standard library links against this package on macOS.
 libiconv.pkg-path = "libiconv"
@@ -20,11 +13,6 @@ libiconv.systems = ["aarch64-darwin", "x86_64-darwin"]
 # by rust-analyzer below to provide diagnostics and documentation.
 rust-lib-src.pkg-group = "rust-toolchain"
 rust-lib-src.pkg-path = "rustPlatform.rustLibSrc"
-
-# rust-analyzer is usually updated on a different cadence from the Rust
-# toolchain and thus goes in its own group.
-rust-analyzer.pkg-group = "rust-analyzer"
-rust-analyzer.pkg-path = "rust-analyzer"
 
 # We install gcc and clang as linkers for Rust.
 clang.pkg-path = "clang"
