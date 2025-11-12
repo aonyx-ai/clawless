@@ -27,7 +27,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Flox
-        uses: flox/install-flox-action@ba0eb4eb776f1d3b47279d7980f6643caffd8c41 # 2.0.0
+        uses: flox/install-flox-action@819183ecd53757be53d66f492eeb7d689687a66b # 2.1.0
 
       - name: Remove Flox installer (if it exists)
         run: rm -f flox.x86_64-linux.deb
