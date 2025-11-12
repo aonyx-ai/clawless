@@ -34,13 +34,6 @@ zizmor.pkg-path = "zizmor"
 [vars]
 
 [hook]
-on-activate = '''
-# On GitHub Actions, we need to increase the static TLS size for glibc to avoid
-# an "cannot allocate memory in static TLS block" error when loading Rust.
-if [ -n "$GITHUB_ACTIONS" ]; then
-  export GLIBC_TUNABLES=glibc.rtld.optional_static_tls=10000
-fi
-'''
 
 [profile]
 

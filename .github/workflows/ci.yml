@@ -11,6 +11,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  GLIBC_TUNABLES: glibc.rtld.optional_static_tls=100000
+
 jobs:
   targets:
     name: Enumerate Just recipes
