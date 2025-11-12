@@ -71,6 +71,16 @@ check-msrv:
     # Run tests using the MSRV
     RUSTFLAGS="-D deprecated" rustup run "${MSRV}" cargo check --all-features --all-targets
 
+# Check that all dependencies in Cargo.toml are used
+check-unused-deps:
+    #!/usr/bin/env bash
+
+    # Install the nightly toolchain if not already installed
+    rustup install nightly
+
+    # Check for unused dependencies
+    rustup run nightly cargo udeps
+
 # Format JSON files
 format-json fix="false": (prettier fix "{json,json5}")
 
