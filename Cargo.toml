@@ -12,8 +12,9 @@ edition = "2024"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/aonyx-ai/clawless.git"
 
-# Rust edition 2024 requires a minimum Rust version of 1.85.0
-rust-version = "1.85.0"
+# typed-builder uses a if-let-chain, which was only stabilized in Rust 1.88.0
+# https://github.com/rust-lang/rust/issues/53667
+rust-version = "1.88.0"
 
 [workspace.dependencies]
 anyhow = "1.0.14"

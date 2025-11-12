@@ -168,10 +168,10 @@ fn extract_function_documentation(input_fn: &ItemFn) -> Option<Documentation> {
                 continue;
             }
 
-            if let Expr::Lit(expr) = &meta.value {
-                if let Lit::Str(lit) = &expr.lit {
-                    docs.push(lit.value().trim().to_string());
-                }
+            if let Expr::Lit(expr) = &meta.value
+                && let Lit::Str(lit) = &expr.lit
+            {
+                docs.push(lit.value().trim().to_string());
             }
         }
     }
