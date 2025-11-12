@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GLIBC_TUNABLES: glibc.rtld.optional_static_tls=100000
+  GLIBC_TUNABLES: glibc.rtld.optional_static_tls=10000
 
 jobs:
   targets:
