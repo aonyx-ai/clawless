@@ -1,11 +1,27 @@
 #![cfg_attr(not(doctest),doc = include_str!("../README.md"))]
 #![warn(missing_docs)]
 
-pub use clawless_derive::{command, main};
+/// A prelude module to easily import Clawless essentials
+///
+/// This module re-exports the most commonly used items from the Clawless crate. By importing
+/// everything from this module, users can conveniently access the necessary types and traits to
+/// define and run commands without needing to import each item individually.
+pub mod prelude {
+    pub use super::error::{CommandResult, Error, ErrorContext};
 
-pub use self::error::{CommandResult, Error, ErrorContext};
+    pub use clap;
+    pub use clap::{Args, FromArgMatches};
+    pub use clawless_derive::{command, main};
+}
+
+pub use clawless_derive::{command, main};
+pub use error::{CommandResult, Error, ErrorContext};
 
 mod error;
+
+// Re-export the clap crate for use with the `clawless-derive` crate
+#[doc(hidden)]
+pub use clap;
 
 // Re-export the inventory crate for use with the `clawless-derive` crate
 #[doc(hidden)]

@@ -1,5 +1,4 @@
-use clap::Args;
-use clawless::{CommandResult, command};
+use clawless::prelude::*;
 
 /// Arguments for the `greet` command
 ///

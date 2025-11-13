@@ -60,7 +60,7 @@ impl CommandGenerator {
         let inventory_name = inventory_name();
 
         quote! {
-            pub fn #function_name() -> clap::Command {
+            pub fn #function_name() -> clawless::clap::Command {
                 let mut command = #command_new;
 
                 for subcommand in clawless::inventory::iter::<#inventory_name> {
@@ -78,7 +78,7 @@ impl CommandGenerator {
         let inventory_name = inventory_name();
 
         quote! {
-            pub async fn #wrapper_function_name(args: clap::ArgMatches) -> clawless::CommandResult {
+            pub async fn #wrapper_function_name(args: clawless::clap::ArgMatches) -> clawless::CommandResult {
                 for subcommand in clawless::inventory::iter::<#inventory_name> {
                     if let Some(matches) = args.subcommand_matches(subcommand.name) {
                         return (subcommand.func)(matches.clone()).await;
@@ -97,16 +97,16 @@ impl CommandGenerator {
 
         let mut command = match args_type {
             Some(ty) => quote! {
-                #ty::augment_args(clap::Command::new(#command_name))
+                #ty::augment_args(clawless::clap::Command::new(#command_name))
             },
             None => quote! {
-                clap::Command::new(#command_name)
+                clawless::clap::Command::new(#command_name)
             },
         };
 
         if self.is_root() {
             command = quote! {
-                #command.about(clap::crate_description!())
+                #command.about(clawless::clap::crate_description!())
             };
         } else if let Some(docs) = docs {
             let Documentation { short, long } = docs;
@@ -131,7 +131,7 @@ impl CommandGenerator {
 
         match args_type {
             Some(ty) => quote! {
-                use clap::FromArgMatches;
+                use clawless::clap::FromArgMatches;
                 let args = #ty::from_arg_matches(&args).unwrap();
                 #command(args).await
             },
@@ -301,7 +301,7 @@ mod tests {
 
         let actual = generator.command_new();
         let expected = quote! {
-            Args::augment_args(clap::Command::new("foo"))
+            Args::augment_args(clawless::clap::Command::new("foo"))
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
@@ -313,7 +313,7 @@ mod tests {
 
         let actual = generator.command_new();
         let expected = quote! {
-            clap::Command::new("foo")
+            clawless::clap::Command::new("foo")
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
@@ -325,7 +325,7 @@ mod tests {
 
         let actual = generator.command_new();
         let expected = quote! {
-            Args::augment_args(clap::Command::new("foo")).arg_required_else_help(true)
+            Args::augment_args(clawless::clap::Command::new("foo")).arg_required_else_help(true)
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
@@ -337,7 +337,7 @@ mod tests {
 
         let actual = generator.wrapper_function_body();
         let expected = quote! {
-            use clap::FromArgMatches;
+            use clawless::clap::FromArgMatches;
             let args = Args::from_arg_matches(&args).unwrap();
             foo(args).await
         };

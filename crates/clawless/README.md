@@ -27,8 +27,7 @@ You can now start creating commands for your application by creating command
 modules. Create `src/command.rs`, and add a struct and a function to the file:
 
 ```rust
-use clap::Args;
-use clawless::{command, CommandResult};
+use clawless::prelude::*;
 
 #[derive(Debug, Args)]
 pub struct CommandArgs {

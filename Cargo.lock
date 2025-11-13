@@ -167,6 +167,7 @@ name = "clawless"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "clap",
  "clawless-derive",
  "inventory",
  "tokio",
@@ -176,7 +177,6 @@ dependencies = [
 name = "clawless-cli"
 version = "0.2.0"
 dependencies = [
- "clap",
  "clawless",
  "trycmd",
 ]
@@ -369,7 +369,6 @@ name = "hello-world"
 version = "0.2.0"
 dependencies = [
  "assert_cmd",
- "clap",
  "clawless",
  "predicates",
 ]
