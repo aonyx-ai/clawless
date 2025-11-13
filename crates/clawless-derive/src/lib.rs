@@ -58,8 +58,7 @@ pub fn main(_input: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```rust,ignore
-/// use clap::Args;
-/// use clawless::{command, CommandResult};
+/// use clawless::prelude::*;
 ///
 /// #[derive(Debug, Args)]
 /// pub struct CommandArgs {

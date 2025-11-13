@@ -13,7 +13,6 @@ name = "clawless"
 path = "src/main.rs"
 
 [dependencies]
-clap = { workspace = true }
 clawless = { path = "../clawless" }
 
 [dev-dependencies]
