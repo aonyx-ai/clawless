@@ -4,6 +4,16 @@ description = "Good issue for newcomers - mentoring available"
 color = "#4ade80"
 
 [[group]]
+prefix = "A-"
+colors = { tailwind = "yellow" }
+labels = [
+  { name = "clawless", description = "An issue related to clawless" },
+  { name = "cli", description = "An issue related to clawless-cli" },
+  { name = "macros", description = "An issue related to clawless-derive" },
+  { name = "github-actions", description = "An issue related to GitHub Actions" },
+]
+
+[[group]]
 prefix = "C-"
 colors = { tailwind = "red" }
 labels = [
@@ -11,14 +21,6 @@ labels = [
   { name = "dependency", description = "Change or update a dependency" },
   { name = "documentation", description = "Improve the documentation" },
   { name = "feature-request", description = "Request a new feature" },
-]
-
-[[group]]
-prefix = "L-"
-colors = { tailwind = "yellow" }
-labels = [
-  { name = "github", description = "An issue related to GitHub Actions" },
-  { name = "rust", description = "An issue related to Rust" },
 ]
 
 [[group]]
