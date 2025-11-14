@@ -16,4 +16,4 @@ path = "src/main.rs"
 clawless = { path = "../clawless" }
 
 [dev-dependencies]
-trycmd = "0.15.9"
+trycmd = { workspace = true }
