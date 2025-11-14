@@ -22,11 +22,11 @@ build-docs:
     cargo doc --all-features --no-deps
 
 # Check that clawless builds with the latest dependencies
-check-latest-deps:
+check-latest-deps force="false":
     #!/usr/bin/env bash
 
     # Abort if git is not clean (but ignore Flox's manifest.lock)
-    if [[ -n $(git status --porcelain -- ':!.flox/env/manifest.lock') ]]; then
+    if [[ {{force}} != "true" && -n $(git status --porcelain -- ':!.flox/env/manifest.lock') ]]; then
         echo "Git working directory is not clean. Commit or stash changes before running this recipe. Aborting."
         git status --porcelain
         exit 1
@@ -39,11 +39,11 @@ check-latest-deps:
     RUSTFLAGS="-D deprecated" cargo test --all-features --all-targets --locked
 
 # Check that clawless builds with the minimal dependencies
-check-minimal-deps:
+check-minimal-deps force="false":
     #!/usr/bin/env bash
 
     # Abort if git is not clean (but ignore Flox's manifest.lock)
-    if [[ -n $(git status --porcelain -- ':!.flox/env/manifest.lock') ]]; then
+    if [[ {{force}} != "true" && -n $(git status --porcelain -- ':!.flox/env/manifest.lock') ]]; then
         echo "Git working directory is not clean. Commit or stash changes before running this recipe. Aborting."
         git status --porcelain
         exit 1
