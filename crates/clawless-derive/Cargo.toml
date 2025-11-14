@@ -12,10 +12,10 @@ rust-version.workspace = true
 proc-macro = true
 
 [dependencies]
-darling = "0.21"
-proc-macro2 = "1.0.86"
-quote = "1.0.35"
-syn = { version = "2.0.46", features = ["full"] }
+darling = { workspace = true }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true }
 
 [dev-dependencies]
-indoc = "2.0.6"
+indoc = { workspace = true }
