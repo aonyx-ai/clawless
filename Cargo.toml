@@ -12,12 +12,12 @@ edition = "2024"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/aonyx-ai/clawless.git"
 
-# typed-builder uses a if-let-chain, which was only stabilized in Rust 1.88.0
+# typed-builder uses an if-let-chain, which was only stabilized in Rust 1.88.0
 # https://github.com/rust-lang/rust/issues/53667
 rust-version = "1.88.0"
 
 [workspace.dependencies]
-anyhow = "1.0.14"
+anyhow = "1.0.16"
 clap = { version = "4.3", features = ["cargo", "derive"] }
 clawless = { path = "crates/clawless" }
 inventory = "0.3"

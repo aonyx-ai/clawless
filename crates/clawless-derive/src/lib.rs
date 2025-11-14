@@ -32,13 +32,14 @@ pub fn main(_input: TokenStream) -> TokenStream {
             Ok(())
         }
 
-        fn main() {
-            let rt = clawless::tokio::runtime::Runtime::new().unwrap();
+        fn main() -> Result<(), Box<dyn std::error::Error>> {
+            let rt = clawless::tokio::runtime::Runtime::new()?;
             rt.block_on(async {
                 let app = clawless_init();
                 clawless_exec(app.get_matches()).await
-            })
-            .unwrap();
+            })?;
+
+            Ok(())
         }
     };
     output.into()
