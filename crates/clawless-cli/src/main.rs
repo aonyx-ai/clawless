@@ -1,3 +1,3 @@
-mod new;
+mod commands;
 
 clawless::main!();

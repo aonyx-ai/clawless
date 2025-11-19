@@ -4,13 +4,29 @@
 the `clawless-derive` crate implements the procedural macros that power this
 framework.
 
-The crate defines the `main!` macro and the `#[command]` macro attribute, which
-the `clawless` crate re-exports. The `main!` macro generates a noop `#[command]`
-as the root of the command-line application, while the `#[command]` macro
-attribute does the heavy lifting of creating a command and registering it with
-its parent.
+The crate defines three main macros which the `clawless` crate re-exports:
 
-Check the documentation of the two macros to get a better understanding of how
+- `main!` - Generates the application entry point and main function
+- `commands!` - Sets up the commands module with the root command and inventory
+- `#[command]` - Marks functions as CLI commands and registers them
+
+The typical structure is:
+
+```rust
+// src/main.rs
+mod commands;
+clawless::main!();
+
+// src/commands.rs
+mod my_command;
+clawless::commands!();
+```
+
+The `commands!` macro generates the root command for your CLI, while the
+`#[command]` macro does the heavy lifting of creating individual commands and
+registering them with their parent module.
+
+Check the documentation of the macros to get a better understanding of how
 this crate works.
 
 ## License
