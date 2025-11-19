@@ -11,32 +11,53 @@ use crate::inventory::InventoryGenerator;
 mod command;
 mod inventory;
 
-/// Initialize and run a Clawless application
+/// Set up the commands module for a Clawless application
 ///
-/// This macro generates the entry point for a Clawless application and a `main` function to run it.
-/// Commands can be implemented in submodules and will be automatically registered as subcommands of
-/// the CLI.
+/// This macro generates the root command for the command-line application and allows subcommands to
+/// be registered under it. It should be called inside `src/commands.rs` or `src/commands/mod.rs` to
+/// follow Clawless's convention.
 ///
 /// # Example
 ///
 /// ```rust,ignore
+/// // src/commands.rs
 /// mod greet;
+/// mod deploy;
+///
+/// clawless::commands!();
+/// ```
+#[proc_macro]
+pub fn commands(_input: TokenStream) -> TokenStream {
+    let output = quote! {
+        #[clawless::command(noop = true, root = true)]
+        async fn clawless() -> clawless::CommandResult {
+            Ok(())
+        }
+    };
+    output.into()
+}
+
+/// Initialize and run a Clawless application
+///
+/// This macro generates the `main` function for a Clawless application.
+/// It should be called in `src/main.rs` after declaring the `commands` module.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// // src/main.rs
+/// mod commands;
 ///
 /// clawless::main!();
 /// ```
 #[proc_macro]
 pub fn main(_input: TokenStream) -> TokenStream {
     let output = quote! {
-        #[clawless::command(noop = true, root = true)]
-        async fn clawless() -> clawless::CommandResult {
-            Ok(())
-        }
-
         fn main() -> Result<(), Box<dyn std::error::Error>> {
             let rt = clawless::tokio::runtime::Runtime::new()?;
             rt.block_on(async {
-                let app = clawless_init();
-                clawless_exec(app.get_matches()).await
+                let app = commands::clawless_init();
+                commands::clawless_exec(app.get_matches()).await
             })?;
 
             Ok(())

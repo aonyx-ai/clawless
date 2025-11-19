@@ -11,10 +11,10 @@ pub mod prelude {
 
     pub use clap;
     pub use clap::{Args, FromArgMatches};
-    pub use clawless_derive::{command, main};
+    pub use clawless_derive::{command, commands, main};
 }
 
-pub use clawless_derive::{command, main};
+pub use clawless_derive::{command, commands, main};
 pub use error::{CommandResult, Error, ErrorContext};
 
 mod error;
