@@ -8,6 +8,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-11-21
+
+### Added
+
+- Document CLIs using doc comments
+- Return result type from commands
+- Return `Result` from `clawless::main!`
+
+### Changed
+
+- Refactor the macros to simplify the crate's API
+- Rename the error types
+- Upgrade to Rust edition 2024
+- Re-export clap dependency
+- Reintroduce `commands` module
+
 ## [0.2.0] - 2025-07-11
 
 ### Changed
@@ -20,5 +36,6 @@ and this project adheres to
 
 - Initial prototype featuring the `clawless!`, `app!`, and `#[command]` macros
 
+[0.3.0]: https://github.com/aonyx-ai/clawless/releases/tag/v0.3.0
 [0.2.0]: https://github.com/aonyx-ai/clawless/releases/tag/v0.2.0
 [0.1.0]: https://github.com/aonyx-ai/clawless/releases/tag/v0.1.0
