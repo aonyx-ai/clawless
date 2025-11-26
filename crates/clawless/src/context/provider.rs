@@ -13,13 +13,13 @@ impl ContextProvider {
         Self::default()
     }
 
-    pub fn execute<Arguments: CommandArguments, Context, S: Command<Arguments> + 'static>(
+    pub async fn execute<Arguments: CommandArguments, Context, S: Command<Arguments> + 'static>(
         &mut self,
         args: Arguments,
         command: impl IntoCommand<Arguments, Context, Command = S>,
     ) -> CommandResult {
         let mut injectable_command = command.into_command();
-        injectable_command.run(args, &mut self.contexts)
+        injectable_command.run(args, &mut self.contexts).await
     }
 
     pub fn add_context<C: 'static>(&mut self, context: C) {

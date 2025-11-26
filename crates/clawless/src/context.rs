@@ -15,20 +15,20 @@ mod tests {
     struct Args;
     impl CommandArguments for Args {}
 
-    fn passes(args: Args, number: Context<i32>) -> CommandResult {
+    async fn passes<'a>(args: Args, number: Context<'a, i32>) -> CommandResult {
         Ok(())
     }
 
-    fn fails(args: Args, number: Context<i32>) -> CommandResult {
+    async fn fails<'a>(args: Args, number: Context<'a, i32>) -> CommandResult {
         anyhow::bail!("failed")
     }
 
-    #[test]
-    fn run_command_with_context() {
+    #[tokio::test]
+    async fn run_command_with_context() {
         let mut context = ContextProvider::new();
         context.add_context(42i32);
 
-        assert!(context.execute(Args, &passes).is_ok());
-        assert!(context.execute(Args, &fails).is_err());
+        assert!(context.execute(Args, &passes).await.is_ok());
+        assert!(context.execute(Args, &fails).await.is_err());
     }
 }

@@ -8,7 +8,7 @@ use getset::MutGetters;
 use typed_builder::TypedBuilder;
 
 pub trait Command<Arguments: CommandArguments> {
-    fn run(
+    async fn run(
         &mut self,
         args: Arguments,
         contexts: &mut HashMap<TypeId, Box<dyn Any>>,
@@ -42,24 +42,24 @@ macro_rules! impl_command {
       where
         Arguments: CommandArguments,
         for<'a, 'b> &'a mut Function:
-          FnMut(Arguments, $($params),* ) -> CommandResult +
-          FnMut(Arguments, $(<$params as ContextParameter>::Item<'b>),* ) -> CommandResult
+          AsyncFnMut(Arguments, $($params),* ) -> CommandResult +
+          AsyncFnMut(Arguments, $(<$params as ContextParameter>::Item<'b>),* ) -> CommandResult
     {
-      fn run(&mut self, args: Arguments, contexts: &mut HashMap<TypeId, Box<dyn Any>>) -> CommandResult {
+      async fn run(&mut self, args: Arguments, contexts: &mut HashMap<TypeId, Box<dyn Any>>) -> CommandResult {
         // This call_inner is necessary to tell rust which function impl to call
-        fn call_inner<Arguments, $($params),*>(
-          mut f: impl FnMut(Arguments, $($params),*) -> CommandResult,
+        async fn call_inner<Arguments, $($params),*>(
+          mut f: impl AsyncFnMut(Arguments, $($params),*) -> CommandResult,
           args: Arguments,
           $($params: $params),*
         ) -> CommandResult {
-          f(args, $($params),*)
+          f(args, $($params),*).await
         }
 
         $(
           let $params = $params::retrieve(contexts);
         )*
 
-        call_inner(self.function_mut(), args, $($params),*)
+        call_inner(self.function_mut(), args, $($params),*).await
       }
     }
   }
@@ -77,8 +77,8 @@ macro_rules! impl_into_command {
       where
         Arguments: CommandArguments,
         for<'a, 'b> &'a mut Function:
-          FnMut(Arguments, $($params),* ) -> CommandResult +
-          FnMut(Arguments, $(<$params as ContextParameter>::Item<'b>),* ) -> CommandResult
+          AsyncFnMut(Arguments, $($params),* ) -> CommandResult +
+          AsyncFnMut(Arguments, $(<$params as ContextParameter>::Item<'b>),* ) -> CommandResult
     {
       type Command = InjectableCommand<Self, Arguments, ($($params,)*)>;
 
