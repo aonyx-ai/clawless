@@ -2,17 +2,21 @@ use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-use crate::CommandResult;
 use crate::context::ContextParameter;
+use crate::{CommandArguments, CommandResult};
 use getset::MutGetters;
 use typed_builder::TypedBuilder;
 
-pub trait Command {
-    fn run(&mut self, contexts: &mut HashMap<TypeId, Box<dyn Any>>) -> CommandResult;
+pub trait Command<Arguments: CommandArguments> {
+    fn run(
+        &mut self,
+        args: Arguments,
+        contexts: &mut HashMap<TypeId, Box<dyn Any>>,
+    ) -> CommandResult;
 }
 
-pub trait IntoCommand<Input> {
-    type Command: Command;
+pub trait IntoCommand<Arguments: CommandArguments, Context> {
+    type Command: Command<Arguments>;
 
     fn into_command(self) -> Self::Command;
 }
@@ -20,11 +24,12 @@ pub trait IntoCommand<Input> {
 #[derive(
     Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, MutGetters, TypedBuilder,
 )]
-pub struct InjectableCommand<Input, Function> {
+pub struct InjectableCommand<Function, Arguments, Context> {
     #[getset(get_mut = "pub")]
     function: Function,
 
-    marker: PhantomData<Input>,
+    arguments: PhantomData<Arguments>,
+    context: PhantomData<Context>,
 }
 
 macro_rules! impl_command {
@@ -33,48 +38,28 @@ macro_rules! impl_command {
   ) => {
     #[allow(non_snake_case)]
     #[allow(unused)]
-    impl<F, $($params: ContextParameter),*> Command for InjectableCommand<($($params,)*), F>
+    impl<Function, Arguments, $($params: ContextParameter),*> Command<Arguments> for InjectableCommand<Function, Arguments, ($($params,)*)>
       where
-        for<'a, 'b> &'a mut F:
-          FnMut( $($params),* ) -> CommandResult +
-          FnMut( $(<$params as ContextParameter>::Item<'b>),* ) -> CommandResult
+        Arguments: CommandArguments,
+        for<'a, 'b> &'a mut Function:
+          FnMut(Arguments, $($params),* ) -> CommandResult +
+          FnMut(Arguments, $(<$params as ContextParameter>::Item<'b>),* ) -> CommandResult
     {
-      fn run(&mut self, contexts: &mut HashMap<TypeId, Box<dyn Any>>) -> CommandResult {
+      fn run(&mut self, args: Arguments, contexts: &mut HashMap<TypeId, Box<dyn Any>>) -> CommandResult {
         // This call_inner is necessary to tell rust which function impl to call
-        fn call_inner<$($params),*>(
-          mut f: impl FnMut($($params),*) -> CommandResult,
+        fn call_inner<Arguments, $($params),*>(
+          mut f: impl FnMut(Arguments, $($params),*) -> CommandResult,
+          args: Arguments,
           $($params: $params),*
         ) -> CommandResult {
-          f($($params),*)
+          f(args, $($params),*)
         }
 
         $(
           let $params = $params::retrieve(contexts);
         )*
 
-        call_inner(self.function_mut(), $($params),*)
-      }
-    }
-  }
-}
-
-macro_rules! impl_into_command {
-  (
-    $($params:ident),*
-  ) => {
-    impl<F, $($params: ContextParameter),*> IntoCommand<($($params,)*)> for F
-      where
-        for<'a, 'b> &'a mut F:
-          FnMut( $($params),* ) -> CommandResult +
-          FnMut( $(<$params as ContextParameter>::Item<'b>),* ) -> CommandResult
-    {
-      type Command = InjectableCommand<($($params,)*), Self>;
-
-      fn into_command(self) -> Self::Command {
-        InjectableCommand::builder()
-            .function(self)
-            .marker(Default::default())
-            .build()
+        call_inner(self.function_mut(), args, $($params),*)
       }
     }
   }
@@ -83,6 +68,30 @@ macro_rules! impl_into_command {
 impl_command!();
 impl_command!(T1);
 impl_command!(T1, T2);
+
+macro_rules! impl_into_command {
+  (
+    $($params:ident),*
+  ) => {
+    impl<Function, Arguments, $($params: ContextParameter),*> IntoCommand<Arguments, ($($params,)*)> for Function
+      where
+        Arguments: CommandArguments,
+        for<'a, 'b> &'a mut Function:
+          FnMut(Arguments, $($params),* ) -> CommandResult +
+          FnMut(Arguments, $(<$params as ContextParameter>::Item<'b>),* ) -> CommandResult
+    {
+      type Command = InjectableCommand<Self, Arguments, ($($params,)*)>;
+
+      fn into_command(self) -> Self::Command {
+        InjectableCommand::builder()
+            .function(self)
+            .arguments(Default::default())
+            .context(Default::default())
+            .build()
+      }
+    }
+  }
+}
 
 impl_into_command!();
 impl_into_command!(T1);
