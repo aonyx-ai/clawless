@@ -17,6 +17,7 @@ pub mod prelude {
 pub use clawless_derive::{command, commands, main};
 pub use error::{CommandResult, Error, ErrorContext};
 
+pub mod context;
 mod error;
 
 // Re-export the clap crate for use with the `clawless-derive` crate
