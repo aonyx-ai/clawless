@@ -1,5 +1,6 @@
+use crate::CommandResult;
 use crate::context::{Command, IntoCommand};
-use crate::{CommandArguments, CommandResult};
+use clap::ArgMatches;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 
@@ -13,10 +14,10 @@ impl ContextProvider {
         Self::default()
     }
 
-    pub async fn execute<Arguments: CommandArguments, Context, S: Command<Arguments> + 'static>(
+    pub async fn execute<Context, S: Command + 'static>(
         &mut self,
-        args: Arguments,
-        command: impl IntoCommand<Arguments, Context, Command = S>,
+        command: impl IntoCommand<Context, Command = S>,
+        args: ArgMatches,
     ) -> CommandResult {
         let mut injectable_command = command.into_command();
         injectable_command.run(args, &mut self.contexts).await

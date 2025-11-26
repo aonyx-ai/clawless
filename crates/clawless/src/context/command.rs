@@ -1,22 +1,22 @@
+use crate::CommandResult;
+use crate::context::ContextParameter;
+use clap::ArgMatches;
+use getset::MutGetters;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::marker::PhantomData;
-
-use crate::context::ContextParameter;
-use crate::{CommandArguments, CommandResult};
-use getset::MutGetters;
 use typed_builder::TypedBuilder;
 
-pub trait Command<Arguments: CommandArguments> {
+pub trait Command {
     async fn run(
         &mut self,
-        args: Arguments,
+        args: ArgMatches,
         contexts: &mut HashMap<TypeId, Box<dyn Any>>,
     ) -> CommandResult;
 }
 
-pub trait IntoCommand<Arguments: CommandArguments, Context> {
-    type Command: Command<Arguments>;
+pub trait IntoCommand<Context> {
+    type Command: Command;
 
     fn into_command(self) -> Self::Command;
 }
@@ -24,11 +24,9 @@ pub trait IntoCommand<Arguments: CommandArguments, Context> {
 #[derive(
     Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, MutGetters, TypedBuilder,
 )]
-pub struct InjectableCommand<Function, Arguments, Context> {
+pub struct InjectableCommand<Function, Context> {
     #[getset(get_mut = "pub")]
     function: Function,
-
-    arguments: PhantomData<Arguments>,
     context: PhantomData<Context>,
 }
 
@@ -38,18 +36,17 @@ macro_rules! impl_command {
   ) => {
     #[allow(non_snake_case)]
     #[allow(unused)]
-    impl<Function, Arguments, $($params: ContextParameter),*> Command<Arguments> for InjectableCommand<Function, Arguments, ($($params,)*)>
+    impl<Function, $($params: ContextParameter),*> Command for InjectableCommand<Function, ($($params,)*)>
       where
-        Arguments: CommandArguments,
         for<'a, 'b> &'a mut Function:
-          AsyncFnMut(Arguments, $($params),* ) -> CommandResult +
-          AsyncFnMut(Arguments, $(<$params as ContextParameter>::Item<'b>),* ) -> CommandResult
+          AsyncFnMut(ArgMatches, $($params),* ) -> CommandResult +
+          AsyncFnMut(ArgMatches, $(<$params as ContextParameter>::Item<'b>),* ) -> CommandResult
     {
-      async fn run(&mut self, args: Arguments, contexts: &mut HashMap<TypeId, Box<dyn Any>>) -> CommandResult {
+      async fn run(&mut self, args: ArgMatches, contexts: &mut HashMap<TypeId, Box<dyn Any>>) -> CommandResult {
         // This call_inner is necessary to tell rust which function impl to call
-        async fn call_inner<Arguments, $($params),*>(
-          mut f: impl AsyncFnMut(Arguments, $($params),*) -> CommandResult,
-          args: Arguments,
+        async fn call_inner<$($params),*>(
+          mut f: impl AsyncFnMut(ArgMatches, $($params),*) -> CommandResult,
+          args: ArgMatches,
           $($params: $params),*
         ) -> CommandResult {
           f(args, $($params),*).await
@@ -73,19 +70,17 @@ macro_rules! impl_into_command {
   (
     $($params:ident),*
   ) => {
-    impl<Function, Arguments, $($params: ContextParameter),*> IntoCommand<Arguments, ($($params,)*)> for Function
+    impl<Function, $($params: ContextParameter),*> IntoCommand<($($params,)*)> for Function
       where
-        Arguments: CommandArguments,
         for<'a, 'b> &'a mut Function:
-          AsyncFnMut(Arguments, $($params),* ) -> CommandResult +
-          AsyncFnMut(Arguments, $(<$params as ContextParameter>::Item<'b>),* ) -> CommandResult
+          AsyncFnMut(ArgMatches, $($params),* ) -> CommandResult +
+          AsyncFnMut(ArgMatches, $(<$params as ContextParameter>::Item<'b>),* ) -> CommandResult
     {
-      type Command = InjectableCommand<Self, Arguments, ($($params,)*)>;
+      type Command = InjectableCommand<Self, ($($params,)*)>;
 
       fn into_command(self) -> Self::Command {
         InjectableCommand::builder()
             .function(self)
-            .arguments(Default::default())
             .context(Default::default())
             .build()
       }

@@ -54,10 +54,12 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 pub fn main(_input: TokenStream) -> TokenStream {
     let output = quote! {
         fn main() -> Result<(), Box<dyn std::error::Error>> {
+            let mut context = clawless::context::ContextProvider::new();
+
             let rt = clawless::tokio::runtime::Runtime::new()?;
             rt.block_on(async {
                 let app = commands::clawless_init();
-                commands::clawless_exec(app.get_matches()).await
+                context.execute(commands::clawless_exec, app.get_matches()).await
             })?;
 
             Ok(())

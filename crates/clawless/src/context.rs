@@ -8,18 +8,19 @@ mod provider;
 
 #[cfg(test)]
 mod tests {
-    use crate::{CommandArguments, CommandResult};
+    use crate::CommandResult;
+    use clap::{Args, Command};
 
     use super::*;
 
-    struct Args;
-    impl CommandArguments for Args {}
+    #[derive(Args)]
+    struct CommandArgs;
 
-    async fn passes<'a>(args: Args, number: Context<'a, i32>) -> CommandResult {
+    async fn passes<'a>(args: CommandArgs, number: Context<'a, i32>) -> CommandResult {
         Ok(())
     }
 
-    async fn fails<'a>(args: Args, number: Context<'a, i32>) -> CommandResult {
+    async fn fails<'a>(args: CommandArgs, number: Context<'a, i32>) -> CommandResult {
         anyhow::bail!("failed")
     }
 
@@ -28,7 +29,9 @@ mod tests {
         let mut context = ContextProvider::new();
         context.add_context(42i32);
 
-        assert!(context.execute(Args, &passes).await.is_ok());
-        assert!(context.execute(Args, &fails).await.is_err());
+        let args = Command::new("test").get_matches_from(Vec::new());
+
+        assert!(context.execute(passes, args).await.is_ok());
+        assert!(context.execute(fails, args).await.is_err());
     }
 }

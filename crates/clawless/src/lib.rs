@@ -31,5 +31,3 @@ pub use inventory;
 // Re-export the tokio crate to run commands in an async runtime
 #[doc(hidden)]
 pub use tokio;
-
-pub trait CommandArguments {}
