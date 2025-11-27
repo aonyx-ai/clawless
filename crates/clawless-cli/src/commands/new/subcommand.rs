@@ -7,7 +7,7 @@ pub struct SubcommandArgs {
 }
 
 #[command]
-pub async fn subcommand(args: SubcommandArgs) -> CommandResult {
+pub async fn subcommand(args: SubcommandArgs, _context: Context) -> CommandResult {
     println!("Running a subcommand: {}", args.name);
     Ok(())
 }

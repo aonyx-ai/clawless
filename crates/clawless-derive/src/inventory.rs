@@ -22,7 +22,7 @@ impl<'a> InventoryGenerator<'a> {
             struct #inventory_name {
                 name: &'static str,
                 init: fn() -> clawless::clap::Command,
-                func: fn(clawless::clap::ArgMatches) -> std::pin::Pin<Box<dyn std::future::Future<Output = clawless::CommandResult>>>,
+                func: fn(clawless::clap::ArgMatches, clawless::context::Context) -> std::pin::Pin<Box<dyn std::future::Future<Output = clawless::CommandResult>>>,
             }
             clawless::inventory::collect!(#inventory_name);
         }
@@ -42,7 +42,7 @@ impl<'a> InventoryGenerator<'a> {
             clawless::inventory::submit!(super::#inventory_name {
                 name: #command,
                 init: #init_fn_name,
-                func: |args| Box::pin(#wrapper_fn_name(args)),
+                func: |args, context| Box::pin(#wrapper_fn_name(args, context)),
             });
         }
     }

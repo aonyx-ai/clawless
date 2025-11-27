@@ -29,8 +29,12 @@ mod inventory;
 #[proc_macro]
 pub fn commands(_input: TokenStream) -> TokenStream {
     let output = quote! {
+        use clawless::prelude::*;
+        #[derive(Debug, clawless::clap::Args)]
+        struct ClawlessEntryPoint {}
+
         #[clawless::command(noop = true, root = true)]
-        async fn clawless() -> clawless::CommandResult {
+        async fn clawless(_args: ClawlessEntryPoint, _context: clawless::context::Context) -> clawless::CommandResult {
             Ok(())
         }
     };
@@ -54,10 +58,12 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 pub fn main(_input: TokenStream) -> TokenStream {
     let output = quote! {
         fn main() -> Result<(), Box<dyn std::error::Error>> {
+            let context = clawless::context::Context::try_new()?;
+
             let rt = clawless::tokio::runtime::Runtime::new()?;
             rt.block_on(async {
                 let app = commands::clawless_init();
-                commands::clawless_exec(app.get_matches()).await
+                commands::clawless_exec(app.get_matches(), context.clone()).await
             })?;
 
             Ok(())
@@ -73,9 +79,9 @@ pub fn main(_input: TokenStream) -> TokenStream {
 /// the command, and it will be automatically registered as a subcommand under
 /// its parent module.
 ///
-/// Command functions can optionally accept a single argument, which must be a
-/// `clap::Args` struct with arguments that will be passed to the command. If no
-/// argument is provided, the command takes no parameters.
+/// Command functions must accept exactly two parameters:
+/// 1. An `args` parameter: a `clap::Args` struct with the command's arguments
+/// 2. A `context` parameter: the `Context` providing access to the application environment
 ///
 /// # Example
 ///
@@ -89,7 +95,7 @@ pub fn main(_input: TokenStream) -> TokenStream {
 /// }
 ///
 /// #[command]
-/// pub async fn command(args: CommandArgs) -> CommandResult {
+/// pub async fn command(args: CommandArgs, context: Context) -> CommandResult {
 ///     println!("Running a command: {}", args.name);
 ///     Ok(())
 /// }
