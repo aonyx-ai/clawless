@@ -78,10 +78,10 @@ impl CommandGenerator {
         let inventory_name = inventory_name();
 
         quote! {
-            pub async fn #wrapper_function_name(args: clawless::clap::ArgMatches) -> clawless::CommandResult {
+            pub async fn #wrapper_function_name(args: clawless::clap::ArgMatches, context: clawless::context::Context) -> clawless::CommandResult {
                 for subcommand in clawless::inventory::iter::<#inventory_name> {
                     if let Some(matches) = args.subcommand_matches(subcommand.name) {
-                        return (subcommand.func)(matches.clone()).await;
+                        return (subcommand.func)(matches.clone(), context).await;
                     }
                 }
 
@@ -95,13 +95,8 @@ impl CommandGenerator {
         let args_type = extract_function_argument_type(&self.input);
         let docs = extract_function_documentation(&self.input);
 
-        let mut command = match args_type {
-            Some(ty) => quote! {
-                #ty::augment_args(clawless::clap::Command::new(#command_name))
-            },
-            None => quote! {
-                clawless::clap::Command::new(#command_name)
-            },
+        let mut command = quote! {
+            #args_type::augment_args(clawless::clap::Command::new(#command_name))
         };
 
         if self.is_root() {
@@ -129,15 +124,10 @@ impl CommandGenerator {
         let args_type = extract_function_argument_type(&self.input);
         let command = self.ident();
 
-        match args_type {
-            Some(ty) => quote! {
-                use clawless::clap::FromArgMatches;
-                let args = #ty::from_arg_matches(&args).unwrap();
-                #command(args).await
-            },
-            None => quote! {
-                #command().await
-            },
+        quote! {
+            use clawless::clap::FromArgMatches;
+            let args = #args_type::from_arg_matches(&args).unwrap();
+            #command(args, context).await
         }
     }
 }
@@ -147,16 +137,21 @@ fn parse_attributes(attrs: TokenStream) -> Attributes {
     Attributes::from_list(&argument_list).unwrap()
 }
 
-fn extract_function_argument_type(input_fn: &ItemFn) -> Option<Box<Type>> {
-    input_fn
-        .sig
-        .inputs
-        .iter()
-        .filter_map(|arg| match arg {
-            FnArg::Receiver(_) => None,
-            FnArg::Typed(PatType { ty, .. }) => Some(ty.clone()),
-        })
-        .next()
+fn extract_function_argument_type(input_fn: &ItemFn) -> Box<Type> {
+    let mut function_arguments = input_fn.sig.inputs.iter().filter_map(|arg| match arg {
+        FnArg::Receiver(_) => None,
+        FnArg::Typed(PatType { ty, .. }) => Some(ty.clone()),
+    });
+
+    let args = function_arguments.next();
+    let context = function_arguments.next();
+
+    if args.is_none() || context.is_none() {
+        panic!("command functions must have exactly two parameters: args and context");
+    }
+
+    // We check that `args` is some above, so calling unwrap() is safe here
+    args.unwrap()
 }
 
 fn extract_function_documentation(input_fn: &ItemFn) -> Option<Documentation> {
@@ -195,7 +190,7 @@ mod tests {
 
     fn generator_with_args() -> CommandGenerator {
         let input = quote! {
-            fn foo(args: Args) {}
+            fn foo(args: Args, context: Context) {}
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
@@ -209,7 +204,7 @@ mod tests {
         };
 
         let input = quote! {
-            fn foo(args: Args) {}
+            fn foo(args: Args, context: Context) {}
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
@@ -219,7 +214,7 @@ mod tests {
 
     fn generator_without_args() -> CommandGenerator {
         let input = quote! {
-            fn foo() {}
+            fn foo(context: Context) {}
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
@@ -228,27 +223,28 @@ mod tests {
     }
 
     #[test]
-    fn extract_function_argument_type_with_args() {
+    fn extract_function_argument_type_with_args_and_context() {
         let input = quote! {
-            fn foo(args: Args) {}
+            fn foo(args: Args, context: Context) {}
         };
 
         let input_fn = syn::parse2(input).unwrap();
         let args_type = extract_function_argument_type(&input_fn);
 
-        assert_eq!("Args", args_type.unwrap().to_token_stream().to_string());
+        assert_eq!("Args", args_type.to_token_stream().to_string());
     }
 
     #[test]
+    #[should_panic]
     fn extract_function_argument_type_without_args() {
         let input = quote! {
-            fn foo() {}
+            fn foo(context: Context) {}
         };
 
         let input_fn = syn::parse2(input).unwrap();
-        let args_type = extract_function_argument_type(&input_fn);
 
-        assert_eq!(None, args_type);
+        // This should panic
+        extract_function_argument_type(&input_fn);
     }
 
     #[test]
@@ -308,15 +304,12 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn command_new_without_args() {
         let generator = generator_without_args();
 
-        let actual = generator.command_new();
-        let expected = quote! {
-            clawless::clap::Command::new("foo")
-        };
-
-        assert_eq!(actual.to_string(), expected.to_string());
+        // This should panic, since the input function has no args parameter
+        generator.command_new();
     }
 
     #[test]
@@ -332,26 +325,14 @@ mod tests {
     }
 
     #[test]
-    fn wrapper_function_body_with_args() {
+    fn wrapper_function_body() {
         let generator = generator_with_args();
 
         let actual = generator.wrapper_function_body();
         let expected = quote! {
             use clawless::clap::FromArgMatches;
             let args = Args::from_arg_matches(&args).unwrap();
-            foo(args).await
-        };
-
-        assert_eq!(actual.to_string(), expected.to_string());
-    }
-
-    #[test]
-    fn wrapper_function_body_without_args() {
-        let generator = generator_without_args();
-
-        let actual = generator.wrapper_function_body();
-        let expected = quote! {
-            foo().await
+            foo(args, context).await
         };
 
         assert_eq!(actual.to_string(), expected.to_string());

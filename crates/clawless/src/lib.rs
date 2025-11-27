@@ -7,6 +7,7 @@
 /// everything from this module, users can conveniently access the necessary types and traits to
 /// define and run commands without needing to import each item individually.
 pub mod prelude {
+    pub use super::context::*;
     pub use super::error::{CommandResult, Error, ErrorContext};
 
     pub use clap;
@@ -17,6 +18,7 @@ pub mod prelude {
 pub use clawless_derive::{command, commands, main};
 pub use error::{CommandResult, Error, ErrorContext};
 
+pub mod context;
 mod error;
 
 // Re-export the clap crate for use with the `clawless-derive` crate

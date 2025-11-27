@@ -9,6 +9,6 @@ pub struct NewArgs {}
 ///
 /// This command creates a new project and sets it up for clawless.
 #[command(noop = true)]
-pub async fn new(_args: NewArgs) -> CommandResult {
+pub async fn new(_args: NewArgs, _context: Context) -> CommandResult {
     Ok(())
 }
