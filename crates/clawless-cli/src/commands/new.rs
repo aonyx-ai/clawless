@@ -157,6 +157,7 @@ fn create_greeting_command(crate_path: &Path) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use std::fs::{create_dir_all, read_to_string};
+
     use tempfile::TempDir;
 
     use super::*;

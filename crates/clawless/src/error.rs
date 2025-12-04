@@ -1,5 +1,3 @@
-pub use anyhow::Error;
-
 /// Trait for adding context to errors
 ///
 /// This is a re-export of `anyhow::Context` that provides the `.context()` method
@@ -15,6 +13,7 @@ pub use anyhow::Error;
 ///     .context("Failed to perform operation")?;
 /// ```
 pub use anyhow::Context as ErrorContext;
+pub use anyhow::Error;
 
 /// Result type for Clawless commands
 ///

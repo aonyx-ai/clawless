@@ -89,7 +89,8 @@ format-markdown fix="false": (prettier fix "md")
 
 # Format Rust files
 format-rust fix="false":
-    cargo fmt {{ if fix != "true" { "--check" } else { "" } }}
+    rustup install -c rustfmt nightly
+    rustup run nightly cargo fmt -- --unstable-features {{ if fix != "true" { "--check" } else { "" } }}
 
 # Format TOML files
 format-toml fix="false":

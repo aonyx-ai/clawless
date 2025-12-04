@@ -1,0 +1,3 @@
+# We use this unstable feature to have consistent import grouping.
+# https://rust-lang.github.io/rustfmt/?search=#group_imports
+group_imports = "StdExternalCrate"
