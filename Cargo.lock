@@ -180,8 +180,12 @@ dependencies = [
 name = "clawless-cli"
 version = "0.3.0"
 dependencies = [
+ "anyhow",
  "clawless",
+ "indoc",
+ "tempfile",
  "trycmd",
+ "typed-fields",
 ]
 
 [[package]]

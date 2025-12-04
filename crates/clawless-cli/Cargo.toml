@@ -13,7 +13,11 @@ name = "clawless"
 path = "src/main.rs"
 
 [dependencies]
+anyhow = { workspace = true }
 clawless = { path = "../clawless" }
+indoc = { workspace = true }
+typed-fields = { workspace = true }
 
 [dev-dependencies]
+tempfile = { workspace = true }
 trycmd = { workspace = true }
