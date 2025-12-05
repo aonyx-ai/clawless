@@ -7,22 +7,52 @@ use typed_builder::TypedBuilder;
 
 const COMMAND_SEPARATOR: &str = "/";
 
+/// Represents a parsed command name with optional parent modules
+///
+/// Command names can be simple (e.g., "greet") or nested using slash notation
+/// (e.g., "db/migrate"). The struct separates the command name from its parent
+/// module hierarchy.
+///
+/// # Examples
+///
+/// ```
+/// # use clawless_cli::input::CommandName;
+/// // Simple command: "greet"
+/// let simple = CommandName::builder()
+///     .name("greet")
+///     .build();
+///
+/// // Nested command: "db/migrate"
+/// let nested = CommandName::builder()
+///     .name("migrate")
+///     .parent_modules(vec!["db".to_string()])
+///     .build();
+/// ```
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Getters, TypedBuilder)]
 pub struct CommandName {
+    /// The name of the command (without parent modules)
     #[builder(setter(into))]
     #[getset(get = "pub")]
     name: String,
 
+    /// Parent module hierarchy, ordered from outermost to innermost
     #[builder(default, setter(into))]
     #[getset(get = "pub")]
     parent_modules: Vec<String>,
 }
 
 impl CommandName {
+    /// Returns the filename for this command (e.g., "greet.rs")
     pub fn filename(&self) -> String {
         format!("{}.rs", self.name.to_case(Case::Snake))
     }
 
+    /// Constructs the full file path for this command from the project root
+    ///
+    /// # Examples
+    ///
+    /// For a command "db/migrate" in project "/my-app":
+    /// - Returns `/my-app/src/commands/db/migrate.rs`
     pub fn path_from_project_root(&self, project_root: &Path) -> PathBuf {
         let mut path = project_root.join("src").join("commands");
 

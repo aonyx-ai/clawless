@@ -8,11 +8,29 @@ use typed_fields::name;
 
 name!(CrateName);
 
+/// Arguments for the `new` command
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Args)]
 pub struct NewArgs {
+    /// Name of the new Clawless project to create
     name: CrateName,
 }
 
+/// Create a new Clawless project with a complete setup
+///
+/// This command creates a new binary crate using `cargo new`, adds the Clawless
+/// framework as a dependency, and sets up the project structure with example code
+/// to get you started quickly.
+///
+/// The generated project includes:
+/// - A `main.rs` file with the Clawless entry point
+/// - A `commands.rs` module for organizing commands
+/// - A sample `greet` command demonstrating the framework
+///
+/// # Examples
+///
+/// ```shell
+/// clawless new my-app
+/// ```
 #[command]
 pub async fn new(args: NewArgs, context: Context) -> CommandResult {
     // Call `cargo new` to create a new binary crate

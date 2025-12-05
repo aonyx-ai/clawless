@@ -8,11 +8,36 @@ use indoc::indoc;
 
 use crate::input::CommandName;
 
+/// Arguments for the `generate command` command
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, Args)]
 pub struct GenerateCommandArgs {
+    /// Name of the command to generate.
+    ///
+    /// Use slash notation for nested commands (e.g., "db/migrate").
     name: String,
 }
 
+/// Generate a new command in a Clawless project
+///
+/// This command creates a new command file with boilerplate code and automatically
+/// adds the necessary `mod` statement to the parent module. It supports nested
+/// command hierarchies using slash notation.
+///
+/// The command must be run from within a Clawless project directory (or any of
+/// its subdirectories). The project is identified by the presence of a `main.rs`
+/// file containing the `clawless::main!` macro.
+///
+/// # Examples
+///
+/// Generate a simple command:
+/// ```shell
+/// clawless generate command deploy
+/// ```
+///
+/// Generate a nested command:
+/// ```shell
+/// clawless generate command db/migrate
+/// ```
 #[command]
 pub async fn command(args: GenerateCommandArgs, context: Context) -> CommandResult {
     // Check is command is running inside a Clawless project
