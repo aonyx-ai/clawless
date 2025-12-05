@@ -191,21 +191,27 @@ fn insert_mod_statement(project: &Path, command_name: &CommandName) -> Result<()
 }
 
 fn find_parent_module(project: &Path, command_name: &CommandName) -> Result<PathBuf> {
-    let mut parents = command_name.parent_modules().clone();
-    parents.insert(0, "commands".to_string());
+    let parent_modules = command_name.parent_modules();
 
-    // Pop the last module as it is the command's parent
-    // Note: Unwrapping here is safe, since we always have at least "commands" in the list.
-    let parent = parents.pop().unwrap();
+    // The parent module is either "commands" (if no nesting) or the last element in parent_modules
+    let commands_default = "commands".to_string();
+    let parent_name = parent_modules.last().unwrap_or(&commands_default);
 
     // Determine the path to the parent module file (either as a file or mod.rs)
-    let mut base = project.join("src");
-    for module in &parents {
-        base = base.join(module.to_case(Case::Snake));
+    let mut base = project.join("src").join("commands");
+
+    // Navigate down to the parent's directory, excluding the parent itself
+    if parent_modules.len() > 1 {
+        for module in &parent_modules[..parent_modules.len() - 1] {
+            base = base.join(module.to_case(Case::Snake));
+        }
+    } else if parent_modules.is_empty() {
+        // Parent is src/commands itself
+        base = project.join("src");
     }
 
-    let candidate_file = base.join(format!("{}.rs", parent.to_case(Case::Snake)));
-    let candidate_dir_mod = base.join(parent.to_case(Case::Snake)).join("mod.rs");
+    let candidate_file = base.join(format!("{}.rs", parent_name.to_case(Case::Snake)));
+    let candidate_dir_mod = base.join(parent_name.to_case(Case::Snake)).join("mod.rs");
 
     if candidate_file.exists() {
         Ok(candidate_file)
@@ -214,7 +220,7 @@ fn find_parent_module(project: &Path, command_name: &CommandName) -> Result<Path
     } else {
         Err(anyhow!(
             "parent module `{}` does not exist under `src/commands`; refusing to create it",
-            parent
+            parent_name
         ))
     }
 }
