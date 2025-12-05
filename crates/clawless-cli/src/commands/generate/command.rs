@@ -53,23 +53,20 @@ fn find_clawless_project(current_working_directory: &CurrentWorkingDirectory) ->
 fn find_main_rs(current_working_directory: &CurrentWorkingDirectory) -> Option<PathBuf> {
     let mut dir = current_working_directory.get().to_path_buf();
 
-    let main_rs_path = dir.join("src").join("main.rs");
-    if main_rs_path.exists() {
-        return Some(main_rs_path);
-    }
-
     loop {
-        let main_rs_path = dir.join("main.rs");
-
-        if main_rs_path.exists() {
-            return Some(main_rs_path);
+        // Check for src/main.rs first, then main.rs in the current directory
+        let src_main_rs = dir.join("src").join("main.rs");
+        if src_main_rs.exists() {
+            return Some(src_main_rs);
         }
 
-        if let Some(parent) = dir.parent() {
-            dir = parent.to_path_buf();
-        } else {
-            return None;
+        let main_rs = dir.join("main.rs");
+        if main_rs.exists() {
+            return Some(main_rs);
         }
+
+        // Move up to parent directory, or return None if at filesystem root
+        dir = dir.parent()?.to_path_buf();
     }
 }
 
