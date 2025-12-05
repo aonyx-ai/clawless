@@ -151,31 +151,24 @@ fn insert_mod_statement(project: &Path, command_name: &CommandName) -> Result<()
     // Read the file into memory so that we can iterate over it
     let mut lines: Vec<&str> = content.lines().collect();
 
-    // Find the last mod statement to insert after it
-    let mut index = lines
-        .iter()
-        .enumerate()
-        .rev()
-        .find_map(|(index, line)| line.trim_start().starts_with("mod ").then_some(index));
-
-    // Find the last use statement to insert after it if no mod statements are found
-    if index.is_none() {
-        index = lines
+    // Find insertion point: after last mod, or last use, or first non-doc-comment line, or at start
+    let index =
+        lines
             .iter()
             .enumerate()
             .rev()
-            .find_map(|(index, line)| line.trim_start().starts_with("use ").then_some(index));
-    }
-
-    // If neither mod nor use statements are found, find the first line that isn't a doc comment
-    if index.is_none() {
-        index = lines
-            .iter()
-            .enumerate()
-            .find_map(|(index, line)| (!line.trim_start().starts_with("//!")).then_some(index));
-    }
-
-    let index = index.unwrap_or(0);
+            .find_map(|(index, line)| line.trim_start().starts_with("mod ").then_some(index))
+            .or_else(|| {
+                lines.iter().enumerate().rev().find_map(|(index, line)| {
+                    line.trim_start().starts_with("use ").then_some(index)
+                })
+            })
+            .or_else(|| {
+                lines.iter().enumerate().find_map(|(index, line)| {
+                    (!line.trim_start().starts_with("//!")).then_some(index)
+                })
+            })
+            .unwrap_or(0);
 
     // Insert the mod statement after the found index
     lines.insert(index + 1, &mod_statement);
