@@ -148,45 +148,36 @@ fn insert_mod_statement(project: &Path, command_name: &CommandName) -> Result<()
         return Ok(());
     }
 
-    // Read the file into memory so that we can iterate over it in reverse order
-    let lines = content.lines().collect::<Vec<&str>>();
+    // Read the file into memory so that we can iterate over it
+    let mut lines: Vec<&str> = content.lines().collect();
 
     // Find the last mod statement to insert after it
-    let mut index = lines.iter().enumerate().rev().find_map(|(index, line)| {
-        if line.trim_start().starts_with("mod ") {
-            Some(index)
-        } else {
-            None
-        }
-    });
+    let mut index = lines
+        .iter()
+        .enumerate()
+        .rev()
+        .find_map(|(index, line)| line.trim_start().starts_with("mod ").then_some(index));
 
     // Find the last use statement to insert after it if no mod statements are found
     if index.is_none() {
-        index = lines.iter().enumerate().rev().find_map(|(index, line)| {
-            if line.trim_start().starts_with("use ") {
-                Some(index)
-            } else {
-                None
-            }
-        });
+        index = lines
+            .iter()
+            .enumerate()
+            .rev()
+            .find_map(|(index, line)| line.trim_start().starts_with("use ").then_some(index));
     }
 
     // If neither mod nor use statements are found, find the first line that isn't a doc comment
     if index.is_none() {
-        index = lines.iter().enumerate().find_map(|(index, line)| {
-            let trimmed = line.trim_start();
-            if !trimmed.starts_with("//!") {
-                Some(index)
-            } else {
-                None
-            }
-        });
+        index = lines
+            .iter()
+            .enumerate()
+            .find_map(|(index, line)| (!line.trim_start().starts_with("//!")).then_some(index));
     }
 
     let index = index.unwrap_or(0);
 
     // Insert the mod statement after the found index
-    let mut lines: Vec<&str> = content.lines().collect();
     lines.insert(index + 1, &mod_statement);
     content = lines.join("\n");
 
