@@ -1,4 +1,3 @@
-mod generate;
-mod new;
+mod greet;
 
 clawless::commands!();
