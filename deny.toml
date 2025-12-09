@@ -1,0 +1,19 @@
+[output]
+# When outputting inclusion graphs in diagnostics that include features, this
+# option can be used to specify the depth at which feature edges will be added.
+# This option is included since the graphs can be quite large and the addition
+# of features from the crate(s) to all of the graph roots can be far too verbose.
+# This option can be overridden via `--feature-depth` on the cmd line
+feature-depth = 1
+
+[licenses]
+# List of explicitly allowed licenses
+# See https://spdx.org/licenses/ for list of possible licenses
+# [possible values: any SPDX 3.11 short identifier (+ optional exception)].
+allow = ["Apache-2.0", "MIT", "Unicode-3.0"]
+
+[bans]
+# Lint level for when multiple versions of the same crate are detected
+multiple-versions = "warn"
+# Lint level for when a crate version requirement is `*`
+wildcards = "deny"

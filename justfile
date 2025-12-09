@@ -38,6 +38,10 @@ check-latest-deps force="false":
     # Run tests to ensure the latest versions are compatible
     RUSTFLAGS="-D deprecated" cargo test --all-features --all-targets --locked
 
+# Check that dependencies have compatible open-source licenses and trusted sources
+check-dependencies:
+    cargo deny check bans licenses sources
+
 # Check that clawless builds with the minimal dependencies
 check-minimal-deps force="false":
     #!/usr/bin/env bash
