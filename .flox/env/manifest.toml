@@ -21,6 +21,7 @@ gcc.pkg-path = "gcc"
 gcc.systems = ["aarch64-linux", "x86_64-linux"]
 
 # Local development tools
+cargo-deny.pkg-path = "cargo-deny"
 cargo-udeps.pkg-path = "cargo-udeps"
 git.pkg-path = "git"
 just.pkg-path = "just"

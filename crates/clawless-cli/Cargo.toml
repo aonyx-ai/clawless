@@ -14,7 +14,7 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = { workspace = true }
-clawless = { path = "../clawless" }
+clawless = { workspace = true }
 convert_case = { workspace = true }
 getset = { workspace = true }
 indoc = { workspace = true }

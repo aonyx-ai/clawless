@@ -3,6 +3,9 @@
   "manifest": {
     "version": 1,
     "install": {
+      "cargo-deny": {
+        "pkg-path": "cargo-deny"
+      },
       "cargo-udeps": {
         "pkg-path": "cargo-udeps"
       },
@@ -175,6 +178,122 @@
       },
       "system": "x86_64-linux",
       "group": "rust-toolchain",
+      "priority": 5
+    },
+    {
+      "attr_path": "cargo-deny",
+      "broken": false,
+      "derivation": "/nix/store/0pymkaxm5qhkrf4mb453h96sqljzqhy9-cargo-deny-0.18.5.drv",
+      "description": "Cargo plugin for linting your dependencies",
+      "install_id": "cargo-deny",
+      "license": "[ Apache-2.0, MIT ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "name": "cargo-deny-0.18.5",
+      "pname": "cargo-deny",
+      "rev": "b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "rev_count": 888552,
+      "rev_date": "2025-11-02T19:18:41Z",
+      "scrape_date": "2025-11-04T00:35:18.207797Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.18.5",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/klgj0jy4smqx1wp1x2cs57zn4n5mkhmv-cargo-deny-0.18.5"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "cargo-deny",
+      "broken": false,
+      "derivation": "/nix/store/54zrbfjka45nl0fwppsbl3n3abzc3z48-cargo-deny-0.18.5.drv",
+      "description": "Cargo plugin for linting your dependencies",
+      "install_id": "cargo-deny",
+      "license": "[ Apache-2.0, MIT ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "name": "cargo-deny-0.18.5",
+      "pname": "cargo-deny",
+      "rev": "b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "rev_count": 888552,
+      "rev_date": "2025-11-02T19:18:41Z",
+      "scrape_date": "2025-11-05T16:28:57.467525Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.18.5",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/x6njd6w6yak0m024i6jpdg6v38rbf0mn-cargo-deny-0.18.5"
+      },
+      "system": "aarch64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "cargo-deny",
+      "broken": false,
+      "derivation": "/nix/store/vz8kqb7k1qw6bziqfal2a92y4zrlin92-cargo-deny-0.18.5.drv",
+      "description": "Cargo plugin for linting your dependencies",
+      "install_id": "cargo-deny",
+      "license": "[ Apache-2.0, MIT ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "name": "cargo-deny-0.18.5",
+      "pname": "cargo-deny",
+      "rev": "b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "rev_count": 888552,
+      "rev_date": "2025-11-02T19:18:41Z",
+      "scrape_date": "2025-11-05T16:54:57.245071Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.18.5",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/2h1iym43syqwf2d65daj2bfvgfq0v16a-cargo-deny-0.18.5"
+      },
+      "system": "x86_64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "cargo-deny",
+      "broken": false,
+      "derivation": "/nix/store/l9s1d38pqd9givkjy65y0a7hs8vy7n73-cargo-deny-0.18.5.drv",
+      "description": "Cargo plugin for linting your dependencies",
+      "install_id": "cargo-deny",
+      "license": "[ Apache-2.0, MIT ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "name": "cargo-deny-0.18.5",
+      "pname": "cargo-deny",
+      "rev": "b3d51a0365f6695e7dd5cdf3e180604530ed33b4",
+      "rev_count": 888552,
+      "rev_date": "2025-11-02T19:18:41Z",
+      "scrape_date": "2025-11-05T17:20:46.754366Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.18.5",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/mpmj2rzgk70ap8anwq7wa7rz93i92h7c-cargo-deny-0.18.5"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
       "priority": 5
     },
     {
