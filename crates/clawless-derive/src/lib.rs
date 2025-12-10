@@ -33,7 +33,7 @@ pub fn commands(_input: TokenStream) -> TokenStream {
         #[derive(Debug, clawless::clap::Args)]
         struct ClawlessEntryPoint {}
 
-        #[clawless::command(noop = true, root = true)]
+        #[clawless::command(require_subcommand, root = true)]
         async fn clawless(_args: ClawlessEntryPoint, _context: clawless::context::Context) -> clawless::CommandResult {
             Ok(())
         }
@@ -86,7 +86,16 @@ pub fn main(_input: TokenStream) -> TokenStream {
 /// # Attributes
 ///
 /// - `alias = "name"` - Add a visible alias for the command. Can be repeated for multiple aliases.
-/// - `noop = true` - Mark the command as a group that requires a subcommand (no action on its own).
+/// - `require_subcommand` - Require a subcommand; show help if the command is invoked without one.
+///
+/// # Requiring Subcommands
+///
+/// Use `require_subcommand` to create a command that serves as a container for subcommands. When
+/// this attribute is set, invoking the command without a subcommand will display help instead of
+/// running the command body. This is useful for organizing related commands under a common prefix.
+///
+/// For example, a CLI might have `db migrate`, `db seed`, and `db reset` commands, where `db`
+/// itself requires a subcommand and doesn't perform any action on its own.
 ///
 /// # Examples
 ///
@@ -108,7 +117,7 @@ pub fn main(_input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// Command with aliases:
+/// Command with alias:
 ///
 /// ```rust,ignore
 /// use clawless::prelude::*;
@@ -123,7 +132,7 @@ pub fn main(_input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// Command group with alias:
+/// Command that requires a subcommand:
 ///
 /// ```rust,ignore
 /// use clawless::prelude::*;
@@ -131,8 +140,8 @@ pub fn main(_input: TokenStream) -> TokenStream {
 /// #[derive(Debug, Args)]
 /// pub struct DbArgs {}
 ///
-/// // Users can run `mycli db migrate` or `mycli d migrate`
-/// #[command(noop = true, alias = "d")]
+/// // Running `mycli db` shows help; users must specify a subcommand like `mycli db migrate`
+/// #[command(require_subcommand, alias = "d")]
 /// pub async fn db(args: DbArgs, context: Context) -> CommandResult {
 ///     Ok(())
 /// }
