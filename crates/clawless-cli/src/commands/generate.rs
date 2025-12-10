@@ -18,7 +18,7 @@ pub struct GenerateArgs {}
 /// ```shell
 /// clawless generate command my-command
 /// ```
-#[command(noop = true)]
+#[command(noop = true, alias = "g")]
 pub async fn generate(_args: GenerateArgs, _context: Context) -> CommandResult {
     Ok(())
 }
