@@ -14,8 +14,9 @@ pub struct CommandGenerator {
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, FromMeta, Default)]
 struct Attributes {
+    /// Require a subcommand; show help if invoked without one
     #[darling(default)]
-    noop: bool,
+    require_subcommand: bool,
     #[darling(default)]
     root: bool,
     #[darling(default, multiple)]
@@ -113,7 +114,7 @@ impl CommandGenerator {
             };
         }
 
-        if self.attrs.noop {
+        if self.attrs.require_subcommand {
             command = quote! {
                 #command.arg_required_else_help(true)
             };
@@ -207,9 +208,9 @@ mod tests {
         CommandGenerator::new(TokenStream::new(), input_function)
     }
 
-    fn generator_with_args_and_noop() -> CommandGenerator {
+    fn generator_with_require_subcommand() -> CommandGenerator {
         let attrs = quote! {
-            noop = true
+            require_subcommand
         };
 
         let input = quote! {
@@ -259,9 +260,9 @@ mod tests {
         CommandGenerator::new(attrs, input_function)
     }
 
-    fn generator_with_noop_and_alias() -> CommandGenerator {
+    fn generator_with_require_subcommand_and_alias() -> CommandGenerator {
         let attrs = quote! {
-            noop = true, alias = "f"
+            require_subcommand, alias = "f"
         };
 
         let input = quote! {
@@ -364,8 +365,8 @@ mod tests {
     }
 
     #[test]
-    fn command_new_with_args_and_noop() {
-        let generator = generator_with_args_and_noop();
+    fn command_new_with_require_subcommand() {
+        let generator = generator_with_require_subcommand();
 
         let actual = generator.command_new();
         let expected = quote! {
@@ -414,8 +415,8 @@ mod tests {
     }
 
     #[test]
-    fn command_new_with_noop_and_alias() {
-        let generator = generator_with_noop_and_alias();
+    fn command_new_with_require_subcommand_and_alias() {
+        let generator = generator_with_require_subcommand_and_alias();
 
         let actual = generator.command_new();
         let expected = quote! {
