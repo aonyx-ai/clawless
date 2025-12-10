@@ -38,7 +38,7 @@ pub struct GenerateCommandArgs {
 /// ```shell
 /// clawless generate command db/migrate
 /// ```
-#[command]
+#[command(alias = "c")]
 pub async fn command(args: GenerateCommandArgs, context: Context) -> CommandResult {
     // Check is command is running inside a Clawless project
     let project = find_clawless_project(context.current_working_directory())?;

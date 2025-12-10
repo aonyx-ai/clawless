@@ -1,4 +1,4 @@
-args = ["generate", "command", "greet/shout"]
+args = ["g", "c", "greet/shout"]
 bin.name = "clawless"
 fs.sandbox = true
 status.code = 0

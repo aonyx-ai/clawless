@@ -12,12 +12,14 @@ pub struct CommandGenerator {
     ident: Ident,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, FromMeta, Default)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, FromMeta, Default)]
 struct Attributes {
     #[darling(default)]
     noop: bool,
     #[darling(default)]
     root: bool,
+    #[darling(default, multiple)]
+    alias: Vec<String>,
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
@@ -114,6 +116,13 @@ impl CommandGenerator {
         if self.attrs.noop {
             command = quote! {
                 #command.arg_required_else_help(true)
+            };
+        }
+
+        if !self.attrs.alias.is_empty() {
+            let aliases = &self.attrs.alias;
+            command = quote! {
+                #command.visible_aliases([#(#aliases),*])
             };
         }
 
@@ -220,6 +229,48 @@ mod tests {
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
 
         CommandGenerator::new(TokenStream::new(), input_function)
+    }
+
+    fn generator_with_single_alias() -> CommandGenerator {
+        let attrs = quote! {
+            alias = "f"
+        };
+
+        let input = quote! {
+            fn foo(args: Args, context: Context) {}
+        };
+
+        let input_function = syn::parse2::<ItemFn>(input).unwrap();
+
+        CommandGenerator::new(attrs, input_function)
+    }
+
+    fn generator_with_multiple_aliases() -> CommandGenerator {
+        let attrs = quote! {
+            alias = "f", alias = "fo"
+        };
+
+        let input = quote! {
+            fn foo(args: Args, context: Context) {}
+        };
+
+        let input_function = syn::parse2::<ItemFn>(input).unwrap();
+
+        CommandGenerator::new(attrs, input_function)
+    }
+
+    fn generator_with_noop_and_alias() -> CommandGenerator {
+        let attrs = quote! {
+            noop = true, alias = "f"
+        };
+
+        let input = quote! {
+            fn foo(args: Args, context: Context) {}
+        };
+
+        let input_function = syn::parse2::<ItemFn>(input).unwrap();
+
+        CommandGenerator::new(attrs, input_function)
     }
 
     #[test]
@@ -333,6 +384,42 @@ mod tests {
             use clawless::clap::FromArgMatches;
             let args = Args::from_arg_matches(&args).unwrap();
             foo(args, context).await
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn command_new_with_single_alias() {
+        let generator = generator_with_single_alias();
+
+        let actual = generator.command_new();
+        let expected = quote! {
+            Args::augment_args(clawless::clap::Command::new("foo")).visible_aliases(["f"])
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn command_new_with_multiple_aliases() {
+        let generator = generator_with_multiple_aliases();
+
+        let actual = generator.command_new();
+        let expected = quote! {
+            Args::augment_args(clawless::clap::Command::new("foo")).visible_aliases(["f", "fo"])
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn command_new_with_noop_and_alias() {
+        let generator = generator_with_noop_and_alias();
+
+        let actual = generator.command_new();
+        let expected = quote! {
+            Args::augment_args(clawless::clap::Command::new("foo")).arg_required_else_help(true).visible_aliases(["f"])
         };
 
         assert_eq!(actual.to_string(), expected.to_string());

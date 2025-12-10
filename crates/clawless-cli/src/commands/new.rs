@@ -31,7 +31,7 @@ pub struct NewArgs {
 /// ```shell
 /// clawless new my-app
 /// ```
-#[command]
+#[command(alias = "n")]
 pub async fn new(args: NewArgs, context: Context) -> CommandResult {
     // Call `cargo new` to create a new binary crate
     let crate_path = create_binary_crate(&context, &args.name)?;

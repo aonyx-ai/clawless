@@ -83,20 +83,57 @@ pub fn main(_input: TokenStream) -> TokenStream {
 /// 1. An `args` parameter: a `clap::Args` struct with the command's arguments
 /// 2. A `context` parameter: the `Context` providing access to the application environment
 ///
-/// # Example
+/// # Attributes
+///
+/// - `alias = "name"` - Add a visible alias for the command. Can be repeated for multiple aliases.
+/// - `noop = true` - Mark the command as a group that requires a subcommand (no action on its own).
+///
+/// # Examples
+///
+/// Basic command:
 ///
 /// ```rust,ignore
 /// use clawless::prelude::*;
 ///
 /// #[derive(Debug, Args)]
-/// pub struct CommandArgs {
+/// pub struct GreetArgs {
 ///     #[arg(short, long)]
 ///     name: String,
 /// }
 ///
 /// #[command]
-/// pub async fn command(args: CommandArgs, context: Context) -> CommandResult {
-///     println!("Running a command: {}", args.name);
+/// pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
+///     println!("Hello, {}!", args.name);
+///     Ok(())
+/// }
+/// ```
+///
+/// Command with aliases:
+///
+/// ```rust,ignore
+/// use clawless::prelude::*;
+///
+/// #[derive(Debug, Args)]
+/// pub struct GenerateArgs {}
+///
+/// // Users can run `mycli generate` or `mycli g`
+/// #[command(alias = "g")]
+/// pub async fn generate(args: GenerateArgs, context: Context) -> CommandResult {
+///     Ok(())
+/// }
+/// ```
+///
+/// Command group with alias:
+///
+/// ```rust,ignore
+/// use clawless::prelude::*;
+///
+/// #[derive(Debug, Args)]
+/// pub struct DbArgs {}
+///
+/// // Users can run `mycli db migrate` or `mycli d migrate`
+/// #[command(noop = true, alias = "d")]
+/// pub async fn db(args: DbArgs, context: Context) -> CommandResult {
 ///     Ok(())
 /// }
 /// ```
