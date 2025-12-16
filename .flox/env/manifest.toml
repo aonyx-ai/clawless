@@ -20,6 +20,9 @@ clang.systems = ["aarch64-darwin", "x86_64-darwin"]
 gcc.pkg-path = "gcc"
 gcc.systems = ["aarch64-linux", "x86_64-linux"]
 
+# Node.js is required for the Docusaurus website
+nodejs.pkg-path = "nodejs"
+
 # Local development tools
 cargo-deny.pkg-path = "cargo-deny"
 cargo-udeps.pkg-path = "cargo-udeps"
