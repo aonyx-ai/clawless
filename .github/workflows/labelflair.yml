@@ -33,5 +33,6 @@ jobs:
         uses: jdno/labelflair@6a399c0d1fe3453fb2d7bdd2da30574cc1ab21b9 # v0.3.0
         with:
           config-file: .github/labelflair.toml
+          delete-other-labels: true
           # Only run this step on the main branch to avoid creating labels in pull requests
           dry-run: ${{ github.ref != 'refs/heads/main' }}
