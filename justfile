@@ -1,6 +1,9 @@
 # Run all recipes inside the Flox environment
 set shell := ["flox", "activate", "--", "sh", "-cu"]
 
+# Commands to build and serve the documentation site
+mod docs
+
 [private]
 default:
     @just --list

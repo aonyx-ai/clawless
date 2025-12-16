@@ -1,0 +1,14 @@
+# Run all recipes inside the Flox environment
+set shell := ["flox", "activate", "--", "sh", "-cu"]
+
+[private]
+default:
+    @just --list
+
+# Create a static build of the site
+build:
+    npm run build
+
+# Start the local development server and open the site in the browser
+dev:
+    npm run start
