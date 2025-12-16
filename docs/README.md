@@ -1,45 +1,26 @@
-# Website
+# Documentation
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern
-static website generator.
+The public website and documentation for Clawless is built using [Docusaurus],
+following the principles of the [Diátaxis] framework.
 
-## Installation
+## Development
 
-```bash
-yarn
+Working on the site is quite straightforward. [Docusaurus] provides great
+documentation on its different features and content types, which can be found
+here: <https://docusaurus.io/docs/category/guides>.
+
+The necessary tooling is included in the [Flox] environment for this project.
+Simply run `flox activate` to enter the environment, and then use `just` to
+run the development server:
+
+```sh
+# From the project root
+just docs dev
+
+# Or, from the docs/ directory
+just dev
 ```
 
-## Local Development
-
-```bash
-yarn start
-```
-
-This command starts a local development server and opens up a browser window.
-Most changes are reflected live without having to restart the server.
-
-## Build
-
-```bash
-yarn build
-```
-
-This command generates static content into the `build` directory and can be
-served using any static contents hosting service.
-
-## Deployment
-
-Using SSH:
-
-```bash
-USE_SSH=true yarn deploy
-```
-
-Not using SSH:
-
-```bash
-GIT_USER=<Your GitHub username> yarn deploy
-```
-
-If you are using GitHub pages for hosting, this command is a convenient way to
-build the website and push to the `gh-pages` branch.
+[diátaxis]: https://diataxis.fr/
+[docusaurus]: https://docusaurus.io/
+[flox]: https://flox.dev/
