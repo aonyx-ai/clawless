@@ -5,7 +5,7 @@ color = "#4ade80"
 
 [[group]]
 prefix = "A-"
-colors = { tailwind = "yellow" }
+colors = { tailwind = "lime" }
 labels = [
   { name = "clawless", description = "An issue related to clawless" },
   { name = "cli", description = "An issue related to clawless-cli" },
@@ -20,7 +20,9 @@ labels = [
   { name = "bug", description = "Report a new bug" },
   { name = "dependency", description = "Change or update a dependency" },
   { name = "documentation", description = "Improve the documentation" },
-  { name = "feature-request", description = "Request a new feature" },
+  { name = "feature", description = "Request a new feature", aliases = [
+    "feature-request",
+  ] },
 ]
 
 [[group]]
