@@ -9,6 +9,7 @@ colors = { tailwind = "lime" }
 labels = [
   { name = "clawless", description = "An issue related to clawless" },
   { name = "cli", description = "An issue related to clawless-cli" },
+  { name = "docs", description = "An issue related to the documentation" },
   { name = "macros", description = "An issue related to clawless-derive" },
   { name = "github-actions", description = "An issue related to GitHub Actions" },
 ]
