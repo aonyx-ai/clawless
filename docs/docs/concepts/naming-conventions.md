@@ -156,7 +156,7 @@ pub struct VersionArgs {}
 
 /// Display version information
 #[command]
-pub async fn version(_args: VersionArgs, _context: Context) -> CommandResult {
+pub async fn version(args: VersionArgs, context: Context) -> CommandResult {
     println!("v1.0.0");
     Ok(())
 }
@@ -174,7 +174,7 @@ pub struct CheckUpdatesArgs {}
 
 /// Check for available updates
 #[command]
-pub async fn check_updates(_args: CheckUpdatesArgs, _context: Context) -> CommandResult {
+pub async fn check_updates(args: CheckUpdatesArgs, context: Context) -> CommandResult {
     println!("Checking for updates...");
     Ok(())
 }
@@ -196,7 +196,7 @@ pub struct UserManagementArgs {}
 
 /// User management commands
 #[command(require_subcommand)]
-pub async fn user_management(_args: UserManagementArgs, _context: Context) -> CommandResult {
+pub async fn user_management(args: UserManagementArgs, context: Context) -> CommandResult {
     Ok(())
 }
 ```
@@ -211,7 +211,7 @@ pub struct CreateUserArgs {
 
 /// Create a new user
 #[command]
-pub async fn create_user(args: CreateUserArgs, _context: Context) ->
+pub async fn create_user(args: CreateUserArgs, context: Context) ->
 CommandResult {
     println!("Creating user: {}", args.username);
     Ok(())

@@ -23,7 +23,7 @@ pub struct GreetArgs {
 
 /// Greet the user
 #[command]
-pub async fn greet(args: GreetArgs, _context: Context) -> CommandResult {
+pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
     println!("Hello, {}!", args.name);
     Ok(())
 }
@@ -133,9 +133,6 @@ current limitations.
 
 Ready to build your first CLI?
 
-- **[Quick Start](/quick-start)** - Get up and running in 5 minutes
-- **[Tutorial](/tutorial)** - Learn Clawless step-by-step
-- **[Concepts](/concepts)** - Understand how Clawless works under the hood
-
-Or jump straight to our [How-To Guides](/how-to) if you prefer learning by
-doing.
+- **[Quick Start](/docs/quick-start)** - Get up and running in 5 minutes
+- **[Concepts](/docs/concepts)** - Understand how Clawless works under the hood
+- **[How-To Guides](/docs/how-to)** - Practical recipes for common tasks

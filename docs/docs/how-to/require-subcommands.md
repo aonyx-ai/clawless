@@ -24,7 +24,7 @@ pub struct DbArgs {}
 
 /// Database management commands
 #[command(require_subcommand)]
-pub async fn db(_args: DbArgs, _context: Context) -> CommandResult {
+pub async fn db(args: DbArgs, context: Context) -> CommandResult {
     // This function body won't execute
     Ok(())
 }
@@ -55,7 +55,7 @@ subcommand:
 ```rust
 /// Database management commands
 #[command]  // No require_subcommand
-pub async fn db(_args: DbArgs, _context: Context) -> CommandResult {
+pub async fn db(args: DbArgs, context: Context) -> CommandResult {
     println!("Use a subcommand: migrate, seed, reset");
     Ok(())
 }
@@ -77,7 +77,7 @@ Commands that only organize subcommands and have no independent functionality:
 ```rust
 /// Configuration management
 #[command(require_subcommand)]
-pub async fn config(_args: ConfigArgs, _context: Context) -> CommandResult {
+pub async fn config(args: ConfigArgs, context: Context) -> CommandResult {
     Ok(())
 }
 ```
@@ -90,7 +90,7 @@ chosen:
 ```rust
 /// Cache management operations
 #[command(require_subcommand)]
-pub async fn cache(_args: CacheArgs, _context: Context) -> CommandResult {
+pub async fn cache(args: CacheArgs, context: Context) -> CommandResult {
     Ok(())
 }
 ```
@@ -113,7 +113,7 @@ leave it as:
 
 ```rust
 #[command(require_subcommand)]
-pub async fn db(_args: DbArgs, _context: Context) -> CommandResult {
+pub async fn db(args: DbArgs, context: Context) -> CommandResult {
     Ok(())
 }
 ```
@@ -122,7 +122,7 @@ Some developers prefer to make this explicit with `unreachable!()`:
 
 ```rust
 #[command(require_subcommand)]
-pub async fn db(_args: DbArgs, _context: Context) -> CommandResult {
+pub async fn db(args: DbArgs, context: Context) -> CommandResult {
     unreachable!("This function should never execute due to require_subcommand")
 }
 ```

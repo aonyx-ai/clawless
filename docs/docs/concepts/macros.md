@@ -65,7 +65,7 @@ use clawless::prelude::*;
 struct ClawlessEntryPoint {}
 
 #[clawless::command(require_subcommand, root = true)]
-async fn clawless(_args: ClawlessEntryPoint, _context: clawless::context::Context)
+async fn clawless(_args: ClawlessEntryPoint, context: clawless::context::Context)
                   -> clawless::CommandResult
 {
     Ok(())
@@ -103,7 +103,7 @@ pub struct GreetArgs {
 
 /// Greet the user
 #[command]
-pub async fn greet(args: GreetArgs, _context: Context) -> CommandResult {
+pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
     println!("Hello, {}!", args.name);
     Ok(())
 }

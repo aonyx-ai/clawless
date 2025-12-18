@@ -129,7 +129,7 @@ pub struct DbArgs {}
 
 /// Database management commands
 #[command]
-pub async fn db(_args: DbArgs, _context: Context) -> CommandResult {
+pub async fn db(_args: DbArgs, context: Context) -> CommandResult {
     // This executes when user runs: myapp db
     println!("Use a subcommand: migrate, seed");
     Ok(())
@@ -141,7 +141,7 @@ Optionally, add `require_subcommand` to skip executing the function and show hel
 ```rust
 /// Database management commands
 #[command(require_subcommand)]
-pub async fn db(_args: DbArgs, _context: Context) -> CommandResult {
+pub async fn db(_args: DbArgs, context: Context) -> CommandResult {
     // This won't execute - require_subcommand shows help instead
     Ok(())
 }

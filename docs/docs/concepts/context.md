@@ -37,11 +37,11 @@ pub async fn deploy(args: DeployArgs, context: Context) -> CommandResult {
 ```
 
 Every command must accept `Context` as its second parameter, even if it doesn't
-use it. Use `_context` to indicate intentionally unused context:
+use it:
 
 ```rust
 #[command]
-pub async fn version(_args: VersionArgs, _context: Context) -> CommandResult {
+pub async fn version(args: VersionArgs, context: Context) -> CommandResult {
     println!("v{}", env!("CARGO_PKG_VERSION"));
     Ok(())
 }

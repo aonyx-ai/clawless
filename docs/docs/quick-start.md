@@ -109,7 +109,7 @@ pub struct GoodbyeArgs {
 
 /// Say goodbye to someone
 #[command]
-pub async fn goodbye(args: GoodbyeArgs, _context: Context) -> CommandResult {
+pub async fn goodbye(args: GoodbyeArgs, context: Context) -> CommandResult {
     println!("Goodbye, {}!", args.name);
     Ok(())
 }
@@ -161,7 +161,6 @@ The file hierarchy automatically becomes your command hierarchy!
 
 You now have a working CLI with multiple commands. To learn more:
 
-- **[Tutorial](/tutorial)** - Step-by-step guide through all Clawless features
 - **[How-To Guides](/how-to)** - Practical recipes for common tasks
 - **[Concepts](/concepts)** - Deep dive into how Clawless works
 

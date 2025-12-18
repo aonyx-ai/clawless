@@ -26,7 +26,7 @@ pub struct GreetArgs {
 ///
 /// This command prints a greeting message to the console.
 #[command]
-pub async fn greet(args: GreetArgs, _context: Context) -> CommandResult {
+pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
     println!("Hello, {}!", args.name);
     Ok(())
 }
@@ -54,7 +54,7 @@ See [Arguments](./arguments) for details.
 
 ```rust
 #[command]
-pub async fn greet(args: GreetArgs, _context: Context) -> CommandResult {
+pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
     println!("Hello, {}!", args.name);
     Ok(())
 }
@@ -81,7 +81,7 @@ You can name the parameters anything you want:
 
 ```rust
 pub async fn deploy(opts: DeployArgs, ctx: Context) -> CommandResult
-pub async fn migrate(args: MigrateArgs, _context: Context) -> CommandResult  // _ if unused
+pub async fn migrate(args: MigrateArgs, context: Context) -> CommandResult  // _ if unused
 ```
 
 **Parameter order:**
@@ -121,7 +121,7 @@ Example:
 use clawless::prelude::*;
 
 #[command]
-pub async fn read_file(args: ReadArgs, _context: Context) -> CommandResult {
+pub async fn read_file(args: ReadArgs, context: Context) -> CommandResult {
     let contents = std::fs::read_to_string(&args.path)?;  // ? propagates errors
     println!("{}", contents);
     Ok(())
@@ -142,7 +142,7 @@ Use `ErrorContext` (re-exported from `anyhow::Context`) to add helpful context:
 use clawless::prelude::*;
 
 #[command]
-pub async fn read_config(args: ReadArgs, _context: Context) -> CommandResult {
+pub async fn read_config(args: ReadArgs, context: Context) -> CommandResult {
     let contents = std::fs::read_to_string(&args.path)
         .context("Failed to read configuration file")?;
 
@@ -214,7 +214,7 @@ pub async fn db(args: DbArgs, context: Context) -> CommandResult {
 This is useful for commands that only act as grouping mechanisms for
 subcommands.
 
-See the [How-To Guides](/how-to) for practical examples of these attributes.
+See [Add Command Aliases](/how-to/add-command-aliases) and [Require Subcommands](/how-to/require-subcommands) for practical examples.
 
 ## Commands without arguments
 
@@ -228,7 +228,7 @@ pub struct VersionArgs {}
 
 /// Display version information
 #[command]
-pub async fn version(_args: VersionArgs, _context: Context) -> CommandResult {
+pub async fn version(_args: VersionArgs, context: Context) -> CommandResult {
     println!("myapp v{}", env!("CARGO_PKG_VERSION"));
     Ok(())
 }
@@ -243,7 +243,7 @@ All commands are async by default, even if they don't use async features:
 
 ```rust
 #[command]
-pub async fn hello(_args: HelloArgs, _context: Context) -> CommandResult {
+pub async fn hello(_args: HelloArgs, context: Context) -> CommandResult {
     println!("Hello!");  // No await needed
     Ok(())
 }
@@ -259,7 +259,7 @@ If you need to call async functions:
 
 ```rust
 #[command]
-pub async fn fetch(args: FetchArgs, _context: Context) -> CommandResult {
+pub async fn fetch(args: FetchArgs, context: Context) -> CommandResult {
     let client = reqwest::Client::new();
     let response = client.get(&args.url).send().await?;
     let body = response.text().await?;

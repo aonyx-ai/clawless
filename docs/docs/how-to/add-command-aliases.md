@@ -22,7 +22,7 @@ pub struct GenerateArgs {
 
 /// Generate code from templates
 #[command(alias = "g")]
-pub async fn generate(args: GenerateArgs, _context: Context) -> CommandResult {
+pub async fn generate(args: GenerateArgs, context: Context) -> CommandResult {
     println!("Generating {}...", args.item);
     Ok(())
 }
