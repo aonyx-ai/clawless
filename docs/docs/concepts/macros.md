@@ -1,0 +1,253 @@
+---
+sidebar_position: 3
+---
+
+# Macros
+
+Clawless uses three procedural macros to wire up your CLI application.
+Understanding how these macros work together helps you debug issues and
+appreciate the convention-based design.
+
+## The three macros
+
+### `clawless::main!()`
+
+Called in `src/main.rs` to generate your application entry point.
+
+**What it does:**
+
+1. Generates the `main()` function
+2. Creates a `Context` with `Context::try_new()`
+3. Initializes a Tokio runtime
+4. Calls the root command initialization and execution
+
+**Generated code:**
+
+```rust
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let context = clawless::context::Context::try_new()?;
+
+    let rt = clawless::tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        let app = commands::clawless_init();
+        commands::clawless_exec(app.get_matches(), context.clone()).await
+    })?;
+
+    Ok(())
+}
+```
+
+**Usage:**
+
+```rust
+// src/main.rs
+mod commands;
+
+clawless::main!();
+```
+
+### `clawless::commands!()`
+
+Called in `src/commands.rs` to set up the root command.
+
+**What it does:**
+
+1. Creates a root command named "clawless" with `require_subcommand`
+2. Provides an entry point for the inventory system to collect subcommands
+3. Generates initialization and execution functions
+
+**Generated code:**
+
+```rust
+use clawless::prelude::*;
+
+#[derive(Debug, clawless::clap::Args)]
+struct ClawlessEntryPoint {}
+
+#[clawless::command(require_subcommand, root = true)]
+async fn clawless(_args: ClawlessEntryPoint, context: clawless::context::Context)
+                  -> clawless::CommandResult
+{
+    Ok(())
+}
+```
+
+**Usage:**
+
+```rust
+// src/commands.rs
+mod greet;
+mod deploy;
+
+clawless::commands!();
+```
+
+### `#[command]`
+
+Marks a function as a CLI command, generating the glue code to integrate it with
+Clap and the inventory system.
+
+**What it does:**
+
+1. Generates a Clap `Command` with help text from doc comments
+2. Generates a wrapper function that parses arguments and calls your function
+3. Registers the command with the inventory system for discovery
+
+**Usage:**
+
+```rust
+#[derive(Debug, Args)]
+pub struct GreetArgs {
+    name: String,
+}
+
+/// Greet the user
+#[command]
+pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
+    println!("Hello, {}!", args.name);
+    Ok(())
+}
+```
+
+For each `#[command]`, the macro generates:
+
+**1. Initialization function** - Creates the Clap command:
+
+```rust
+pub fn greet_init() -> clawless::clap::Command {
+    clawless::clap::Command::new("greet")
+        .about("Greet the user")  // From doc comment
+    // ... argument configuration
+}
+```
+
+**2. Execution wrapper** - Parses arguments and calls your function:
+
+```rust
+pub async fn greet_exec(
+    matches: &clawless::clap::ArgMatches,
+    context: clawless::context::Context,
+) -> clawless::CommandResult {
+    let args = GreetArgs::from_arg_matches(matches)?;
+    greet(args, context).await
+}
+```
+
+**3. Inventory registration** - Makes the command discoverable:
+
+```rust
+clawless::inventory::submit! {
+    // Registration data structure
+}
+```
+
+## How they work together
+
+Here's the flow when your CLI runs:
+
+```
+1. User runs: myapp greet World
+
+2. main!() macro generates main():
+   - Creates Context
+   - Creates Tokio runtime
+   - Calls commands::clawless_init()
+
+3. commands!() generates root command:
+   - Creates "clawless" root command
+   - Inventory collects all registered commands
+
+4. Each #[command] has registered via inventory:
+   - greet_init() provides Clap Command
+   - greet_exec() handles execution
+
+5. Clap parses arguments:
+   - Matches "greet" subcommand
+   - Routes to greet_exec()
+
+6. greet_exec() wrapper:
+   - Parses ArgMatches into GreetArgs
+   - Calls your greet() function
+   - Returns result
+```
+
+## The inventory system
+
+Clawless uses the [`inventory`](https://docs.rs/inventory) crate for command
+discovery. This is what enables convention-based registration without manual
+wiring.
+
+**How it works:**
+
+1. Each `#[command]` macro submits a registration to the inventory at compile
+   time
+2. The `commands!()` macro generates code that collects all registered commands
+3. At runtime, the inventory provides the complete command tree to Clap
+
+This approach means:
+
+- No central registry file to maintain
+- Adding a command is just `mod new_command;` + `#[command]`
+
+## Macro attributes
+
+### `main!()` attributes
+
+The `main!()` macro accepts no attributes.
+
+### `commands!()` attributes
+
+The `commands!()` macro accepts no attributes.
+
+### `#[command]` attributes
+
+- **`alias = "name"`** - Add a command alias
+- **`require_subcommand`** - Prevent execution without a subcommand
+
+See [Commands](./commands#macro-attributes) for details.
+
+## Debugging generated code
+
+If you need to see what the macros generate, use `cargo expand`:
+
+```bash
+# Install cargo-expand
+cargo install cargo-expand
+
+# Expand a specific file
+cargo expand --bin myapp
+
+# View just main.rs expansion
+cargo expand --bin myapp main
+```
+
+This shows the actual Rust code generated by the macros, which can help debug
+issues or understand behavior.
+
+## Limitations
+
+Understanding the macros helps you work within their constraints:
+
+**Function signature requirements:**
+
+- Commands must be `pub async fn`
+- Must accept exactly two parameters: args, then context
+- Must return `CommandResult`
+
+These requirements enable the macro to generate correct wrapper code.
+
+**Module structure requirements:**
+
+- `commands.rs` must exist
+- Must call `commands!()` macro in commands module
+
+These conventions enable the inventory system to discover commands.
+
+## What's next
+
+Now that you understand the macro system, learn about:
+
+- **[Commands](./commands)** - What the `#[command]` macro does to functions
+- **[Project Structure](./project-structure)** - How module hierarchy becomes
+  command hierarchy
+- **[Naming Conventions](./naming-conventions)** - How names map to CLI commands
