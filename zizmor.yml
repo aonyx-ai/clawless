@@ -9,3 +9,6 @@ rules:
   template-injection:
     ignore:
       - release.yml
+  undocumented-permissions:
+    ignore:
+      - docs.yml
