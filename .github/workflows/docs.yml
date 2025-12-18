@@ -34,11 +34,6 @@ jobs:
       - name: Remove Flox installer (if it exists)
         run: rm -f flox.x86_64-linux.deb
 
-      - name: Install dependencies
-        uses: flox/activate-action@bdcbcf8d84af6f503e588ae4125e48133787df95 # 1.0.0
-        with:
-          command: cd docs && pwd && npm ci
-
       - name: Build the documentation
         uses: flox/activate-action@bdcbcf8d84af6f503e588ae4125e48133787df95 # 1.0.0
         with:
