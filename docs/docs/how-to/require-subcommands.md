@@ -8,7 +8,10 @@ Prevent a command from executing without a subcommand, automatically showing
 help instead.
 
 :::info[Future API Changes]
-The `require_subcommand` attribute and the need for empty command group functions are temporary implementation details. A future release will likely introduce a dedicated command group macro to make this pattern cleaner and more explicit. The current API works but may change.
+The `require_subcommand` attribute and the need for empty command group
+functions are temporary implementation details. A future release will likely
+introduce a dedicated command group macro to make this pattern cleaner and more
+explicit. The current API works but may change.
 :::
 
 ## When to use this
@@ -132,7 +135,9 @@ from `clawless generate command`.
 
 ## See also
 
-- [Project Structure](/concepts/project-structure#command-group-functions) - How
+- [Project Structure](../concepts/project-structure#command-group-functions) -
+  How
   command groups work
 - [Add Command Aliases](./add-command-aliases) - Using the `alias` attribute
-- [Commands](/concepts/commands#macro-attributes) - All `#[command]` attributes
+- [Commands](../concepts/commands#macro-attributes) - All `#[command]`
+  attributes

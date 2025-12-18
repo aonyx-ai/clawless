@@ -150,6 +150,7 @@ The framework will catch this at runtime with an error.
 
 ## See also
 
-- [Commands](/concepts/commands#macro-attributes) - All `#[command]` attributes
+- [Commands](../concepts/commands#macro-attributes) - All `#[command]`
+  attributes
 - [Require Subcommands](./require-subcommands) - Using `require_subcommand`
   attribute
