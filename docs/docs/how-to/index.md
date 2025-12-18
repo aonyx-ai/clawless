@@ -34,8 +34,8 @@ business logic.
 ## About How-To Guides
 
 These guides are task-oriented and assume you already understand Clawless
-basics. If you're new to Clawless, start with the [Quick Start](/quick-start)
-or [Concepts](/concepts) section first.
+basics. If you're new to Clawless, start with the [Quick Start](../quick-start)
+or [Concepts](../concepts) section first.
 
 Each guide focuses on a specific task and shows you how to accomplish it
 step-by-step.

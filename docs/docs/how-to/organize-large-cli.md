@@ -4,11 +4,14 @@ sidebar_position: 3
 
 # Organize Large CLI Applications
 
-Learn how to structure your Clawless project as it grows, separating CLI interface from business logic.
+Learn how to structure your Clawless project as it grows, separating CLI
+interface from business logic.
 
 ## Commands are your interface
 
-The `src/commands/` directory defines your CLI's interface - the commands users can run. Keep command functions thin, using them to parse arguments and call your application logic:
+The `src/commands/` directory defines your CLI's interface - the commands users
+can run. Keep command functions thin, using them to parse arguments and call
+your application logic:
 
 ```rust
 // src/commands/deploy.rs
@@ -170,7 +173,8 @@ pub async fn create(args: CreateArgs, context: Context) -> CommandResult {
 
 ## Shared code within command groups
 
-If you need to share code between commands in the same group, create a non-command module:
+If you need to share code between commands in the same group, create a
+non-command module:
 
 ```
 src/commands/
@@ -220,12 +224,18 @@ mod helpers;  // Declare non-command modules too
 
 ## When to create command groups
 
-Create nested command structures when you have multiple related commands that share a conceptual grouping. There's no hard rule - use groups when they make the CLI more intuitive for your users.
+Create nested command structures when you have multiple related commands that
+share a conceptual grouping. There's no hard rule - use groups when they make
+the CLI more intuitive for your users.
 
-The file structure flexibility is there when you need it. Start with flat structure, add grouping when it improves clarity.
+The file structure flexibility is there when you need it. Start with flat
+structure, add grouping when it improves clarity.
 
 ## See also
 
-- [Project Structure](/concepts/project-structure) - How file structure maps to commands
-- [Generate Commands](./generate-commands) - Creating commands and groups with the CLI
-- [Require Subcommands](./require-subcommands) - Enforcing subcommand usage in groups
+- [Project Structure](../concepts/project-structure) - How file structure maps
+  to commands
+- [Generate Commands](./generate-commands) - Creating commands and groups with
+  the CLI
+- [Require Subcommands](./require-subcommands) - Enforcing subcommand usage in
+  groups

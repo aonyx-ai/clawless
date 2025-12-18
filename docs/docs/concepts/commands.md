@@ -214,7 +214,8 @@ pub async fn db(args: DbArgs, context: Context) -> CommandResult {
 This is useful for commands that only act as grouping mechanisms for
 subcommands.
 
-See [Add Command Aliases](/how-to/add-command-aliases) and [Require Subcommands](/how-to/require-subcommands) for practical examples.
+See [Add Command Aliases](../how-to/add-command-aliases)
+and [Require Subcommands](../how-to/require-subcommands) for practical examples.
 
 ## Commands without arguments
 

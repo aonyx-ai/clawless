@@ -161,8 +161,8 @@ The file hierarchy automatically becomes your command hierarchy!
 
 You now have a working CLI with multiple commands. To learn more:
 
-- **[How-To Guides](/how-to)** - Practical recipes for common tasks
-- **[Concepts](/concepts)** - Deep dive into how Clawless works
+- **[How-To Guides](./how-to)** - Practical recipes for common tasks
+- **[Concepts](./concepts)** - Deep dive into how Clawless works
 
 Or jump right into building by exploring the generated code in
 `src/commands/greet.rs` to see how commands, arguments, and context work

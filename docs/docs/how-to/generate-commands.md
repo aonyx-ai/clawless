@@ -263,7 +263,8 @@ they're not necessary for your use case.
 
 ## See also
 
-- [Project Structure](/concepts/project-structure) - Understanding the file
+- [Project Structure](../concepts/project-structure) - Understanding the file
   hierarchy
-- [Naming Conventions](/concepts/naming-conventions) - How names become commands
-- [Commands](/concepts/commands) - Command function details
+- [Naming Conventions](../concepts/naming-conventions) - How names become
+  commands
+- [Commands](../concepts/commands) - Command function details
