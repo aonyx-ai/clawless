@@ -15,7 +15,7 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: "https://clawless.aonyx.ai",
+  url: "https://clawless.rs",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: "/",
@@ -65,7 +65,7 @@ const config: Config = {
 
   themeConfig: {
     // Replace with your project's social card
-    image: "img/docusaurus-social-card.jpg",
+    image: "img/social-card.png",
     colorMode: {
       respectPrefersColorScheme: true,
     },
@@ -97,17 +97,33 @@ const config: Config = {
           title: "Docs",
           items: [
             {
-              label: "Documentation",
-              to: "/docs/intro",
+              label: "Quick Start",
+              to: "/docs/quick-start",
+            },
+            {
+              label: "Concepts",
+              to: "/docs/concepts",
+            },
+            {
+              label: "How-to Guides",
+              to: "/docs/how-to",
             },
           ],
         },
         {
-          title: "Community",
+          title: "Resources",
           items: [
             {
               label: "GitHub",
               href: "https://github.com/aonyx-ai/clawless",
+            },
+            {
+              label: "crates.io",
+              href: "https://crates.io/crates/clawless",
+            },
+            {
+              label: "docs.rs",
+              href: "https://docs.rs/clawless/latest/clawless/",
             },
           ],
         },
@@ -117,10 +133,6 @@ const config: Config = {
             {
               label: "Blog",
               to: "/blog",
-            },
-            {
-              label: "GitHub",
-              href: "https://github.com/aonyx-ai/clawless",
             },
           ],
         },
