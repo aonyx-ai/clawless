@@ -34,15 +34,10 @@ jobs:
       - name: Remove Flox installer (if it exists)
         run: rm -f flox.x86_64-linux.deb
 
-      - name: Install the Node dependencies
-        uses: flox/activate-action@bdcbcf8d84af6f503e588ae4125e48133787df95 # 1.0.0
-        with:
-          command: cd docs && npm ci
-
       - name: Build the documentation
         uses: flox/activate-action@bdcbcf8d84af6f503e588ae4125e48133787df95 # 1.0.0
         with:
-          command: just docs build
+          command: '"cd docs && npm ci && just build"'
 
       - name: Upload the documentation artifact
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # 4.0.0
