@@ -71,8 +71,11 @@ complete walkthrough.
 ## Project Status
 
 Clawless is actively used in our internal projects and continues to evolve based
-on real-world needs. The core concepts are stable, but we may add new features
+on real-world needs. The core concepts are stable, but we will add new features
 and refine APIs as we expand its capabilities.
+
+Check out the [roadmap](https://github.com/aonyx-ai/clawless/issues) to see what
+we're working on and share your ideas.
 
 If you're building internal tools or prototyping, Clawless is a great choice.
 For production applications, review
