@@ -1,1 +1,4 @@
-exclude = [".flox/**"]
+exclude = [
+  ".flox/**",
+  "crates/clawless-cli/tests/commands/new.out/cli/Cargo.toml",
+]
