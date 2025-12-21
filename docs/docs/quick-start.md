@@ -21,6 +21,11 @@ The Clawless CLI provides scaffolding and code generation for your projects:
 cargo install clawless-cli
 ```
 
+:::tip[Prefer manual setup?]
+If you want to add Clawless to an existing project or prefer to set things up
+yourself, see the [Manual Setup](./manual-setup) guide.
+:::
+
 ## Create your first project
 
 Generate a new CLI application:
