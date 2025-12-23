@@ -37,7 +37,7 @@ jobs:
         uses: rust-lang/crates-io-auth-action@b7e9a28eded4986ec6b1fa40eeee8f8f165559ec # 1.0.3
 
       - name: Publish crate
-        uses: flox/activate-action@bdcbcf8d84af6f503e588ae4125e48133787df95 # 1.0.0
+        uses: flox/activate-action@410568008895a0f2e09a34bbd9523f8ef1f2d292 # 1.1.0
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
         with:
