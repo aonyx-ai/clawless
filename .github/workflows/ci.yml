@@ -64,7 +64,7 @@ jobs:
         run: rm -f flox.x86_64-linux.deb
 
       - name: Run check with Just
-        uses: flox/activate-action@bdcbcf8d84af6f503e588ae4125e48133787df95 # 1.0.0
+        uses: flox/activate-action@410568008895a0f2e09a34bbd9523f8ef1f2d292 # 1.1.0
         with:
           command: just ${{ matrix.target }}
 
