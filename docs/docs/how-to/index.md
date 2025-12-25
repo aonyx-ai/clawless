@@ -31,6 +31,13 @@ instead.
 Structure your Clawless project as it grows, separating CLI interface from
 business logic.
 
+## Testing
+
+### [Test with trycmd](./test-with-trycmd)
+
+Write snapshot tests for your CLI using trycmd, with test cases defined as
+simple TOML files.
+
 ## About How-To Guides
 
 These guides are task-oriented and assume you already understand Clawless
