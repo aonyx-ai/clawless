@@ -203,7 +203,7 @@ fn extract_function_argument_type(input_fn: &ItemFn) -> Result<Box<Type>> {
             &input_fn.sig,
             "command function is missing the `args` parameter\n\n\
              = help: command functions must accept an arguments struct as the first parameter\n\n    \
-             #[derive(Debug, clap::Args)]\n    \
+             #[derive(Debug, Args)]\n    \
              pub struct MyArgs {\n        \
              // Define your command's arguments here\n    \
              }\n\n    \
