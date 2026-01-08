@@ -32,7 +32,7 @@ quote = "1.0.28"
 syn = { version = "2.0.31", features = ["full"] }
 tempfile = "3"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-trybuild = "1"
+trybuild = "1.0.86"
 trycmd = ">=0.9,<1"
 typed-builder = ">=0.5,<1"
 typed-fields = ">=0.6,<1"
