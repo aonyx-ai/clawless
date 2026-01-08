@@ -1,12 +1,15 @@
 [package]
 name = "clawless"
-description = "A framework for building command-line applications"
+description = "An opinionated framework for building command-line applications"
 
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+
+categories = ["command-line-interface"]
+keywords = ["cli", "framework"]
 
 [dependencies]
 anyhow = { workspace = true }
