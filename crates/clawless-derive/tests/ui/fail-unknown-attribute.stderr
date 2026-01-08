@@ -1,4 +1,4 @@
-error: Unknown field: `unknown_attr`
+error: Unknown field: `unknown_attr`. Available values: `alias`, `require_subcommand`, `root`
 
        = help: supported attributes are `alias` and `require_subcommand`
 

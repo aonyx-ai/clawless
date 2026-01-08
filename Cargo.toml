@@ -23,7 +23,7 @@ clap = { version = "4.3.0", features = ["cargo", "derive"] }
 clawless = { path = "crates/clawless", version = "=0.4.0" }
 clawless-derive = { path = "crates/clawless-derive", version = "=0.4.0" }
 convert_case = ">=0.1,<1"
-darling = ">=0.21,<1"
+darling = ">=0.21.1,<1"
 getset = ">=0.1,<1"
 indoc = "2.0.0"
 inventory = "0.3.0"
