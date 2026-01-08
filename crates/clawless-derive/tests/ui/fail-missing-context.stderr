@@ -1,0 +1,12 @@
+error: command function is missing the `context` parameter
+
+       = help: command functions must accept `context: Context` as the second parameter
+
+           #[command]
+           pub async fn my_command(args: MyArgs, context: Context) -> CommandResult {
+               ...
+           }
+ --> tests/ui/fail-missing-context.rs:9:5
+  |
+9 | pub async fn greet(args: GreetArgs) -> CommandResult {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

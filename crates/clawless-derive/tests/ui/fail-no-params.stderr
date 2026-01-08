@@ -1,0 +1,15 @@
+error: command function is missing required parameters
+
+       = help: command functions must accept two parameters: an arguments struct and context
+
+           #[derive(Debug, Args)]
+           pub struct MyArgs {}
+
+           #[command]
+           pub async fn my_command(args: MyArgs, context: Context) -> CommandResult {
+               ...
+           }
+ --> tests/ui/fail-no-params.rs:4:5
+  |
+4 | pub async fn greet() -> CommandResult {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

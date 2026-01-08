@@ -150,7 +150,10 @@ pub fn main(_input: TokenStream) -> TokenStream {
 pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
     let input_function = parse_macro_input!(input as ItemFn);
 
-    let command_generator = CommandGenerator::new(attrs.into(), input_function.clone());
+    let command_generator = match CommandGenerator::new(attrs.into(), input_function.clone()) {
+        Ok(generator) => generator,
+        Err(e) => return e.into_compile_error().into(),
+    };
     let inventory_generator = InventoryGenerator::new(&command_generator);
 
     let inventory_struct_for_subcommands = inventory_generator.inventory();

@@ -2,10 +2,11 @@ use darling::FromMeta;
 use darling::ast::NestedMeta;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Expr, FnArg, Ident, ItemFn, Lit, Meta, PatType, Type};
+use syn::{Error, Expr, FnArg, Ident, ItemFn, Lit, Meta, PatType, Result, Type};
 
 use crate::inventory::inventory_name;
 
+#[derive(Debug)]
 pub struct CommandGenerator {
     attrs: Attributes,
     input: ItemFn,
@@ -30,15 +31,18 @@ struct Documentation {
 }
 
 impl CommandGenerator {
-    pub fn new(attrs: TokenStream, input: ItemFn) -> Self {
-        let attrs = parse_attributes(attrs);
+    pub fn new(attrs: TokenStream, input: ItemFn) -> Result<Self> {
+        let attrs = parse_attributes(attrs)?;
         let ident = input.sig.ident.clone();
 
-        Self {
+        // Validate function signature early to catch errors
+        extract_function_argument_type(&input)?;
+
+        Ok(Self {
             attrs,
             input,
             ident,
-        }
+        })
     }
 
     pub fn ident(&self) -> Ident {
@@ -95,7 +99,9 @@ impl CommandGenerator {
 
     fn command_new(&self) -> TokenStream {
         let command_name = self.ident.to_string();
-        let args_type = extract_function_argument_type(&self.input);
+        // Safe to unwrap: validated in CommandGenerator::new()
+        let args_type = extract_function_argument_type(&self.input)
+            .expect("function arguments must be validated in CommandGenerator::new()");
         let docs = extract_function_documentation(&self.input);
 
         let mut command = quote! {
@@ -131,7 +137,9 @@ impl CommandGenerator {
     }
 
     fn wrapper_function_body(&self) -> TokenStream {
-        let args_type = extract_function_argument_type(&self.input);
+        // Safe to unwrap: validated in CommandGenerator::new()
+        let args_type = extract_function_argument_type(&self.input)
+            .expect("function arguments must be validated in CommandGenerator::new()");
         let command = self.ident();
 
         quote! {
@@ -142,12 +150,34 @@ impl CommandGenerator {
     }
 }
 
-fn parse_attributes(attrs: TokenStream) -> Attributes {
-    let argument_list = NestedMeta::parse_meta_list(attrs).unwrap();
-    Attributes::from_list(&argument_list).unwrap()
+fn parse_attributes(attrs: TokenStream) -> Result<Attributes> {
+    let argument_list = NestedMeta::parse_meta_list(attrs.clone()).map_err(|e| {
+        Error::new_spanned(
+            attrs.clone(),
+            format!(
+                "invalid attribute syntax: {e}\n\n\
+                 = help: use one of the supported attributes\n\n    \
+                 #[command]\n    \
+                 #[command(alias = \"g\")]\n    \
+                 #[command(require_subcommand)]\n    \
+                 #[command(alias = \"g\", require_subcommand)]"
+            ),
+        )
+    })?;
+
+    Attributes::from_list(&argument_list).map_err(|e| {
+        Error::new_spanned(
+            attrs,
+            format!(
+                "{e}\n\n\
+                 = help: supported attributes are `alias` and `require_subcommand`\n\n    \
+                 #[command(alias = \"g\", require_subcommand)]"
+            ),
+        )
+    })
 }
 
-fn extract_function_argument_type(input_fn: &ItemFn) -> Box<Type> {
+fn extract_function_argument_type(input_fn: &ItemFn) -> Result<Box<Type>> {
     let mut function_arguments = input_fn.sig.inputs.iter().filter_map(|arg| match arg {
         FnArg::Receiver(_) => None,
         FnArg::Typed(PatType { ty, .. }) => Some(ty.clone()),
@@ -156,12 +186,42 @@ fn extract_function_argument_type(input_fn: &ItemFn) -> Box<Type> {
     let args = function_arguments.next();
     let context = function_arguments.next();
 
-    if args.is_none() || context.is_none() {
-        panic!("command functions must have exactly two parameters: args and context");
+    match (args, context) {
+        (Some(args_type), Some(_)) => Ok(args_type),
+        (None, None) => Err(Error::new_spanned(
+            &input_fn.sig,
+            "command function is missing required parameters\n\n\
+             = help: command functions must accept two parameters: an arguments struct and context\n\n    \
+             #[derive(Debug, Args)]\n    \
+             pub struct MyArgs {}\n\n    \
+             #[command]\n    \
+             pub async fn my_command(args: MyArgs, context: Context) -> CommandResult {\n        \
+             ...\n    \
+             }",
+        )),
+        (None, Some(_)) => Err(Error::new_spanned(
+            &input_fn.sig,
+            "command function is missing the `args` parameter\n\n\
+             = help: command functions must accept an arguments struct as the first parameter\n\n    \
+             #[derive(Debug, Args)]\n    \
+             pub struct MyArgs {\n        \
+             // Define your command's arguments here\n    \
+             }\n\n    \
+             #[command]\n    \
+             pub async fn my_command(args: MyArgs, context: Context) -> CommandResult {\n        \
+             ...\n    \
+             }",
+        )),
+        (Some(_), None) => Err(Error::new_spanned(
+            &input_fn.sig,
+            "command function is missing the `context` parameter\n\n\
+             = help: command functions must accept `context: Context` as the second parameter\n\n    \
+             #[command]\n    \
+             pub async fn my_command(args: MyArgs, context: Context) -> CommandResult {\n        \
+             ...\n    \
+             }",
+        )),
     }
-
-    // We check that `args` is some above, so calling unwrap() is safe here
-    args.unwrap()
 }
 
 fn extract_function_documentation(input_fn: &ItemFn) -> Option<Documentation> {
@@ -205,7 +265,7 @@ mod tests {
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
 
-        CommandGenerator::new(TokenStream::new(), input_function)
+        CommandGenerator::new(TokenStream::new(), input_function).unwrap()
     }
 
     fn generator_with_require_subcommand() -> CommandGenerator {
@@ -219,17 +279,7 @@ mod tests {
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
 
-        CommandGenerator::new(attrs, input_function)
-    }
-
-    fn generator_without_args() -> CommandGenerator {
-        let input = quote! {
-            fn foo(context: Context) {}
-        };
-
-        let input_function = syn::parse2::<ItemFn>(input).unwrap();
-
-        CommandGenerator::new(TokenStream::new(), input_function)
+        CommandGenerator::new(attrs, input_function).unwrap()
     }
 
     fn generator_with_single_alias() -> CommandGenerator {
@@ -243,7 +293,7 @@ mod tests {
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
 
-        CommandGenerator::new(attrs, input_function)
+        CommandGenerator::new(attrs, input_function).unwrap()
     }
 
     fn generator_with_multiple_aliases() -> CommandGenerator {
@@ -257,7 +307,7 @@ mod tests {
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
 
-        CommandGenerator::new(attrs, input_function)
+        CommandGenerator::new(attrs, input_function).unwrap()
     }
 
     fn generator_with_require_subcommand_and_alias() -> CommandGenerator {
@@ -271,7 +321,22 @@ mod tests {
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
 
-        CommandGenerator::new(attrs, input_function)
+        CommandGenerator::new(attrs, input_function).unwrap()
+    }
+
+    #[test]
+    fn command_generator_new_with_one_param_returns_error() {
+        // When there's only one parameter, the macro sees it as having args but missing context
+        let input = quote! {
+            fn foo(args: Args) {}
+        };
+
+        let input_function = syn::parse2::<ItemFn>(input).unwrap();
+        let result = CommandGenerator::new(TokenStream::new(), input_function);
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("missing the `context` parameter"));
     }
 
     #[test]
@@ -281,22 +346,39 @@ mod tests {
         };
 
         let input_fn = syn::parse2(input).unwrap();
-        let args_type = extract_function_argument_type(&input_fn);
+        let args_type = extract_function_argument_type(&input_fn).unwrap();
 
         assert_eq!("Args", args_type.to_token_stream().to_string());
     }
 
     #[test]
-    #[should_panic]
-    fn extract_function_argument_type_without_args() {
+    fn extract_function_argument_type_with_one_param_returns_error() {
+        // When there's only one parameter, the macro sees it as having args but missing context
+        // (parameters are positional, not semantic)
         let input = quote! {
-            fn foo(context: Context) {}
+            fn foo(args: Args) {}
         };
 
         let input_fn = syn::parse2(input).unwrap();
+        let result = extract_function_argument_type(&input_fn);
 
-        // This should panic
-        extract_function_argument_type(&input_fn);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("missing the `context` parameter"));
+    }
+
+    #[test]
+    fn extract_function_argument_type_without_params_returns_error() {
+        let input = quote! {
+            fn foo() {}
+        };
+
+        let input_fn = syn::parse2(input).unwrap();
+        let result = extract_function_argument_type(&input_fn);
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("missing required parameters"));
     }
 
     #[test]
@@ -353,15 +435,6 @@ mod tests {
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
-    }
-
-    #[test]
-    #[should_panic]
-    fn command_new_without_args() {
-        let generator = generator_without_args();
-
-        // This should panic, since the input function has no args parameter
-        generator.command_new();
     }
 
     #[test]

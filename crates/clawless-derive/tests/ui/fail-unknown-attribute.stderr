@@ -1,0 +1,9 @@
+error: Unknown field: `unknown_attr`. Available values: `alias`, `require_subcommand`, `root`
+
+       = help: supported attributes are `alias` and `require_subcommand`
+
+           #[command(alias = "g", require_subcommand)]
+ --> tests/ui/fail-unknown-attribute.rs:8:11
+  |
+8 | #[command(unknown_attr)]
+  |           ^^^^^^^^^^^^
