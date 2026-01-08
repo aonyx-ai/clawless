@@ -135,6 +135,7 @@ prettier fix="false" extension="*":
 publish:
     cargo publish -p clawless-derive -v --all-features
     cargo publish -p clawless -v --all-features
+    cargo publish -p clawless-cli -v --all-features
 
 # Run the tests
 test-rust:
