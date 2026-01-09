@@ -25,6 +25,7 @@ nodejs.pkg-path = "nodejs"
 
 # Local development tools
 cargo-deny.pkg-path = "cargo-deny"
+cargo-nextest.pkg-path = "cargo-nextest"
 cargo-udeps.pkg-path = "cargo-udeps"
 git.pkg-path = "git"
 just.pkg-path = "just"

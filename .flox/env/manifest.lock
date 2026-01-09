@@ -6,6 +6,9 @@
       "cargo-deny": {
         "pkg-path": "cargo-deny"
       },
+      "cargo-nextest": {
+        "pkg-path": "cargo-nextest"
+      },
       "cargo-udeps": {
         "pkg-path": "cargo-udeps"
       },
@@ -304,6 +307,126 @@
       "priority": 5
     },
     {
+      "attr_path": "cargo-nextest",
+      "broken": false,
+      "derivation": "/nix/store/927dck1rnl06dqlixmlfc05sx8dfm872-cargo-nextest-0.9.114.drv",
+      "description": "Next-generation test runner for Rust projects",
+      "install_id": "cargo-nextest",
+      "license": "[ MIT, Apache-2.0 ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=addf7cf5f383a3101ecfba091b98d0a1263dc9b8",
+      "name": "cargo-nextest-0.9.114",
+      "pname": "cargo-nextest",
+      "rev": "addf7cf5f383a3101ecfba091b98d0a1263dc9b8",
+      "rev_count": 908783,
+      "rev_date": "2025-12-08T09:27:56Z",
+      "scrape_date": "2025-12-10T02:54:43.787909Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.9.114",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/xq51fbjkz9wnnc9ns52nmf7j7b791iqv-cargo-nextest-0.9.114"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "cargo-nextest",
+      "broken": false,
+      "derivation": "/nix/store/w5046lyzc9rm8g24b0brm4vibv5b3rhd-cargo-nextest-0.9.114.drv",
+      "description": "Next-generation test runner for Rust projects",
+      "install_id": "cargo-nextest",
+      "license": "[ MIT, Apache-2.0 ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=addf7cf5f383a3101ecfba091b98d0a1263dc9b8",
+      "name": "cargo-nextest-0.9.114",
+      "pname": "cargo-nextest",
+      "rev": "addf7cf5f383a3101ecfba091b98d0a1263dc9b8",
+      "rev_count": 908783,
+      "rev_date": "2025-12-08T09:27:56Z",
+      "scrape_date": "2025-12-10T03:03:54.224128Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.9.114",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/5k1gkiibiygxr08rbhdr48f0qwafxzap-cargo-nextest-0.9.114"
+      },
+      "system": "aarch64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "cargo-nextest",
+      "broken": false,
+      "derivation": "/nix/store/4s6gjjqw5mszhmvv0ncq61y057cyb9pc-cargo-nextest-0.9.114.drv",
+      "description": "Next-generation test runner for Rust projects",
+      "install_id": "cargo-nextest",
+      "license": "[ MIT, Apache-2.0 ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=addf7cf5f383a3101ecfba091b98d0a1263dc9b8",
+      "name": "cargo-nextest-0.9.114",
+      "pname": "cargo-nextest",
+      "rev": "addf7cf5f383a3101ecfba091b98d0a1263dc9b8",
+      "rev_count": 908783,
+      "rev_date": "2025-12-08T09:27:56Z",
+      "scrape_date": "2025-12-10T03:13:57.671513Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.9.114",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/lml5dkj93sbi9452jg16qqfqbd6iwxnb-cargo-nextest-0.9.114"
+      },
+      "system": "x86_64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "cargo-nextest",
+      "broken": false,
+      "derivation": "/nix/store/0kcal05m0iz59mycgqv2igsh0dzxds5n-cargo-nextest-0.9.114.drv",
+      "description": "Next-generation test runner for Rust projects",
+      "install_id": "cargo-nextest",
+      "license": "[ MIT, Apache-2.0 ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=addf7cf5f383a3101ecfba091b98d0a1263dc9b8",
+      "name": "cargo-nextest-0.9.114",
+      "pname": "cargo-nextest",
+      "rev": "addf7cf5f383a3101ecfba091b98d0a1263dc9b8",
+      "rev_count": 908783,
+      "rev_date": "2025-12-08T09:27:56Z",
+      "scrape_date": "2025-12-10T03:23:17.481997Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "0.9.114",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/z2l7mvxaxmlahk5mrqn0n72sfjs9lmlk-cargo-nextest-0.9.114"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
       "attr_path": "cargo-udeps",
       "broken": false,
       "derivation": "/nix/store/1lvqc98928vw68xgiwympwngb3afdj4i-cargo-udeps-0.1.60.drv",
@@ -444,6 +567,7 @@
       "unfree": false,
       "version": "21.1.2",
       "outputs_to_install": [
+        "out",
         "out"
       ],
       "outputs": {
@@ -474,6 +598,7 @@
       "unfree": false,
       "version": "21.1.2",
       "outputs_to_install": [
+        "out",
         "out"
       ],
       "outputs": {
@@ -505,6 +630,8 @@
       "version": "14.3.0",
       "outputs_to_install": [
         "man",
+        "out",
+        "out",
         "out"
       ],
       "outputs": {
@@ -538,6 +665,8 @@
       "version": "14.3.0",
       "outputs_to_install": [
         "man",
+        "out",
+        "out",
         "out"
       ],
       "outputs": {
@@ -828,6 +957,7 @@
       "unfree": false,
       "version": "109.100.2",
       "outputs_to_install": [
+        "out",
         "out"
       ],
       "outputs": {
@@ -859,6 +989,7 @@
       "unfree": false,
       "version": "109.100.2",
       "outputs_to_install": [
+        "out",
         "out"
       ],
       "outputs": {
@@ -1363,6 +1494,8 @@
       "unfree": false,
       "version": "4.5.0",
       "outputs_to_install": [
+        "out",
+        "out",
         "out"
       ],
       "outputs": {
