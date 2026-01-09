@@ -139,4 +139,4 @@ publish:
 
 # Run the tests
 test-rust:
-    cargo test --all-features --all-targets
+    cargo nextest run --all-features --all-targets
