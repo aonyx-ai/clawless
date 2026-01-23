@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(just format-rust:*)",
+      "Bash(just lint-rust:*)",
+      "Bash(just test-rust:*)",
+      "Skill(rust-style)",
+      "Skill(rustdoc)",
+      "WebFetch(domain:clawless.rs)"
+    ]
+  }
+}
