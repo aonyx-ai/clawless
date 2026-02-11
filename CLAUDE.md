@@ -90,6 +90,15 @@ than large rewrites.
   them.
 - Getting the details right is really important!
 
+### Specifications
+
+The `specs/` directory contains the project's design specifications.
+[`specs/architecture.md`][architecture] defines the ubiquitous language and
+hexagonal architecture; consult it before introducing new domain concepts or
+modifying architectural boundaries. New features should have a spec before
+implementation begins. See [`specs/README.md`][specs-readme] for templates and
+process.
+
 ### Structure
 
 ```text
@@ -100,6 +109,8 @@ crates/
 examples/
   └── hello-world/           # Reference example project
 docs/                        # Docusaurus documentation site
+specs/                       # Design specifications
+  └── architecture.md        # Domain model and ubiquitous language
 ```
 
 ### Conventions
@@ -714,8 +725,10 @@ This `CLAUDE.md` file was adopted from
 [nextest's AGENTS.md][nextest-agents], which is published under the
 Apache-2.0 or MIT license.
 
+[architecture]: specs/architecture.md
 [flox]: https://flox.dev
 [nextest-agents]: https://github.com/nextest-rs/nextest/blob/main/AGENTS.md
+[specs-readme]: specs/README.md
 [tbaggery]: https://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
 [trycmd]: https://docs.rs/trycmd/latest/trycmd/
 [trybuild]: https://docs.rs/trybuild/latest/trybuild/
