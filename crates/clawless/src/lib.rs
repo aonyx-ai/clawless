@@ -11,13 +11,16 @@ pub mod prelude {
     pub use clap::{Args, FromArgMatches};
     pub use clawless_derive::{command, commands, main};
 
+    pub use super::cancellation::*;
     pub use super::context::*;
     pub use super::error::{CommandResult, Error, ErrorContext};
 }
 
+pub use cancellation::Cancellation;
 pub use clawless_derive::{command, commands, main};
 pub use error::{CommandResult, Error, ErrorContext};
 
+pub mod cancellation;
 pub mod context;
 mod error;
 

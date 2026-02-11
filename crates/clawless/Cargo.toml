@@ -18,5 +18,6 @@ clawless-derive = { workspace = true }
 getset = { workspace = true }
 inventory = { workspace = true }
 tokio = { workspace = true }
+tokio-util = { workspace = true }
 typed-builder = { workspace = true }
 typed-fields = { workspace = true }
