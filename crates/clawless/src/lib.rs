@@ -30,6 +30,9 @@ pub use clap;
 // Re-export the inventory crate for use with the `clawless-derive` crate
 #[doc(hidden)]
 pub use inventory;
+// Signal-to-cancellation adapter used by the `main!()` macro expansion
+#[doc(hidden)]
+pub mod signal;
 // Re-export the tokio crate to run commands in an async runtime
 #[doc(hidden)]
 pub use tokio;
