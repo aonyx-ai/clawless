@@ -118,7 +118,11 @@ A node in the command tree.
 - **Description**: short + long (from doc comments)
 - **Arguments**: the typed input this command accepts
 - **Children**: subcommands (forming a tree)
-- **Behavior**: async function body; optionally spawns Tasks
+- **Behavior**: async function body; optionally spawns Tasks. A command's
+  behavior may be a long-running interactive loop that repeatedly spawns Tasks
+  and solicits Prompts. The framework provides the primitives (Task, Prompt,
+  Cancellation) that such a loop uses; the session lifecycle is managed by the
+  command itself.
 
 ### Argument
 
@@ -138,6 +142,11 @@ custom parser.
 ### Context
 
 Injected environment. Everything a command needs that isn't from argv.
+
+Context is read-only. It describes the environment in which a command executes,
+not the application's mutable state. Mutable shared state is an
+application-level concern; the mechanism for managing it is intentionally
+deferred until real usage patterns emerge.
 
 - Working directory
 - Configuration (hierarchical: global, project, env, flags)
@@ -231,31 +240,42 @@ split:
 - **Infrastructure**: OS signal handling (SIGINT, SIGTERM) creates cancellation
   tokens. This mapping lives outside the domain core.
 
+Cancellation tokens form a tree. The Application owns the root token. A Command
+or Task may create a child token scoped to a unit of work (e.g., one REPL turn).
+Cancelling a child stops that unit without affecting the parent. Cancelling the
+root triggers shutdown of all outstanding work.
+
 Tasks do not know _why_ they were cancelled — only that the token was signaled.
 
 ## Port definitions
 
 ### Formatter (output port)
 
-The Formatter is the single point of output control. The domain emits
-structured data (Progress, Artifacts, Diagnostics); the Formatter adapter
-decides how to present it.
+The Formatter controls all output. The domain emits structured data (Progress,
+Artifacts, Diagnostics); the Formatter adapter decides how to present it.
+
+Formatters form a tree that mirrors the Task tree. Each Task receives its own
+Formatter instance, created by its parent's Formatter. A Task writes Progress,
+Artifacts, and Diagnostics to its Formatter without knowing the rendering
+strategy. The root Formatter (owned by the Application) coordinates rendering
+across all children.
 
 **Interface** (what the domain sees):
 
-- Receives Progress updates from Tasks
-- Receives Artifacts produced by Tasks (possibly as a stream)
-- Receives Diagnostics raised by Tasks
+- Creates child Formatter instances (one per child Task)
+- Receives Progress updates from the owning Task
+- Receives Artifacts produced by the owning Task (possibly as a stream)
+- Receives Diagnostics raised by the owning Task
 - Renders Prompt interactions on behalf of the Prompt port
 
 **Example adapters**:
 
-| Adapter  | Behavior                                                           |
-| -------- | ------------------------------------------------------------------ |
-| Terminal | Colors, layout, interleaving, clearing, redrawing; adapts to width |
-| CI       | Plain text, no cursor control, structured log output               |
-| JSON     | Machine-readable output for scripting and piping                   |
-| Test     | Captures output for assertions; no side effects                    |
+| Adapter  | Behavior                                                   |
+| -------- | ---------------------------------------------------------- |
+| Terminal | Colors, layout, screen regions, redrawing; adapts to width |
+| CI       | Plain text, no cursor control, sequential output           |
+| JSON     | Machine-readable output structured by task                 |
+| Test     | Captures output for assertions; no side effects            |
 
 ### Prompt (input port)
 
@@ -264,18 +284,20 @@ information" — the Prompt adapter decides how to obtain it.
 
 **Interface** (what the domain sees):
 
-- **What**: a description of the information needed
+- **What**: a description of the information needed, plus optional structured
+  metadata that adapters may use for rendering (e.g., a tool name, arguments,
+  and risk level for an approval prompt)
 - **Type**: text, confirmation, selection, password
 - **Default**: optional fallback value
 - **Validation**: constraints on acceptable answers
 
 **Example adapters**:
 
-| Adapter         | Behavior                                                                                 |
-| --------------- | ---------------------------------------------------------------------------------------- |
-| Interactive     | Renders questions through the Formatter, collects user answers                           |
-| Non-interactive | Resolves from environment variables or defaults; errors if required input is unavailable |
-| Test            | Returns preconfigured answers for deterministic testing                                  |
+| Adapter         | Behavior                                                                                                                           |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Interactive     | Renders questions through the Formatter, collects user answers                                                                     |
+| Non-interactive | Resolves programmatically (environment variables, defaults, policy-based auto-resolution); errors if required input is unavailable |
+| Test            | Returns preconfigured answers for deterministic testing                                                                            |
 
 The domain is not aware of _how_ the answer is obtained. A Prompt for a
 database name might be answered by a terminal question, an environment
