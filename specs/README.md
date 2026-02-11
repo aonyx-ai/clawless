@@ -15,6 +15,10 @@ Larger work that should be broken into smaller, atomic changes is considered a
 _project_. Projects are documented in `projects/` and have two or more feature
 specs.
 
+| #    | Project                                      | Status  |
+| ---- | -------------------------------------------- | ------- |
+| P001 | [Cancellation](projects/001-cancellation.md) | Planned |
+
 Each project spec should include:
 
 | Section        | Purpose                                           |
@@ -30,6 +34,12 @@ Each project spec should include:
 
 Individual feature specifications live in `features/`. Each spec is
 self-contained and follows a consistent template.
+
+| #    | Feature                                                      | Project      | Status  |
+| ---- | ------------------------------------------------------------ | ------------ | ------- |
+| F001 | [Cancellation token](features/001-cancellation-token.md)     | Cancellation | Planned |
+| F002 | [Signal handling](features/002-signal-handling.md)           | Cancellation | Planned |
+| F003 | [Command cancellation](features/003-command-cancellation.md) | Cancellation | Planned |
 
 Each feature spec should include:
 
