@@ -28,7 +28,7 @@ mod current_working_directory;
 /// }
 ///
 /// #[command]
-/// pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
+/// pub async fn greet(args: GreetArgs, context: Context, _cancellation: Cancellation) -> CommandResult {
 ///     println!("Hello, {}!", args.name);
 ///     Ok(())
 /// }

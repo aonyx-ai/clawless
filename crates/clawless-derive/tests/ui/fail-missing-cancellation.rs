@@ -5,8 +5,8 @@ pub struct GreetArgs {
     name: String,
 }
 
-#[command(unknown_attr)]
-pub async fn greet(args: GreetArgs, context: Context, _cancellation: Cancellation) -> CommandResult {
+#[command]
+pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
     println!("Hello, {}!", args.name);
     Ok(())
 }

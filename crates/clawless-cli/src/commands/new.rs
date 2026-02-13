@@ -32,7 +32,7 @@ pub struct NewArgs {
 /// clawless new my-app
 /// ```
 #[command(alias = "n")]
-pub async fn new(args: NewArgs, context: Context) -> CommandResult {
+pub async fn new(args: NewArgs, context: Context, _cancellation: Cancellation) -> CommandResult {
     // Call `cargo new` to create a new binary crate
     let crate_path = create_binary_crate(&context, &args.name)?;
 
@@ -158,7 +158,7 @@ fn create_greeting_command(crate_path: &Path) -> Result<(), Error> {
         }
 
         #[command]
-        pub async fn greet(args: GreetArgs) -> CommandResult {
+        pub async fn greet(args: GreetArgs, _context: Context, _cancellation: Cancellation) -> CommandResult {
             // Print the greeting to the console
             println!("Hello, {}!", args.name);
 
@@ -271,6 +271,8 @@ mod tests {
 
         let greet_rs_contents = read_to_string(commands_dir_path.join("greet.rs")).unwrap();
 
-        assert!(greet_rs_contents.contains("pub async fn greet"));
+        assert!(greet_rs_contents.contains(
+            "pub async fn greet(args: GreetArgs, _context: Context, _cancellation: Cancellation)"
+        ));
     }
 }

@@ -173,10 +173,12 @@ name = "clawless"
 version = "0.4.0"
 dependencies = [
  "anyhow",
+ "assert_cmd",
  "clap",
  "clawless-derive",
  "getset",
  "inventory",
+ "libc",
  "tokio",
  "tokio-util",
  "typed-builder",

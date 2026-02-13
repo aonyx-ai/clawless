@@ -19,6 +19,10 @@ pub struct GenerateArgs {}
 /// clawless generate command my-command
 /// ```
 #[command(require_subcommand, alias = "g")]
-pub async fn generate(_args: GenerateArgs, _context: Context) -> CommandResult {
+pub async fn generate(
+    _args: GenerateArgs,
+    _context: Context,
+    _cancellation: Cancellation,
+) -> CommandResult {
     Ok(())
 }

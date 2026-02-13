@@ -16,7 +16,11 @@ pub struct GreetArgs {
 /// This command prints a greeting message to the console using the provided name. If no name is
 /// given, the greeting default to "Hello, World!".
 #[command]
-pub async fn greet(args: GreetArgs, _context: Context) -> CommandResult {
+pub async fn greet(
+    args: GreetArgs,
+    _context: Context,
+    _cancellation: Cancellation,
+) -> CommandResult {
     println!("Hello, {}!", args.name);
     Ok(())
 }

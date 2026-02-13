@@ -1,0 +1,12 @@
+error: command function is missing the `context` and `cancellation` parameters
+
+       = help: command functions must accept `context: Context` as the second parameter and `cancellation: Cancellation` as the third
+
+           #[command]
+           pub async fn my_command(args: MyArgs, context: Context, cancellation: Cancellation) -> CommandResult {
+               ...
+           }
+ --> tests/ui/fail-missing-context-and-cancellation.rs:9:5
+  |
+9 | pub async fn greet(args: GreetArgs) -> CommandResult {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

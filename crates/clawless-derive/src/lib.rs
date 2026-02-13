@@ -34,7 +34,7 @@ pub fn commands(_input: TokenStream) -> TokenStream {
         struct ClawlessEntryPoint {}
 
         #[clawless::command(require_subcommand, root = true)]
-        async fn clawless(_args: ClawlessEntryPoint, _context: clawless::context::Context) -> clawless::CommandResult {
+        async fn clawless(_args: ClawlessEntryPoint, _context: clawless::context::Context, _cancellation: clawless::cancellation::Cancellation) -> clawless::CommandResult {
             Ok(())
         }
     };
@@ -59,11 +59,16 @@ pub fn main(_input: TokenStream) -> TokenStream {
     let output = quote! {
         fn main() -> Result<(), Box<dyn std::error::Error>> {
             let context = clawless::context::Context::try_new()?;
+            let cancellation = clawless::cancellation::Cancellation::new();
 
             let rt = clawless::tokio::runtime::Runtime::new()?;
             rt.block_on(async {
+                clawless::tokio::spawn(
+                    clawless::signal::wait_for_shutdown(cancellation.clone())
+                );
+
                 let app = commands::clawless_init();
-                commands::clawless_exec(app.get_matches(), context.clone()).await
+                commands::clawless_exec(app.get_matches(), context.clone(), cancellation).await
             })?;
 
             Ok(())
@@ -79,9 +84,10 @@ pub fn main(_input: TokenStream) -> TokenStream {
 /// the command, and it will be automatically registered as a subcommand under
 /// its parent module.
 ///
-/// Command functions must accept exactly two parameters:
+/// Command functions must accept exactly three parameters:
 /// 1. An `args` parameter: a `clap::Args` struct with the command's arguments
 /// 2. A `context` parameter: the `Context` providing access to the application environment
+/// 3. A `cancellation` parameter: the `Cancellation` token for cooperative shutdown
 ///
 /// # Attributes
 ///
@@ -111,7 +117,7 @@ pub fn main(_input: TokenStream) -> TokenStream {
 /// }
 ///
 /// #[command]
-/// pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
+/// pub async fn greet(args: GreetArgs, context: Context, _cancellation: Cancellation) -> CommandResult {
 ///     println!("Hello, {}!", args.name);
 ///     Ok(())
 /// }
@@ -127,7 +133,7 @@ pub fn main(_input: TokenStream) -> TokenStream {
 ///
 /// // Users can run `mycli generate` or `mycli g`
 /// #[command(alias = "g")]
-/// pub async fn generate(args: GenerateArgs, context: Context) -> CommandResult {
+/// pub async fn generate(args: GenerateArgs, context: Context, _cancellation: Cancellation) -> CommandResult {
 ///     Ok(())
 /// }
 /// ```
@@ -142,7 +148,7 @@ pub fn main(_input: TokenStream) -> TokenStream {
 ///
 /// // Running `mycli db` shows help; users must specify a subcommand like `mycli db migrate`
 /// #[command(require_subcommand, alias = "d")]
-/// pub async fn db(args: DbArgs, context: Context) -> CommandResult {
+/// pub async fn db(args: DbArgs, context: Context, _cancellation: Cancellation) -> CommandResult {
 ///     Ok(())
 /// }
 /// ```
