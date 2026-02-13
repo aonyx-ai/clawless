@@ -19,9 +19,9 @@ fn sigint_triggers_graceful_cancellation() {
 
     unsafe { libc::kill(child.id() as libc::pid_t, libc::SIGINT) };
 
+    let status = child.wait().unwrap();
+
     let line = lines.next().unwrap().unwrap();
     assert_eq!(line, "cancelled");
-
-    let status = child.wait().unwrap();
     assert!(status.success());
 }
