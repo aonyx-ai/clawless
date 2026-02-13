@@ -28,6 +28,12 @@ The Context system provides commands with access to framework features. Explore
 how Context gives you environment information today and will provide access to
 configuration, output abstractions, and more in the future.
 
+### [Cancellation](./cancellation)
+
+Cooperative shutdown through cancellation tokens. Learn how Clawless handles
+Ctrl+C signals, how commands observe cancellation to shut down gracefully, and
+how parent-child tokens enable scoped cancellation.
+
 ### [Macros](./macros)
 
 Clawless uses three macros to wire up your CLI. Understand how `main!`,
@@ -82,10 +88,11 @@ If you're new to Clawless:
 1. Start with **[Commands](./commands)** and **[Arguments](./arguments)** to
    understand the basics
 2. Learn about **[Context](./context)** to access framework features
-3. Explore **[Project Structure](./project-structure)** to understand how to
+3. Read **[Cancellation](./cancellation)** to understand cooperative shutdown
+4. Explore **[Project Structure](./project-structure)** to understand how to
    organize your CLI
-4. Read **[Macros](./macros)** if you're curious about implementation details
-5. Reference **[Naming Conventions](./naming-conventions)** when you need to
+5. Read **[Macros](./macros)** if you're curious about implementation details
+6. Reference **[Naming Conventions](./naming-conventions)** when you need to
    look up specific rules
 
 For experienced developers, the **[Macros](./macros)** section provides insight
