@@ -21,3 +21,6 @@ tokio = { workspace = true }
 tokio-util = { workspace = true }
 typed-builder = { workspace = true }
 typed-fields = { workspace = true }
+
+[dev-dependencies]
+trybuild = { workspace = true }

@@ -188,6 +188,7 @@ dependencies = [
  "inventory",
  "tokio",
  "tokio-util",
+ "trybuild",
  "typed-builder",
  "typed-fields",
 ]
@@ -211,13 +212,11 @@ dependencies = [
 name = "clawless-derive"
 version = "0.5.0"
 dependencies = [
- "clawless",
  "darling",
  "indoc",
  "proc-macro2",
  "quote",
  "syn",
- "trybuild",
 ]
 
 [[package]]
