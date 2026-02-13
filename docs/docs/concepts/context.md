@@ -9,18 +9,19 @@ to framework features and environment information. It's how Clawless delivers
 batteries-included functionality to your commands without requiring manual
 setup.
 
-:::warning[Work in Progress]
-The Context system is still evolving. Currently, it only provides access to the
-working directory. Many of the features described below (configuration, output
-abstraction, structured logging) are planned but not yet implemented. See
-the [Future features](#future-features) section for what's coming.
+:::info[Growing incrementally]
+The Context system is evolving. Currently, it provides access to the working
+directory and [cancellation](./cancellation). Features described in the
+[Future features](#future-features) section (configuration, output abstraction,
+structured logging) are planned but not yet implemented.
 :::
 
 ## What is Context?
 
 Context is a struct passed to every command that provides:
 
-- **Currently available:** Environment information (working directory)
+- **Currently available:** Environment information (working directory),
+  [cancellation](./cancellation) for cooperative shutdown
 - **Coming soon:** Configuration, output abstraction, structured logging, and
   more
 
@@ -83,6 +84,30 @@ type, which is a wrapper around `PathBuf` with the same API. You can:
 command changes directories (e.g., with `std::env::set_current_dir()`), the
 context value won't update. This is by design to provide a stable reference
 point.
+
+### Cancellation
+
+Access the cooperative shutdown token to respond to Ctrl+C gracefully:
+
+```rust
+use clawless::prelude::*;
+
+#[command]
+pub async fn serve(_args: ServeArgs, context: Context) -> CommandResult {
+    println!("server started");
+
+    context.cancellation().cancelled().await;
+
+    println!("shutting down");
+    Ok(())
+}
+```
+
+The `cancellation()` method returns a [`Cancellation`][cancellation-type] token.
+You can await it, poll it synchronously, or create child tokens for scoped
+work. See [Cancellation](./cancellation) for the full explanation.
+
+[cancellation-type]: https://docs.rs/clawless/latest/clawless/cancellation/struct.Cancellation.html
 
 ## Future features
 
@@ -208,6 +233,8 @@ execution:
 
 Now that you understand Context, learn about:
 
+- **[Cancellation](./cancellation)** - How cooperative shutdown works through
+  the cancellation token
 - **[Commands](./commands)** - How Context integrates with command functions
 - **[Arguments](./arguments)** - The other parameter commands receive
 - **[Project Structure](./project-structure)** - Organizing commands in your

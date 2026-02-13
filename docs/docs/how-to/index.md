@@ -38,6 +38,13 @@ business logic.
 Write snapshot tests for your CLI using trycmd, with test cases defined as
 simple TOML files.
 
+## Runtime behavior
+
+### [Handle cancellation](./handle-cancellation)
+
+Respond to Ctrl+C gracefully using cancellation tokens, with patterns for async
+waiting, loop polling, `tokio::select!`, and scoped child tokens.
+
 ## About How-To Guides
 
 These guides are task-oriented and assume you already understand Clawless
