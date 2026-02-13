@@ -132,7 +132,7 @@ pub struct GreetArgs {
 
 /// Greet someone by name
 #[command(alias = "g")]
-pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
+pub async fn greet(args: GreetArgs, context: Context, _cancellation: Cancellation) -> CommandResult {
     println!("Hello, {}!", args.name);
     Ok(())
 }
@@ -542,7 +542,7 @@ mod tests {
 ```rust
 // DO: Extract testable logic
 #[command]
-pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
+pub async fn greet(args: GreetArgs, context: Context, _cancellation: Cancellation) -> CommandResult {
     execute(&args)
 }
 

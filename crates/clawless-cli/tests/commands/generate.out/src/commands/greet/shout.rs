@@ -6,7 +6,7 @@ pub struct ShoutArgs {
 }
 
 #[command]
-pub async fn shout(args: ShoutArgs, context: Context) -> CommandResult {
+pub async fn shout(args: ShoutArgs, _context: Context, _cancellation: Cancellation) -> CommandResult {
     // Command implementation goes here
     Ok(())
 }
