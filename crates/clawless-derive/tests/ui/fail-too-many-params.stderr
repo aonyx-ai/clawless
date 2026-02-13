@@ -1,12 +1,12 @@
 error: command function has too many parameters
 
-       = help: command functions must accept exactly three parameters: an arguments struct, context, and cancellation
+       = help: command functions must accept exactly two parameters: an arguments struct and context
 
            #[command]
-           pub async fn my_command(args: MyArgs, context: Context, cancellation: Cancellation) -> CommandResult {
+           pub async fn my_command(args: MyArgs, context: Context) -> CommandResult {
                ...
            }
  --> tests/ui/fail-too-many-params.rs:9:5
   |
-9 | pub async fn greet(args: GreetArgs, context: Context, cancellation: Cancellation, extra: String) -> CommandResult {
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+9 | pub async fn greet(args: GreetArgs, context: Context, extra: String) -> CommandResult {
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
