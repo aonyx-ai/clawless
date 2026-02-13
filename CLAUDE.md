@@ -142,6 +142,8 @@ pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
 - Module paths map to subcommands: `commands/generate/command.rs` →
   `<cli> generate command`.
 - Use `.context("description")?` from `anyhow::Context` for error context.
+- Doc examples and scaffolding templates use `context: Context` (no underscore
+  prefix), even when the example body doesn't reference `context`.
 
 ### Architecture
 
@@ -711,6 +713,9 @@ We write commit messages inspired by [tbaggery][tbaggery]:
 - **Bisect-able history**: Every commit must build and pass all checks.
 - **Separate concerns**: Format fixes and refactoring should be in separate
   commits from feature changes.
+- **Diff against the baseline when reversing or modifying a prior commit**: use
+  `git diff <commit>~1` (against the working tree) to verify you haven't
+  introduced unintentional changes relative to the pre-commit state.
 
 ### Pull requests
 
