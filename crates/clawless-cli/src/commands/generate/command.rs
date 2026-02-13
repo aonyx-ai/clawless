@@ -39,11 +39,7 @@ pub struct GenerateCommandArgs {
 /// clawless generate command db/migrate
 /// ```
 #[command(alias = "c")]
-pub async fn command(
-    args: GenerateCommandArgs,
-    context: Context,
-    _cancellation: Cancellation,
-) -> CommandResult {
+pub async fn command(args: GenerateCommandArgs, context: Context) -> CommandResult {
     // Check is command is running inside a Clawless project
     let project = find_clawless_project(context.current_working_directory())?;
 
@@ -141,7 +137,7 @@ fn create_command_file(project_path: &Path, command_name: &CommandName) -> Resul
             }}
 
             #[command]
-            pub async fn {}(args: {}Args, _context: Context, _cancellation: Cancellation) -> CommandResult {{
+            pub async fn {}(args: {}Args, context: Context) -> CommandResult {{
                 // Command implementation goes here
                 Ok(())
             }}
@@ -337,7 +333,7 @@ mod tests {
         let content = read_to_string(command_file_path).unwrap();
 
         assert!(content.contains("pub struct CommandArgs"));
-        assert!(content.contains("pub async fn command(args: CommandArgs, _context: Context, _cancellation: Cancellation)"));
+        assert!(content.contains("pub async fn command(args: CommandArgs, context: Context)"));
     }
 
     #[test]

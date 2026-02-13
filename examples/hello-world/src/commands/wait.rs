@@ -10,9 +10,9 @@ pub struct WaitArgs {}
 /// and exits. It serves as a reference for how commands observe the cancellation token for
 /// cooperative shutdown.
 #[command]
-pub async fn wait(_args: WaitArgs, _context: Context, cancellation: Cancellation) -> CommandResult {
+pub async fn wait(_args: WaitArgs, context: Context) -> CommandResult {
     println!("waiting");
-    cancellation.cancelled().await;
+    context.cancellation().cancelled().await;
     println!("cancelled");
     Ok(())
 }

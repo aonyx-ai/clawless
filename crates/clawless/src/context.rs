@@ -12,6 +12,7 @@ use getset::Getters;
 use typed_builder::TypedBuilder;
 
 pub use self::current_working_directory::CurrentWorkingDirectory;
+use crate::cancellation::Cancellation;
 
 mod current_working_directory;
 
@@ -28,29 +29,41 @@ mod current_working_directory;
 /// }
 ///
 /// #[command]
-/// pub async fn greet(args: GreetArgs, context: Context, _cancellation: Cancellation) -> CommandResult {
+/// pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
 ///     println!("Hello, {}!", args.name);
 ///     Ok(())
 /// }
 /// ```
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Getters, TypedBuilder)]
+#[derive(Clone, Debug, Getters, TypedBuilder)]
 pub struct Context {
     /// The working directory in which a command was called
     #[builder(setter(into))]
     #[getset(get = "pub")]
     current_working_directory: CurrentWorkingDirectory,
+
+    /// The cancellation token for cooperative shutdown
+    #[builder(default)]
+    #[getset(get = "pub")]
+    cancellation: Cancellation,
 }
 
 impl Context {
     /// Create a new `Context` instance
     ///
     /// This function initializes a new `Context` with default settings. Since some parts of the
-    /// context might fail to initialize, this function returns a `Result`.
-    pub fn try_new() -> Result<Self> {
+    /// context might fail to initialize, this function returns a [`Result`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the current working directory cannot be determined.
+    ///
+    /// [`Result`]: anyhow::Result
+    pub fn try_new(cancellation: Cancellation) -> Result<Self> {
         let current_working_directory = CurrentWorkingDirectory::try_from_env()?;
 
         Ok(Self {
             current_working_directory,
+            cancellation,
         })
     }
 }

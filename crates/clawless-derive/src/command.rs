@@ -85,10 +85,10 @@ impl CommandGenerator {
         let inventory_name = inventory_name();
 
         quote! {
-            pub async fn #wrapper_function_name(args: clawless::clap::ArgMatches, context: clawless::context::Context, cancellation: clawless::cancellation::Cancellation) -> clawless::CommandResult {
+            pub async fn #wrapper_function_name(args: clawless::clap::ArgMatches, context: clawless::context::Context) -> clawless::CommandResult {
                 for subcommand in clawless::inventory::iter::<#inventory_name> {
                     if let Some(matches) = args.subcommand_matches(subcommand.name) {
-                        return (subcommand.func)(matches.clone(), context, cancellation.clone()).await;
+                        return (subcommand.func)(matches.clone(), context).await;
                     }
                 }
 
@@ -145,7 +145,7 @@ impl CommandGenerator {
         quote! {
             use clawless::clap::FromArgMatches;
             let args = #args_type::from_arg_matches(&args).unwrap();
-            #command(args, context, cancellation).await
+            #command(args, context).await
         }
     }
 }
@@ -185,7 +185,6 @@ fn extract_function_argument_type(input_fn: &ItemFn) -> Result<Box<Type>> {
 
     let args = function_arguments.next();
     let context = function_arguments.next();
-    let cancellation = function_arguments.next();
 
     let extra = function_arguments.next();
 
@@ -193,46 +192,37 @@ fn extract_function_argument_type(input_fn: &ItemFn) -> Result<Box<Type>> {
         return Err(Error::new_spanned(
             &input_fn.sig,
             "command function has too many parameters\n\n\
-             = help: command functions must accept exactly three parameters: an arguments struct, context, and cancellation\n\n    \
+             = help: command functions must accept exactly two parameters: an arguments struct and context\n\n    \
              #[command]\n    \
-             pub async fn my_command(args: MyArgs, context: Context, cancellation: Cancellation) -> CommandResult {\n        \
+             pub async fn my_command(args: MyArgs, context: Context) -> CommandResult {\n        \
              ...\n    \
              }",
         ));
     }
 
-    match (args, context, cancellation) {
-        (Some(args_type), Some(_), Some(_)) => Ok(args_type),
-        (None, None, None) => Err(Error::new_spanned(
+    match (args, context) {
+        (Some(args_type), Some(_)) => Ok(args_type),
+        (None, None) => Err(Error::new_spanned(
             &input_fn.sig,
             "command function is missing required parameters\n\n\
-             = help: command functions must accept three parameters: an arguments struct, context, and cancellation\n\n    \
+             = help: command functions must accept two parameters: an arguments struct and context\n\n    \
              #[derive(Debug, Args)]\n    \
              pub struct MyArgs {}\n\n    \
              #[command]\n    \
-             pub async fn my_command(args: MyArgs, context: Context, cancellation: Cancellation) -> CommandResult {\n        \
+             pub async fn my_command(args: MyArgs, context: Context) -> CommandResult {\n        \
              ...\n    \
              }",
         )),
-        (Some(_), None, None) => Err(Error::new_spanned(
+        (Some(_), None) => Err(Error::new_spanned(
             &input_fn.sig,
-            "command function is missing the `context` and `cancellation` parameters\n\n\
-             = help: command functions must accept `context: Context` as the second parameter and `cancellation: Cancellation` as the third\n\n    \
+            "command function is missing the `context` parameter\n\n\
+             = help: command functions must accept `context: Context` as the second parameter\n\n    \
              #[command]\n    \
-             pub async fn my_command(args: MyArgs, context: Context, cancellation: Cancellation) -> CommandResult {\n        \
+             pub async fn my_command(args: MyArgs, context: Context) -> CommandResult {\n        \
              ...\n    \
              }",
         )),
-        (Some(_), Some(_), None) => Err(Error::new_spanned(
-            &input_fn.sig,
-            "command function is missing the `cancellation` parameter\n\n\
-             = help: command functions must accept `cancellation: Cancellation` as the third parameter\n\n    \
-             #[command]\n    \
-             pub async fn my_command(args: MyArgs, context: Context, cancellation: Cancellation) -> CommandResult {\n        \
-             ...\n    \
-             }",
-        )),
-        (None, Some(_), _) | (None, None, Some(_)) | (Some(_), None, Some(_)) => {
+        (None, Some(_)) => {
             unreachable!("sequential Iterator::next() cannot skip elements")
         }
     }
@@ -274,7 +264,7 @@ mod tests {
 
     fn generator_with_args() -> CommandGenerator {
         let input = quote! {
-            fn foo(args: Args, context: Context, cancellation: Cancellation) {}
+            fn foo(args: Args, context: Context) {}
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
@@ -288,7 +278,7 @@ mod tests {
         };
 
         let input = quote! {
-            fn foo(args: Args, context: Context, cancellation: Cancellation) {}
+            fn foo(args: Args, context: Context) {}
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
@@ -302,7 +292,7 @@ mod tests {
         };
 
         let input = quote! {
-            fn foo(args: Args, context: Context, cancellation: Cancellation) {}
+            fn foo(args: Args, context: Context) {}
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
@@ -316,7 +306,7 @@ mod tests {
         };
 
         let input = quote! {
-            fn foo(args: Args, context: Context, cancellation: Cancellation) {}
+            fn foo(args: Args, context: Context) {}
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
@@ -330,7 +320,7 @@ mod tests {
         };
 
         let input = quote! {
-            fn foo(args: Args, context: Context, cancellation: Cancellation) {}
+            fn foo(args: Args, context: Context) {}
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
@@ -349,33 +339,13 @@ mod tests {
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(
-            err.to_string()
-                .contains("missing the `context` and `cancellation` parameters")
-        );
+        assert!(err.to_string().contains("missing the `context` parameter"));
     }
 
     #[test]
-    fn command_generator_new_with_two_params_returns_error() {
+    fn command_generator_new_with_three_params_returns_error() {
         let input = quote! {
-            fn foo(args: Args, context: Context) {}
-        };
-
-        let input_function = syn::parse2::<ItemFn>(input).unwrap();
-        let result = CommandGenerator::new(TokenStream::new(), input_function);
-
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(
-            err.to_string()
-                .contains("missing the `cancellation` parameter")
-        );
-    }
-
-    #[test]
-    fn command_generator_new_with_four_params_returns_error() {
-        let input = quote! {
-            fn foo(args: Args, context: Context, cancellation: Cancellation, extra: Extra) {}
+            fn foo(args: Args, context: Context, extra: Extra) {}
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
@@ -389,7 +359,7 @@ mod tests {
     #[test]
     fn extract_function_argument_type_with_all_params() {
         let input = quote! {
-            fn foo(args: Args, context: Context, cancellation: Cancellation) {}
+            fn foo(args: Args, context: Context) {}
         };
 
         let input_fn = syn::parse2(input).unwrap();
@@ -409,33 +379,13 @@ mod tests {
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(
-            err.to_string()
-                .contains("missing the `context` and `cancellation` parameters")
-        );
+        assert!(err.to_string().contains("missing the `context` parameter"));
     }
 
     #[test]
-    fn extract_function_argument_type_with_two_params_returns_error() {
+    fn extract_function_argument_type_with_three_params_returns_error() {
         let input = quote! {
-            fn foo(args: Args, context: Context) {}
-        };
-
-        let input_fn = syn::parse2(input).unwrap();
-        let result = extract_function_argument_type(&input_fn);
-
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(
-            err.to_string()
-                .contains("missing the `cancellation` parameter")
-        );
-    }
-
-    #[test]
-    fn extract_function_argument_type_with_four_params_returns_error() {
-        let input = quote! {
-            fn foo(args: Args, context: Context, cancellation: Cancellation, extra: Extra) {}
+            fn foo(args: Args, context: Context, extra: Extra) {}
         };
 
         let input_fn = syn::parse2(input).unwrap();
@@ -536,7 +486,7 @@ mod tests {
         let expected = quote! {
             use clawless::clap::FromArgMatches;
             let args = Args::from_arg_matches(&args).unwrap();
-            foo(args, context, cancellation).await
+            foo(args, context).await
         };
 
         assert_eq!(actual.to_string(), expected.to_string());

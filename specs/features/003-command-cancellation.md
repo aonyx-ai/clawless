@@ -8,11 +8,10 @@
 
 ## Summary
 
-Integrate [Cancellation] into the command lifecycle by changing the command
-signature from `(Args, Context)` to `(Args, Context, Cancellation)`.
-The `main!()` macro creates a root token, spawns the signal handler, and passes
-the token through to every command. This is the feature that makes cancellation
-usable by application authors.
+Integrate [Cancellation] into the command lifecycle by embedding it in
+[Context]. The `main!()` macro creates a root token, spawns the signal
+handler, and passes the token through `Context` to every command. This is the
+feature that makes cancellation usable by application authors.
 
 ## Motivation
 
@@ -23,105 +22,102 @@ signal handlers, and thread the token through their command dispatch. That is
 exactly the boilerplate the framework should eliminate.
 
 After this feature, every `#[command]` function automatically receives a
-`Cancellation` token that is already wired to OS signals. Commands can
-immediately use it for cooperative shutdown with zero setup.
+`Context` that carries a `Cancellation` token already wired to OS signals.
+Commands can immediately use it for cooperative shutdown with zero setup.
 
 ## Domain concepts
 
-### Cancellation as a third parameter
+### Cancellation embedded in Context
 
-The [architecture] defines [Context] as "read-only environment description: CWD,
-config, env vars, services, terminal capabilities." Cancellation is operational,
-not environmental. It represents an active shutdown signal, not a description of
-the execution environment.
+Originally (see "alternatives considered"), cancellation was a separate third
+parameter. In practice, this forced every command to declare
+`_cancellation: Cancellation` even when unused. Embedding `Cancellation` in
+`Context` simplifies the command API to two parameters (`args, context`) while
+keeping cancellation fully accessible via `context.cancellation()`.
 
-Making `Cancellation` a third parameter rather than embedding it in `Context`
-keeps each concept focused:
+This means `Context` is no longer purely "read-only environment description" in
+the strictest sense: it now also carries the cancellation signal. However,
+`Context` already serves as the single runtime-provided value that commands
+receive, so housing the cancellation token there is the pragmatic choice that
+minimizes API surface and boilerplate.
 
-- **Context**: what the world looks like (read-only, immutable).
-- **Cancellation**: whether to stop working (mutable signal, may be triggered at
-  any time).
-
-This separation also avoids making `Context` non-`Eq` (since `Cancellation` does
-not implement `Eq`).
+As a consequence, `Context` loses `Eq`, `PartialEq`, `Ord`, `PartialOrd`, and
+`Hash` derives because `CancellationToken` does not implement them. No existing
+code depends on `Context` equality.
 
 ## Design rationale
 
-### Breaking signature change
+### Two-parameter command signature
 
-Changing the command signature from two parameters to three is a breaking
-change. Every existing `#[command]` function must be updated. This is acceptable
-because:
-
-- Clawless is pre-1.0. Breaking changes are expected and documented.
-- The change is mechanical: add `_cancellation: Cancellation` (or
-  `cancellation: Cancellation` if the command uses it) to every command
-  function.
-- The compiler catches every missed update at build time; there is no risk of
-  silent breakage.
+Commands accept `(args, context)`. Cancellation is accessed via
+`context.cancellation()`. This keeps the command signature clean and avoids
+forcing every command to declare an unused parameter.
 
 ### Alternatives considered
 
-| Alternative                       | Why rejected                                                   |
-| --------------------------------- | -------------------------------------------------------------- |
-| Embed in `Context`                | Context is read-only environment; cancellation is operational. |
-|                                   | Would make `Context` non-`Eq`.                                 |
-| Trait-based injection             | Over-engineered for a single value; adds indirection without   |
-|                                   | clear benefit.                                                 |
-| Optional parameter (detect arity) | Macro complexity increases significantly; implicit behavior    |
-|                                   | is harder to understand than explicit parameters.              |
-| Global / thread-local             | Violates explicit dependency passing; untestable.              |
+| Alternative                       | Why rejected                                                  |
+| --------------------------------- | ------------------------------------------------------------- |
+| Third parameter                   | Forces `_cancellation: Cancellation` boilerplate on every     |
+|                                   | command, even those that never use it. Originally implemented |
+|                                   | but reversed in favor of embedding in Context.                |
+| Trait-based injection             | Over-engineered for a single value; adds indirection without  |
+|                                   | clear benefit.                                                |
+| Optional parameter (detect arity) | Macro complexity increases significantly; implicit behavior   |
+|                                   | is harder to understand than explicit parameters.             |
+| Global / thread-local             | Violates explicit dependency passing; untestable.             |
 
 ### Root token ownership
 
 The `main!()` macro creates the root `Cancellation` token. This
 matches the [architecture]: "The Application owns the root token." Since the
 Application is currently implicit (represented by `main!()`), the root token is
-created in the generated `main` function.
+created in the generated `main` function and passed to `Context::try_new()`.
 
 ## Functional requirements
 
-1. The `#[command]` macro accepts functions with exactly three parameters:
-   args struct, `Context`, and `Cancellation`.
-2. The `commands!()` macro generates a root command that accepts `Cancellation`.
+1. The `#[command]` macro accepts functions with exactly two parameters:
+   args struct and `Context`.
+2. The `commands!()` macro generates a root command that accepts `Context`.
 3. The `main!()` macro:
    a. Creates a root `Cancellation` token.
-   b. Spawns `clawless::signal::wait_for_shutdown` as a background task with a
-   clone of the root token.
-   c. Passes the root token to `commands::clawless_exec`.
+   b. Passes the token to `Context::try_new(cancellation.clone())`.
+   c. Spawns `clawless::signal::wait_for_shutdown` as a background task with
+   the root token.
+   d. Passes `context` to `commands::clawless_exec`.
 4. The `ClawlessSubcommands` inventory struct's function pointer includes
-   `Cancellation` in its signature.
+   `Context` (which carries `Cancellation`) in its signature.
 5. All existing commands continue to compile and function correctly after
    updating their signatures.
 
 ## Non-functional requirements
 
 1. **Compile-time validation**: the `#[command]` macro rejects functions that do
-   not have exactly three parameters, with a clear error message.
+   not have exactly two parameters, with a clear error message.
 2. **Zero overhead for commands that ignore cancellation**: a command that
-   accepts `_cancellation: Cancellation` but never uses it incurs no runtime
-   cost beyond cloning the token (which is a reference count increment).
+   never calls `context.cancellation()` incurs no runtime cost beyond the
+   token being present in `Context` (which is a reference count increment on
+   clone).
 
 ## API surface
 
-### Command signature (changed)
+### Command signature
 
 ```rust
-// Before
 #[command]
 pub async fn greet(args: GreetArgs, _context: Context) -> CommandResult {
     println!("Hello, {}!", args.name);
     Ok(())
 }
+```
 
-// After
+### Accessing cancellation
+
+```rust
 #[command]
-pub async fn greet(
-    args: GreetArgs,
-    _context: Context,
-    _cancellation: Cancellation,
-) -> CommandResult {
-    println!("Hello, {}!", args.name);
+pub async fn wait(_args: WaitArgs, context: Context) -> CommandResult {
+    println!("waiting");
+    context.cancellation().cancelled().await;
+    println!("cancelled");
     Ok(())
 }
 ```
@@ -130,32 +126,31 @@ pub async fn greet(
 
 #### `#[command]`
 
-- Validates three parameters (was two).
-- Generated dispatch function passes `Cancellation` to the command body.
+- Validates two parameters (args struct and context).
+- Generated dispatch function passes `Context` to the command body.
 
 #### `commands!()`
 
-- Generated root command function accepts `Cancellation`.
+- Generated root command function accepts `Context`.
 
 #### `main!()`
 
 ```rust
 // Generated code (conceptual)
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let context = clawless::context::Context::try_new()?;
     let cancellation = clawless::cancellation::Cancellation::new();
+    let context = clawless::context::Context::try_new(cancellation.clone())?;
 
     let rt = clawless::tokio::runtime::Runtime::new()?;
     rt.block_on(async {
         clawless::tokio::spawn(
-            clawless::signal::wait_for_shutdown(cancellation.clone())
+            clawless::signal::wait_for_shutdown(cancellation)
         );
 
         let app = commands::clawless_init();
         commands::clawless_exec(
             app.get_matches(),
-            context.clone(),
-            cancellation,
+            context,
         ).await
     })?;
 
@@ -166,24 +161,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #### `ClawlessSubcommands`
 
 ```rust
-// Before
 struct ClawlessSubcommands {
     name: &'static str,
     init: fn() -> clawless::clap::Command,
     func: fn(
         clawless::clap::ArgMatches,
         clawless::context::Context,
-    ) -> Pin<Box<dyn Future<Output=clawless::CommandResult>>>,
-}
-
-// After
-struct ClawlessSubcommands {
-    name: &'static str,
-    init: fn() -> clawless::clap::Command,
-    func: fn(
-        clawless::clap::ArgMatches,
-        clawless::context::Context,
-        clawless::cancellation::Cancellation,
     ) -> Pin<Box<dyn Future<Output=clawless::CommandResult>>>,
 }
 ```
@@ -192,43 +175,45 @@ struct ClawlessSubcommands {
 
 ### Modified files
 
-| File                                                   | Change                                                |
-| ------------------------------------------------------ | ----------------------------------------------------- |
-| `crates/clawless-derive/src/lib.rs`                    | Update `commands!()` and `main!()` macro output       |
-| `crates/clawless-derive/src/command.rs`                | Validate 3 params; update generated dispatch          |
-| `crates/clawless-derive/src/inventory.rs`              | Add `Cancellation` to `ClawlessSubcommands` signature |
-| `examples/hello-world/src/commands/greet.rs`           | Add `Cancellation` parameter                          |
-| `crates/clawless-cli/src/commands/new.rs`              | Add `Cancellation` parameter                          |
-| `crates/clawless-cli/src/commands/generate.rs`         | Add `Cancellation` parameter                          |
-| `crates/clawless-cli/src/commands/generate/command.rs` | Add `Cancellation` parameter                          |
+| File                                                   | Change                                        |
+| ------------------------------------------------------ | --------------------------------------------- |
+| `crates/clawless/src/context.rs`                       | Add `Cancellation` field, update `try_new()`  |
+| `crates/clawless-derive/src/lib.rs`                    | Update `commands!()` and `main!()` output     |
+| `crates/clawless-derive/src/command.rs`                | Validate 2 params; update generated dispatch  |
+| `crates/clawless-derive/src/inventory.rs`              | Remove `Cancellation` from function signature |
+| `examples/hello-world/src/commands/greet.rs`           | Remove `Cancellation` parameter               |
+| `examples/hello-world/src/commands/wait.rs`            | Access cancellation via `context`             |
+| `crates/clawless-cli/src/commands/new.rs`              | Remove `Cancellation` parameter               |
+| `crates/clawless-cli/src/commands/generate.rs`         | Remove `Cancellation` parameter               |
+| `crates/clawless-cli/src/commands/generate/command.rs` | Remove `Cancellation` parameter               |
 
 ### Test and fixture updates
 
-All test fixtures that exercise command signatures must be updated:
+All test fixtures that exercise command signatures were updated:
 
-- **trycmd fixtures** (`crates/clawless-cli/tests/`): update expected output if
-  command help text changes.
-- **trybuild expectations** (`crates/clawless-derive/tests/`): update
-  compile-fail tests that validate parameter count errors; update compile-pass
-  tests to use three parameters.
+- **trycmd fixtures** (`crates/clawless-cli/tests/`): updated to 2-param
+  signatures.
+- **trybuild expectations** (`crates/clawless-derive/tests/`): updated
+  compile-fail tests for 2-param validation; removed the now-passing
+  `fail-missing-cancellation` test; renamed
+  `fail-missing-context-and-cancellation` to `fail-missing-context`.
 - **Scaffolding templates**: the `new` and `generate command` commands contain
-  inline template strings that emit source code for new commands. These
-  templates
-  must generate three-parameter signatures. The affected template strings are in
-  `crates/clawless-cli/src/commands/new.rs` and
-  `crates/clawless-cli/src/commands/generate/command.rs` (already listed in the
-  modified files table above).
+  inline template strings that emit source code for new commands, updated to
+  generate two-parameter signatures.
 
 ## Edge cases
 
 | Case                                     | Expected behavior                                       |
 | ---------------------------------------- | ------------------------------------------------------- |
 | Command with wrong parameter count       | `#[command]` macro emits a clear compile error          |
-| Container command (`require_subcommand`) | Receives and forwards `Cancellation` to child commands  |
-| Nested subcommands                       | Each level passes the same `Cancellation` token through |
-| Command creates child token              | Works via `cancellation.child()`; parent is unaffected  |
+| Container command (`require_subcommand`) | Receives and forwards `Context` to child commands       |
+| Nested subcommands                       | Each level passes the same `Context` (and thus the same |
+|                                          | `Cancellation` token) through                           |
+| Command creates child token              | Works via `context.cancellation().child()`; parent is   |
+|                                          | unaffected                                              |
 | Signal arrives before command starts     | Token is already cancelled when command receives it;    |
-|                                          | command can check `cancellation.is_cancelled()` upfront |
+|                                          | command can check                                       |
+|                                          | `context.cancellation().is_cancelled()` upfront         |
 
 ## Out of scope
 
