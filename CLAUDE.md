@@ -107,11 +107,15 @@ crates/
   ├── clawless-derive/       # Procedural macros
   └── clawless-cli/          # CLI scaffolding tool
 examples/
+  ├── cancellation/          # Cooperative cancellation example
   └── hello-world/           # Reference example project
 docs/                        # Docusaurus documentation site
 specs/                       # Design specifications
   └── architecture.md        # Domain model and ubiquitous language
 ```
+
+Each example should demonstrate a single concept. Prefer creating a new example
+over adding unrelated commands to an existing one.
 
 ### Conventions
 

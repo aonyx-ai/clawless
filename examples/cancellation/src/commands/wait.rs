@@ -7,8 +7,14 @@ pub struct WaitArgs {}
 /// Wait for cancellation
 ///
 /// This command blocks until a cancellation signal is received, then prints a confirmation message
-/// and exits. It serves as a reference for how commands observe the cancellation token for
+/// and exits gracefully. It demonstrates how commands observe the cancellation token for
 /// cooperative shutdown.
+///
+/// Run this command and press Ctrl+C to trigger cancellation:
+///
+/// ```shell
+/// cancellation wait
+/// ```
 #[command]
 pub async fn wait(_args: WaitArgs, context: Context) -> CommandResult {
     println!("waiting");
