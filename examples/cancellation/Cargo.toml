@@ -1,0 +1,20 @@
+[package]
+name = "cancellation"
+description = "Demonstrates cooperative cancellation in clawless"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+# We do not want to publish examples to crates.io, since they provide no value
+# or functionality on their own.
+publish = false
+
+[dependencies]
+clawless = { workspace = true }
+
+[dev-dependencies]
+assert_cmd = { workspace = true }
+libc = { workspace = true }

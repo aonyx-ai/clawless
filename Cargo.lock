@@ -123,6 +123,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
 
 [[package]]
+name = "cancellation"
+version = "0.4.0"
+dependencies = [
+ "assert_cmd",
+ "clawless",
+ "libc",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -173,12 +182,10 @@ name = "clawless"
 version = "0.4.0"
 dependencies = [
  "anyhow",
- "assert_cmd",
  "clap",
  "clawless-derive",
  "getset",
  "inventory",
- "libc",
  "tokio",
  "tokio-util",
  "typed-builder",
