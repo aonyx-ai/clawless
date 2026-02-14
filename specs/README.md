@@ -75,6 +75,8 @@ Each feature spec should include:
 - **Consistent terminology** - Use terms from
   the [architecture](architecture.md)
 - **Small increments** - Prefer small, deliverable features over large chunks
+- **Specs are historical records** - Once a feature ships, its spec is frozen.
+  Do not update API references in completed specs when the API changes later.
 
 ### Verification checklist
 
