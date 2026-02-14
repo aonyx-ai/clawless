@@ -97,7 +97,8 @@ The `specs/` directory contains the project's design specifications.
 hexagonal architecture; consult it before introducing new domain concepts or
 modifying architectural boundaries. New features should have a spec before
 implementation begins. See [`specs/README.md`][specs-readme] for templates and
-process.
+process. Specs for already-shipped features are historical records; do not
+update their API references when the API changes in a later PR.
 
 ### Structure
 
