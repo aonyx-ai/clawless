@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
+use bon::Builder;
 use convert_case::{Case, Casing};
 use getset::Getters;
-use typed_builder::TypedBuilder;
 
 const COMMAND_SEPARATOR: &str = "/";
 
@@ -28,15 +28,15 @@ const COMMAND_SEPARATOR: &str = "/";
 ///     .parent_modules(vec!["db".to_string()])
 ///     .build();
 /// ```
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Getters, TypedBuilder)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Builder, Getters)]
 pub struct CommandName {
     /// The name of the command (without parent modules)
-    #[builder(setter(into))]
+    #[builder(into)]
     #[getset(get = "pub")]
     name: String,
 
     /// Parent module hierarchy, ordered from outermost to innermost
-    #[builder(default, setter(into))]
+    #[builder(default, into)]
     #[getset(get = "pub")]
     parent_modules: Vec<String>,
 }

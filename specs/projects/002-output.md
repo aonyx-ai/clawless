@@ -54,10 +54,8 @@ fixtures to use the new output API.
 
 ### Prerequisite
 
-F005 depends on a separate PR (not part of this project) that migrates Context
-from `typed-builder` to `bon`. This simplifies Context construction and sets up
-a cleaner pattern for adding the Output field. The migration must land before
-F005 implementation begins.
+F005 depends on the bon migration (Context uses `bon` for builder construction).
+This prerequisite has been completed.
 
 ## Out of scope
 

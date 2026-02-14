@@ -13,13 +13,13 @@ keywords = ["cli", "framework"]
 
 [dependencies]
 anyhow = { workspace = true }
+bon = { workspace = true }
 clap = { workspace = true }
 clawless-derive = { workspace = true }
 getset = { workspace = true }
 inventory = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
-typed-builder = { workspace = true }
 typed-fields = { workspace = true }
 
 [dev-dependencies]

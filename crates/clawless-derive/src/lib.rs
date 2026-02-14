@@ -59,7 +59,9 @@ pub fn main(_input: TokenStream) -> TokenStream {
     let output = quote! {
         fn main() -> Result<(), Box<dyn std::error::Error>> {
             let cancellation = clawless::cancellation::Cancellation::new();
-            let context = clawless::context::Context::try_new(cancellation.clone())?;
+            let context = clawless::context::Context::builder()
+                .cancellation(cancellation.clone())
+                .build()?;
 
             let rt = clawless::tokio::runtime::Runtime::new()?;
             rt.block_on(async {

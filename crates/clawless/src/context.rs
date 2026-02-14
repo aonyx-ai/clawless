@@ -8,8 +8,8 @@
 //! `Context` struct as well as the types defined in this module.
 
 use anyhow::Result;
+use bon::bon;
 use getset::Getters;
-use typed_builder::TypedBuilder;
 
 pub use self::current_working_directory::CurrentWorkingDirectory;
 use crate::cancellation::Cancellation;
@@ -34,32 +34,49 @@ mod current_working_directory;
 ///     Ok(())
 /// }
 /// ```
-#[derive(Clone, Debug, Getters, TypedBuilder)]
+#[derive(Clone, Debug, Getters)]
 pub struct Context {
     /// The working directory in which a command was called
-    #[builder(setter(into))]
     #[getset(get = "pub")]
     current_working_directory: CurrentWorkingDirectory,
 
     /// The cancellation token for cooperative shutdown
-    #[builder(default)]
     #[getset(get = "pub")]
     cancellation: Cancellation,
 }
 
+#[bon]
 impl Context {
-    /// Create a new `Context` instance
+    /// Creates a new [`Context`] instance
     ///
-    /// This function initializes a new `Context` with default settings. Since some parts of the
-    /// context might fail to initialize, this function returns a [`Result`].
+    /// When `current_working_directory` is omitted, it is auto-detected from the environment.
+    /// When provided explicitly (e.g., in tests), the given value is used directly.
     ///
     /// # Errors
     ///
-    /// Returns an error if the current working directory cannot be determined.
+    /// Returns an error if `current_working_directory` is not provided and the current working
+    /// directory cannot be determined from the environment.
     ///
-    /// [`Result`]: anyhow::Result
-    pub fn try_new(cancellation: Cancellation) -> Result<Self> {
-        let current_working_directory = CurrentWorkingDirectory::try_from_env()?;
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// // Production: CWD auto-detected
+    /// let context = Context::builder().build()?;
+    ///
+    /// // Tests: explicit CWD
+    /// let context = Context::builder()
+    ///     .current_working_directory(tmp.path())
+    ///     .build()?;
+    /// ```
+    #[builder]
+    pub fn new(
+        #[builder(into)] current_working_directory: Option<CurrentWorkingDirectory>,
+        #[builder(default)] cancellation: Cancellation,
+    ) -> Result<Self> {
+        let current_working_directory = match current_working_directory {
+            Some(cwd) => cwd,
+            None => CurrentWorkingDirectory::try_from_env()?,
+        };
 
         Ok(Self {
             current_working_directory,
@@ -70,7 +87,52 @@ impl Context {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
+
+    #[test]
+    fn new_with_cancellation_uses_provided_token() {
+        let cancellation = Cancellation::new();
+        cancellation.cancel();
+
+        let context = Context::builder()
+            .current_working_directory(Path::new("/tmp"))
+            .cancellation(cancellation)
+            .build()
+            .expect("should create context");
+
+        assert!(context.cancellation().is_cancelled());
+    }
+
+    #[test]
+    fn new_with_cwd_uses_provided_value() {
+        let context = Context::builder()
+            .current_working_directory(Path::new("/tmp"))
+            .build()
+            .expect("should create context");
+
+        assert_eq!(context.current_working_directory().get(), Path::new("/tmp"));
+    }
+
+    #[test]
+    fn new_with_defaults_detects_cwd() {
+        let expected = std::env::current_dir().expect("should get current dir");
+
+        let context = Context::builder().build().expect("should create context");
+
+        assert_eq!(context.current_working_directory().get(), expected);
+    }
+
+    #[test]
+    fn new_with_defaults_has_uncancelled_token() {
+        let context = Context::builder()
+            .current_working_directory(Path::new("/tmp"))
+            .build()
+            .expect("should create context");
+
+        assert!(!context.cancellation().is_cancelled());
+    }
 
     #[test]
     fn trait_send() {

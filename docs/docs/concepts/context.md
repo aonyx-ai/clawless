@@ -196,8 +196,9 @@ use clawless::context::Context;
 #[test]
 fn test_deploy_command() {
     let context = Context::builder()
-        .current_working_directory("/tmp/test".into())
-        .build();
+        .current_working_directory("/tmp/test")
+        .build()
+        .expect("should create context");
 
     let args = DeployArgs { environment: "test".into() };
 
@@ -223,7 +224,7 @@ asked for" and "what the framework provides" explicit.
 Context is created once when your CLI starts and is cloned for each command
 execution:
 
-1. **Startup** - `Context::try_new()` is called by the `main!` macro
+1. **Startup** - `Context::builder().build()?` is called by the `main!` macro
 2. **Initialization** - Environment information is captured (working directory,
    etc.)
 3. **Execution** - Context is cloned and passed to your command

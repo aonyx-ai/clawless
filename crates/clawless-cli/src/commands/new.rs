@@ -186,7 +186,8 @@ mod tests {
 
         let context = Context::builder()
             .current_working_directory(cwd.path())
-            .build();
+            .build()
+            .expect("failed to create context");
 
         let crate_name = CrateName::new("my_crate");
 
@@ -201,7 +202,8 @@ mod tests {
 
         let context = Context::builder()
             .current_working_directory(cwd.path())
-            .build();
+            .build()
+            .expect("failed to create context");
 
         // Pre-create the directory to simulate an existing crate
         create_dir_all(cwd.path().join("crate-that-already-exists")).unwrap();
@@ -217,7 +219,8 @@ mod tests {
 
         let context = Context::builder()
             .current_working_directory(cwd.path())
-            .build();
+            .build()
+            .expect("failed to create context");
 
         let crate_path = create_binary_crate(&context, &CrateName::new("my_crate")).unwrap();
 

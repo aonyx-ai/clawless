@@ -17,11 +17,11 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = { workspace = true }
+bon = { workspace = true }
 clawless = { workspace = true }
 convert_case = { workspace = true }
 getset = { workspace = true }
 indoc = { workspace = true }
-typed-builder = { workspace = true }
 typed-fields = { workspace = true }
 
 [dev-dependencies]
