@@ -15,9 +15,10 @@ Larger work that should be broken into smaller, atomic changes is considered a
 _project_. Projects are documented in `projects/` and have two or more feature
 specs.
 
-| #    | Project                                      | Status  |
-| ---- | -------------------------------------------- | ------- |
-| P001 | [Cancellation](projects/001-cancellation.md) | Planned |
+| #    | Project                                      | Status   |
+| ---- | -------------------------------------------- | -------- |
+| P001 | [Cancellation](projects/001-cancellation.md) | Complete |
+| P002 | [Output](projects/002-output.md)             | Planned  |
 
 Each project spec should include:
 
@@ -35,11 +36,13 @@ Each project spec should include:
 Individual feature specifications live in `features/`. Each spec is
 self-contained and follows a consistent template.
 
-| #    | Feature                                                      | Project      | Status  |
-| ---- | ------------------------------------------------------------ | ------------ | ------- |
-| F001 | [Cancellation token](features/001-cancellation-token.md)     | Cancellation | Planned |
-| F002 | [Signal handling](features/002-signal-handling.md)           | Cancellation | Planned |
-| F003 | [Command cancellation](features/003-command-cancellation.md) | Cancellation | Planned |
+| #    | Feature                                                      | Project      | Status   |
+| ---- | ------------------------------------------------------------ | ------------ | -------- |
+| F001 | [Cancellation token](features/001-cancellation-token.md)     | Cancellation | Complete |
+| F002 | [Signal handling](features/002-signal-handling.md)           | Cancellation | Complete |
+| F003 | [Command cancellation](features/003-command-cancellation.md) | Cancellation | Complete |
+| F004 | [Output types](features/004-output-types.md)                 | Output       | Planned  |
+| F005 | [Command output](features/005-command-output.md)             | Output       | Planned  |
 
 Each feature spec should include:
 
