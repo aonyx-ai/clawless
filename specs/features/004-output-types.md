@@ -389,6 +389,7 @@ How should the internal writer targets be represented for `Clone` + `Send` +
 `verbose`, `result`) does not expose the writer abstraction. The choice is an
 internal implementation detail that can be evaluated during the F004 PR.
 
+[#153]: https://github.com/aonyx-ai/clawless/issues/153
 [architecture]: ../architecture.md
 [artifact]: ../architecture.md#artifact
 [cancellation]: ../architecture.md#cancellation
