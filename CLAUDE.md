@@ -693,6 +693,8 @@ Use American English spelling: "color" not "colour", "serialize" not
 - **Never** use title case in headings and titles. Always use sentence case.
 - Always use the Oxford comma.
 - Use reference-style Markdown links, not inline links.
+- Table cells must be single-line. Markdown does not support multi-line cells;
+  each newline starts a new row. Ignore line length limits for table rows.
 
 ## Git
 
@@ -702,6 +704,14 @@ We write commit messages inspired by [tbaggery][tbaggery]:
 
 - Capitalized, short (50 chars or less) summary
 - Imperative mood: "Fix bug" not "Fixed bug" or "Fixes bug"
+- Focus on the goal of the change, not implementation details. The body should
+  describe what the change accomplishes and why, not enumerate every file or
+  component touched.
+- Keep formatting minimal. Avoid heavy use of bold, bullet lists, or headings
+  in commit bodies. Plain prose is preferred.
+- Start body sentences with a subject. "This change introduces…",
+  "We learned…", "The migration simplifies…" — not dangling participles like
+  "Learned from…" or "Introduces…".
 - Explain the "why" and the trade-offs of the change
 - Use simple past and present tense in body: "Previously, when the user did X, Y
   used to happen. With this commit, now Z happens."
