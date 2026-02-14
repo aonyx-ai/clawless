@@ -13,8 +13,8 @@ edition = "2024"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/aonyx-ai/clawless.git"
 
-# Edition 2024 was released in Rust 1.85.0.
-rust-version = "1.85.0"
+# darling 0.23 requires Rust 1.88.0 or greater
+rust-version = "1.88.0"
 
 [workspace.dependencies]
 anyhow = "1.0.16"
@@ -25,7 +25,7 @@ clawless = { path = "crates/clawless", version = "=0.5.0" }
 clawless-derive = { path = "crates/clawless-derive", version = "=0.5.0" }
 convert_case = ">=0.1,<1"
 libc = "0.2"
-darling = ">=0.21.1,<1"
+darling = ">=0.23,<1"
 getset = ">=0.1,<1"
 indoc = "2.0.0"
 inventory = "0.3.0"
