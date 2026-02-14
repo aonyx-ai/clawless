@@ -95,28 +95,20 @@ just as it creates the root `Cancellation` token. Since the [Application] is
 currently implicit (represented by `main!()`), Output is created in the
 generated `main` function and passed to `Context`.
 
-## Prerequisite: bon migration
-
-This feature depends on a separate PR (not part of the output project) that
-migrates `Context` from `typed-builder` to `bon`. The migration simplifies
-`Context` construction and provides a cleaner pattern for adding the `Output`
-field. The prerequisite PR must land before this feature is implemented.
-
 ## Functional requirements
 
 1. `Context` gains an `output` field of type `Output`, accessible via
    `context.output()`.
-2. `Context::try_new()` accepts configuration to construct `Output` (the exact
-   signature depends on the bon migration).
-3. `Context::builder()` allows setting `Output` explicitly (for tests).
+2. `Context::builder()` accepts an `output` parameter to configure `Output`.
    If not set, the builder provides a sensible default (`Verbosity::Default`,
    `OutputMode::Text`).
+3. `Context::builder()` allows setting `Output` explicitly (for tests).
 4. The `main!()` macro:
    a. Attaches `--quiet`, `--verbose`, and `--json` as global Clap args to the
    root command.
    b. Parses the flags from `ArgMatches` after command resolution.
    c. Constructs `Output` with the resolved `Verbosity` and `OutputMode`.
-   d. Passes `Output` (or its configuration) to `Context::try_new()`.
+   d. Passes `Output` to `Context::builder().output(output).build()?`.
 5. `--quiet` and `--verbose` are mutually exclusive. Clap reports a conflict
    error if both are provided.
 6. `--json` may be combined with any verbosity level.
@@ -229,7 +221,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             clawless::output::OutputMode::Text
         };
         let output = clawless::output::Output::new(verbosity, mode);
-        let context = clawless::context::Context::try_new(cancellation, output)?;
+        let context = clawless::context::Context::builder()
+            .cancellation(cancellation)
+            .output(output)
+            .build()?;
 
         commands::clawless_exec(matches, context).await
     })?;
@@ -244,7 +239,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 | File                                | Change                                                               |
 | ----------------------------------- | -------------------------------------------------------------------- |
-| `crates/clawless/src/context.rs`    | Add `Output` field, update `try_new()`, add `output()` accessor      |
+| `crates/clawless/src/context.rs`    | Add `Output` field, update builder, add `output()` accessor          |
 | `crates/clawless/src/lib.rs`        | Update prelude if needed                                             |
 | `crates/clawless-derive/src/lib.rs` | Update `main!()` to inject flags, parse them, and construct `Output` |
 

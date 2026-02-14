@@ -17,7 +17,7 @@ Called in `src/main.rs` to generate your application entry point.
 **What it does:**
 
 1. Generates the `main()` function
-2. Creates a `Context` with `Context::try_new()`
+2. Initializes the `Context`
 3. Initializes a Tokio runtime
 4. Calls the root command initialization and execution
 
@@ -25,12 +25,19 @@ Called in `src/main.rs` to generate your application entry point.
 
 ```rust
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let context = clawless::context::Context::try_new()?;
+    let cancellation = clawless::cancellation::Cancellation::new();
+    let context = clawless::context::Context::builder()
+        .cancellation(cancellation.clone())
+        .build()?;
 
     let rt = clawless::tokio::runtime::Runtime::new()?;
     rt.block_on(async {
+        clawless::tokio::spawn(
+            clawless::signal::wait_for_shutdown(cancellation)
+        );
+
         let app = commands::clawless_init();
-        commands::clawless_exec(app.get_matches(), context.clone()).await
+        commands::clawless_exec(app.get_matches(), context).await
     })?;
 
     Ok(())

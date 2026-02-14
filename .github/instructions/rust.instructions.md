@@ -13,8 +13,8 @@ complete set of rules lives in [`CLAUDE.md`][claude-md].
 Standard traits first, then third-party derives alphabetical by crate:
 
 1. Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default
-2. Third-party: alphabetical by crate, then by macro (e.g., `CopyGetters`,
-   `Getters` from getset, then `TypedBuilder` from typed-builder)
+2. Third-party: alphabetical by crate, then by macro (e.g., `Builder` from bon,
+   then `CopyGetters`, `Getters` from getset)
 
 ## Type system
 
@@ -23,7 +23,7 @@ Standard traits first, then third-party derives alphabetical by crate:
   newtypes via the `typed-fields` crate.
 - **Enums over bools.** Use enums with meaningful variants instead of `bool`
   parameters.
-- **Builders with `typed-builder`.** Getters with `getset` (`CopyGetters` for
+- **Builders with `bon`.** Getters with `getset` (`CopyGetters` for
   `Copy` types, `Getters` for references).
 
 ## Control flow

@@ -258,11 +258,11 @@ git show <commit> --stat
 #### Key dependencies
 
 - **anyhow**: Error handling with context.
+- **bon**: Derive builder patterns for complex types.
 - **clap**: CLI argument parsing (with derive macros).
 - **getset**: Derive getters and setters for struct fields.
 - **inventory**: Compile-time command registration.
 - **tokio**: Async runtime.
-- **typed-builder**: Derive builder patterns for complex types.
 - **typed-fields**: Macros to generate newtypes.
 
 ### Type system
@@ -303,7 +303,7 @@ fn create_repo(name: &str, is_public: bool) {}
 
 #### Derive conventions
 
-- Builders with `typed-builder`
+- Builders with `bon`
 - Getters with `getset` (CopyGetters for Copy, Getters for references)
 - Standard trait order: Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash,
   Debug, Default
@@ -314,7 +314,7 @@ fn create_repo(name: &str, is_public: bool) {}
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct CommandId(i64);
 
-// Third-party: getset (CopyGetters, Getters), then typed-builder (TypedBuilder)
+// Third-party: bon (Builder), then getset (CopyGetters, Getters)
 #[derive(
     Clone,
     Eq,
@@ -324,9 +324,9 @@ pub struct CommandId(i64);
     Hash,
     Debug,
     Default,
+    Builder,
     CopyGetters,
     Getters,
-    TypedBuilder
 )]
 pub struct User {
     id: UserId,
