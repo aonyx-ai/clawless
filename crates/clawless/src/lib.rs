@@ -10,10 +10,12 @@ pub mod prelude {
     pub use clap;
     pub use clap::{Args, FromArgMatches};
     pub use clawless_derive::{command, commands, main};
+    pub use serde::Serialize;
 
     pub use super::cancellation::*;
     pub use super::context::*;
     pub use super::error::{CommandResult, Error, ErrorContext};
+    pub use super::output::*;
 }
 
 pub use cancellation::Cancellation;
@@ -23,6 +25,7 @@ pub use error::{CommandResult, Error, ErrorContext};
 pub mod cancellation;
 pub mod context;
 mod error;
+pub mod output;
 
 // Re-export the clap crate for use with the `clawless-derive` crate
 #[doc(hidden)]

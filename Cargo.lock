@@ -212,6 +212,8 @@ dependencies = [
  "clawless-derive",
  "getset",
  "inventory",
+ "serde",
+ "serde_json",
  "tokio",
  "tokio-util",
  "trybuild",
