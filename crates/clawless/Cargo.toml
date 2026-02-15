@@ -18,6 +18,8 @@ clap = { workspace = true }
 clawless-derive = { workspace = true }
 getset = { workspace = true }
 inventory = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
 typed-fields = { workspace = true }
