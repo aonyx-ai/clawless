@@ -1,0 +1,8 @@
+bin.name = "output"
+args = ["--verbose", "count", "the quick brown fox"]
+status.code = 0
+stdout = """
+input: the quick brown fox
+counting words
+4
+"""

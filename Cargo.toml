@@ -29,6 +29,7 @@ darling = ">=0.23,<1"
 getset = ">=0.1,<1"
 indoc = "2.0.0"
 inventory = "0.3.0"
+predicates = "3"
 proc-macro2 = "1.0.86"
 quote = "1.0.28"
 serde = { version = "1", features = ["derive"] }

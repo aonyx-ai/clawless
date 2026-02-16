@@ -158,9 +158,9 @@ fn create_greeting_command(crate_path: &Path) -> Result<(), Error> {
         }
 
         #[command]
-        pub async fn greet(args: GreetArgs, _context: Context) -> CommandResult {
+        pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
             // Print the greeting to the console
-            println!("Hello, {}!", args.name);
+            context.output().print(format!("Hello, {}!", args.name));
 
             // Exit the CLI successfully
             Ok(())
@@ -275,7 +275,7 @@ mod tests {
         let greet_rs_contents = read_to_string(commands_dir_path.join("greet.rs")).unwrap();
 
         assert!(
-            greet_rs_contents.contains("pub async fn greet(args: GreetArgs, _context: Context)")
+            greet_rs_contents.contains("pub async fn greet(args: GreetArgs, context: Context)")
         );
     }
 }

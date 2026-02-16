@@ -13,6 +13,7 @@ use getset::Getters;
 
 pub use self::current_working_directory::CurrentWorkingDirectory;
 use crate::cancellation::Cancellation;
+use crate::output::Output;
 
 mod current_working_directory;
 
@@ -43,6 +44,10 @@ pub struct Context {
     /// The cancellation token for cooperative shutdown
     #[getset(get = "pub")]
     cancellation: Cancellation,
+
+    /// The output handler for user-facing messages
+    #[getset(get = "pub")]
+    output: Output,
 }
 
 #[bon]
@@ -72,6 +77,7 @@ impl Context {
     pub fn new(
         #[builder(into)] current_working_directory: Option<CurrentWorkingDirectory>,
         #[builder(default)] cancellation: Cancellation,
+        #[builder(default)] output: Output,
     ) -> Result<Self> {
         let current_working_directory = match current_working_directory {
             Some(cwd) => cwd,
@@ -81,6 +87,7 @@ impl Context {
         Ok(Self {
             current_working_directory,
             cancellation,
+            output,
         })
     }
 }
@@ -90,6 +97,7 @@ mod tests {
     use std::path::Path;
 
     use super::*;
+    use crate::output::{OutputMode, Verbosity};
 
     #[test]
     fn new_with_cancellation_uses_provided_token() {
@@ -116,12 +124,37 @@ mod tests {
     }
 
     #[test]
+    fn new_with_defaults_has_default_output() {
+        let context = Context::builder()
+            .current_working_directory(Path::new("/tmp"))
+            .build()
+            .expect("should create context");
+
+        assert_eq!(context.output().verbosity(), Verbosity::Default);
+        assert_eq!(context.output().mode(), OutputMode::Text);
+    }
+
+    #[test]
     fn new_with_defaults_detects_cwd() {
         let expected = std::env::current_dir().expect("should get current dir");
 
         let context = Context::builder().build().expect("should create context");
 
         assert_eq!(context.current_working_directory().get(), expected);
+    }
+
+    #[test]
+    fn new_with_output_uses_provided_value() {
+        let output = Output::new(Verbosity::Verbose, OutputMode::Json);
+
+        let context = Context::builder()
+            .current_working_directory(Path::new("/tmp"))
+            .output(output)
+            .build()
+            .expect("should create context");
+
+        assert_eq!(context.output().verbosity(), Verbosity::Verbose);
+        assert_eq!(context.output().mode(), OutputMode::Json);
     }
 
     #[test]

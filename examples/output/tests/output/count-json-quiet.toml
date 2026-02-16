@@ -1,0 +1,7 @@
+bin.name = "output"
+args = ["--json", "--quiet", "count", "the quick brown fox"]
+status.code = 0
+stdout = """
+{"words":4}
+"""
+stderr = ""

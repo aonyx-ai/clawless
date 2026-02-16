@@ -17,6 +17,7 @@ use std::io::Write;
 #[cfg(test)]
 use std::sync::{Arc, Mutex};
 
+use clap::{Arg, ArgAction, ArgMatches};
 use serde::Serialize;
 
 pub use self::output_mode::OutputMode;
@@ -201,6 +202,95 @@ impl Output {
     pub fn mode(&self) -> OutputMode {
         self.mode
     }
+
+    /// Attaches `--quiet`, `--verbose`, and `--json` as global flags to a [`clap::Command`]
+    ///
+    /// The `--quiet` and `--verbose` flags conflict with each other. All three flags are global,
+    /// meaning they can appear before or after the subcommand name.
+    ///
+    /// This method is called by the `main!()` macro expansion. Command authors do not call it
+    /// directly.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let command = clap::Command::new("test");
+    /// let command = clawless::output::Output::augment_command(command);
+    /// ```
+    pub fn augment_command(command: clap::Command) -> clap::Command {
+        command
+            .arg(
+                Arg::new("quiet")
+                    .short('q')
+                    .long("quiet")
+                    .help("Suppress informational messages")
+                    .global(true)
+                    .action(ArgAction::SetTrue)
+                    .conflicts_with("verbose"),
+            )
+            .arg(
+                Arg::new("verbose")
+                    .short('v')
+                    .long("verbose")
+                    .help("Show additional detail")
+                    .global(true)
+                    .action(ArgAction::SetTrue)
+                    .conflicts_with("quiet"),
+            )
+            .arg(
+                Arg::new("json")
+                    .long("json")
+                    .help("Output results as JSON")
+                    .global(true)
+                    .action(ArgAction::SetTrue),
+            )
+    }
+
+    /// Constructs an [`Output`] from parsed CLI flags
+    ///
+    /// Reads the `--quiet`, `--verbose`, and `--json` flags from the given [`ArgMatches`] and
+    /// returns an [`Output`] configured accordingly. The command must have been augmented with
+    /// [`augment_command`] before parsing.
+    ///
+    /// This method is called by the `main!()` macro expansion. Command authors do not call it
+    /// directly.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let command = clawless::output::Output::augment_command(
+    ///     clap::Command::new("test"),
+    /// );
+    /// let matches = command.get_matches_from(vec!["test", "--quiet"]);
+    /// let output = clawless::output::Output::from_arg_matches(&matches);
+    /// assert_eq!(output.verbosity(), clawless::output::Verbosity::Quiet);
+    /// ```
+    ///
+    /// [`augment_command`]: Output::augment_command
+    pub fn from_arg_matches(matches: &ArgMatches) -> Self {
+        let quiet = matches.get_flag("quiet");
+        let verbose = matches.get_flag("verbose");
+        let json = matches.get_flag("json");
+
+        let verbosity = match (quiet, verbose) {
+            (true, _) => Verbosity::Quiet,
+            (_, true) => Verbosity::Verbose,
+            (false, false) => Verbosity::Default,
+        };
+
+        let mode = match json {
+            true => OutputMode::Json,
+            false => OutputMode::Text,
+        };
+
+        Self::new(verbosity, mode)
+    }
+}
+
+impl Default for Output {
+    fn default() -> Self {
+        Self::new(Verbosity::default(), OutputMode::default())
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -268,6 +358,73 @@ mod tests {
 
             (output, buffers)
         }
+    }
+
+    fn test_command() -> clap::Command {
+        Output::augment_command(clap::Command::new("test"))
+    }
+
+    #[test]
+    fn augment_command_adds_three_global_args() {
+        let command = test_command();
+        let args: Vec<&str> = command
+            .get_arguments()
+            .filter(|a| a.is_global_set())
+            .map(|a| a.get_id().as_str())
+            .collect();
+
+        assert!(args.contains(&"quiet"));
+        assert!(args.contains(&"verbose"));
+        assert!(args.contains(&"json"));
+        assert_eq!(args.len(), 3);
+    }
+
+    #[test]
+    fn default_is_text_with_default_verbosity() {
+        let output = Output::default();
+
+        assert_eq!(output.verbosity(), Verbosity::Default);
+        assert_eq!(output.mode(), OutputMode::Text);
+    }
+
+    #[test]
+    fn from_arg_matches_with_defaults() {
+        let matches = test_command().get_matches_from(vec!["test"]);
+
+        let output = Output::from_arg_matches(&matches);
+
+        assert_eq!(output.verbosity(), Verbosity::Default);
+        assert_eq!(output.mode(), OutputMode::Text);
+    }
+
+    #[test]
+    fn from_arg_matches_with_json_flag() {
+        let matches = test_command().get_matches_from(vec!["test", "--json"]);
+
+        let output = Output::from_arg_matches(&matches);
+
+        assert_eq!(output.mode(), OutputMode::Json);
+        assert_eq!(output.verbosity(), Verbosity::Default);
+    }
+
+    #[test]
+    fn from_arg_matches_with_quiet_flag() {
+        let matches = test_command().get_matches_from(vec!["test", "--quiet"]);
+
+        let output = Output::from_arg_matches(&matches);
+
+        assert_eq!(output.verbosity(), Verbosity::Quiet);
+        assert_eq!(output.mode(), OutputMode::Text);
+    }
+
+    #[test]
+    fn from_arg_matches_with_verbose_flag() {
+        let matches = test_command().get_matches_from(vec!["test", "--verbose"]);
+
+        let output = Output::from_arg_matches(&matches);
+
+        assert_eq!(output.verbosity(), Verbosity::Verbose);
+        assert_eq!(output.mode(), OutputMode::Text);
     }
 
     #[test]
