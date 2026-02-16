@@ -1,0 +1,6 @@
+bin.name = "output"
+args = ["--quiet", "count", "the quick brown fox"]
+status.code = 0
+stdout = """
+4
+"""

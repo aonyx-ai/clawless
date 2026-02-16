@@ -1,6 +1,6 @@
 [package]
-name = "hello-world"
-description = "A simple Hello World example for clawless"
+name = "output"
+description = "Demonstrates Output, verbosity, and output mode in clawless"
 
 version.workspace = true
 edition.workspace = true
@@ -14,7 +14,7 @@ publish = false
 
 [dependencies]
 clawless = { workspace = true }
+serde = { workspace = true }
 
 [dev-dependencies]
-assert_cmd = { workspace = true }
-predicates = { workspace = true }
+trycmd = { workspace = true }

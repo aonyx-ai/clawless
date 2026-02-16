@@ -1,0 +1,10 @@
+bin.name = "output"
+args = ["--json", "--verbose", "count", "the quick brown fox"]
+status.code = 0
+stdout = """
+{"words":4}
+"""
+stderr = """
+input: the quick brown fox
+counting words
+"""

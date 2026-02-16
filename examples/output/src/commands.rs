@@ -1,0 +1,3 @@
+mod count;
+
+clawless::commands!();

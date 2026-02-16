@@ -1,0 +1,8 @@
+bin.name = "output"
+args = ["--quiet", "--verbose", "count", "the quick brown fox"]
+status.code = 2
+stderr = """
+...
+[..]cannot be used with[..]
+...
+"""

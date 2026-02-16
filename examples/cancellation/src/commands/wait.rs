@@ -17,8 +17,8 @@ pub struct WaitArgs {}
 /// ```
 #[command]
 pub async fn wait(_args: WaitArgs, context: Context) -> CommandResult {
-    println!("waiting");
+    context.output().print("waiting");
     context.cancellation().cancelled().await;
-    println!("cancelled");
+    context.output().print("cancelled");
     Ok(())
 }

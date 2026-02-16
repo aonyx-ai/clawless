@@ -59,8 +59,14 @@ pub fn main(_input: TokenStream) -> TokenStream {
     let output = quote! {
         fn main() -> Result<(), Box<dyn std::error::Error>> {
             let cancellation = clawless::cancellation::Cancellation::new();
+
+            let app = clawless::output::Output::augment_command(commands::clawless_init());
+            let matches = app.get_matches();
+            let output = clawless::output::Output::from_arg_matches(&matches);
+
             let context = clawless::context::Context::builder()
                 .cancellation(cancellation.clone())
+                .output(output)
                 .build()?;
 
             let rt = clawless::tokio::runtime::Runtime::new()?;
@@ -69,8 +75,7 @@ pub fn main(_input: TokenStream) -> TokenStream {
                     clawless::signal::wait_for_shutdown(cancellation)
                 );
 
-                let app = commands::clawless_init();
-                commands::clawless_exec(app.get_matches(), context).await
+                commands::clawless_exec(matches, context).await
             })?;
 
             Ok(())
