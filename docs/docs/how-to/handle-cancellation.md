@@ -22,11 +22,13 @@ pub struct ServeArgs {}
 /// Start a server and wait for shutdown
 #[command]
 pub async fn serve(_args: ServeArgs, context: Context) -> CommandResult {
-    println!("server started, press Ctrl+C to stop");
+    let output = context.output();
+
+    output.print("server started, press Ctrl+C to stop");
 
     context.cancellation().cancelled().await;
 
-    println!("shutting down");
+    output.print("shutting down");
     Ok(())
 }
 ```
@@ -49,16 +51,17 @@ pub struct MigrateArgs {}
 #[command]
 pub async fn migrate(_args: MigrateArgs, context: Context) -> CommandResult {
     let cancellation = context.cancellation();
+    let output = context.output();
     let migrations = discover_migrations()?;
 
     for migration in &migrations {
         if cancellation.is_cancelled() {
-            println!("cancelled, stopping after last completed migration");
+            output.print("cancelled, stopping after last completed migration");
             break;
         }
 
         run_migration(migration)?;
-        println!("applied: {}", migration.name());
+        output.print(format!("applied: {}", migration.name()));
     }
 
     Ok(())
@@ -85,14 +88,15 @@ pub struct FetchArgs {
 #[command]
 pub async fn fetch(args: FetchArgs, context: Context) -> CommandResult {
     let cancellation = context.cancellation();
+    let output = context.output();
 
     tokio::select! {
         result = do_fetch(&args.url) => {
             let body = result.context("fetch failed")?;
-            println!("{body}");
+            output.print(body);
         }
         _ = cancellation.cancelled() => {
-            println!("fetch cancelled");
+            output.print("fetch cancelled");
         }
     }
 
@@ -119,6 +123,7 @@ pub struct WatchArgs {}
 #[command]
 pub async fn watch(_args: WatchArgs, context: Context) -> CommandResult {
     let cancellation = context.cancellation();
+    let output = context.output();
 
     loop {
         if cancellation.is_cancelled() {
@@ -129,15 +134,15 @@ pub async fn watch(_args: WatchArgs, context: Context) -> CommandResult {
 
         tokio::select! {
             _result = build(&build_token) => {
-                println!("build completed");
+                output.print("build completed");
             }
             _ = wait_for_change() => {
                 // New change detected, cancel the current build
                 build_token.cancel();
-                println!("change detected, restarting build");
+                output.print("change detected, restarting build");
             }
             _ = cancellation.cancelled() => {
-                println!("shutting down");
+                output.print("shutting down");
             }
         }
     }

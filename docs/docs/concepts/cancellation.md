@@ -1,5 +1,5 @@
 ---
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 # Cancellation
@@ -38,7 +38,7 @@ pub async fn process(_args: ProcessArgs, context: Context) -> CommandResult {
 
     loop {
         if cancellation.is_cancelled() {
-            println!("shutting down");
+            context.output().print("shutting down");
             break;
         }
 

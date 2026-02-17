@@ -361,21 +361,21 @@ the terminal, the CI system, or the test harness directly.
 
 ## Current state
 
-| Entity       | Current implementation                       | Status                             |
-| ------------ | -------------------------------------------- | ---------------------------------- |
-| Application  | `main!()` macro                              | Implicit, no first-class type      |
-| Command      | `#[command]` async fn                        | Emergent from fn + attrs + module  |
-| Argument     | Clap `#[derive(Args)]`                       | Fully delegated to Clap            |
-| Context      | `Context` struct (CWD, Cancellation)         | Minimal but functional             |
-| Prompt       | Not represented                              | Missing                            |
-| Hook         | Not represented                              | Missing                            |
-| Task         | Not represented                              | Missing; commands are monolithic   |
-| Cancellation | `Cancellation` value object + signal adapter | Fully implemented                  |
-| Progress     | Not represented                              | Missing                            |
-| Artifact     | Not represented                              | Missing; commands print directly   |
-| Diagnostic   | `anyhow::Result`                             | Exists but unstructured            |
-| Outcome      | `CommandResult` = `anyhow::Result<()>`       | Thin alias, no exit code control   |
-| Formatter    | Not represented                              | Missing; commands own their output |
+| Entity       | Current implementation                       | Status                                |
+| ------------ | -------------------------------------------- | ------------------------------------- |
+| Application  | `main!()` macro                              | Implicit, no first-class type         |
+| Command      | `#[command]` async fn                        | Emergent from fn + attrs + module     |
+| Argument     | Clap `#[derive(Args)]`                       | Fully delegated to Clap               |
+| Context      | `Context` struct (CWD, Cancellation, Output) | Functional                            |
+| Prompt       | Not represented                              | Missing                               |
+| Hook         | Not represented                              | Missing                               |
+| Task         | Not represented                              | Missing; commands are monolithic      |
+| Cancellation | `Cancellation` value object + signal adapter | Fully implemented                     |
+| Progress     | `Output::print()`, `Output::verbose()`       | Partial; no progress bars or spinners |
+| Artifact     | `Output::result()` (`Display` + `Serialize`) | Partial; single value per command     |
+| Diagnostic   | `anyhow::Result`                             | Exists but unstructured               |
+| Outcome      | `CommandResult` = `anyhow::Result<()>`       | Thin alias, no exit code control      |
+| Formatter    | `Output` with `Verbosity` and `OutputMode`   | Partial; text and JSON modes          |
 
 ## Open questions
 

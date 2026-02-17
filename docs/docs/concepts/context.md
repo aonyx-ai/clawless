@@ -11,8 +11,8 @@ setup.
 
 :::info[Growing incrementally]
 The Context system is evolving. Currently, it provides access to the working
-directory and [cancellation](./cancellation). Features described in the
-[Future features](#future-features) section (configuration, output abstraction,
+directory, [cancellation](./cancellation), and [output](./output). Features
+described in the [Future features](#future-features) section (configuration,
 structured logging) are planned but not yet implemented.
 :::
 
@@ -21,9 +21,9 @@ structured logging) are planned but not yet implemented.
 Context is a struct passed to every command that provides:
 
 - **Currently available:** Environment information (working directory),
-  [cancellation](./cancellation) for cooperative shutdown
-- **Coming soon:** Configuration, output abstraction, structured logging, and
-  more
+  [cancellation](./cancellation) for cooperative shutdown,
+  [output](./output) for framework-controlled command output
+- **Coming soon:** Configuration, structured logging, and more
 
 ```rust
 use clawless::prelude::*;
@@ -32,7 +32,7 @@ use clawless::prelude::*;
 pub async fn deploy(args: DeployArgs, context: Context) -> CommandResult {
     // Access context features here
     let cwd = context.current_working_directory();
-    println!("Deploying from: {}", cwd.display());
+    context.output().print(format!("Deploying from: {}", cwd.display()));
     Ok(())
 }
 ```
@@ -43,7 +43,7 @@ use it:
 ```rust
 #[command]
 pub async fn version(args: VersionArgs, context: Context) -> CommandResult {
-    println!("v{}", env!("CARGO_PKG_VERSION"));
+    context.output().print(format!("v{}", env!("CARGO_PKG_VERSION")));
     Ok(())
 }
 ```
@@ -60,13 +60,14 @@ use clawless::prelude::*;
 #[command]
 pub async fn status(_args: StatusArgs, context: Context) -> CommandResult {
     let cwd = context.current_working_directory();
+    let output = context.output();
 
-    println!("Working directory: {}", cwd.display());
+    output.print(format!("Working directory: {}", cwd.display()));
 
     // Build paths relative to the working directory
     let config_path = cwd.join("config.toml");
     if config_path.exists() {
-        println!("Found config at: {}", config_path.display());
+        output.print(format!("Found config at: {}", config_path.display()));
     }
 
     Ok(())
@@ -94,11 +95,13 @@ use clawless::prelude::*;
 
 #[command]
 pub async fn serve(_args: ServeArgs, context: Context) -> CommandResult {
-    println!("server started");
+    let output = context.output();
+
+    output.print("server started");
 
     context.cancellation().cancelled().await;
 
-    println!("shutting down");
+    output.print("shutting down");
     Ok(())
 }
 ```
@@ -108,6 +111,33 @@ You can await it, poll it synchronously, or create child tokens for scoped
 work. See [Cancellation](./cancellation) for the full explanation.
 
 [cancellation-type]: https://docs.rs/clawless/latest/clawless/cancellation/struct.Cancellation.html
+
+### Output
+
+Access the framework-controlled output system for writing messages that
+respect `--quiet`, `--verbose`, and `--json` flags:
+
+```rust
+use clawless::prelude::*;
+
+#[command]
+pub async fn build(args: BuildArgs, context: Context) -> CommandResult {
+    let output = context.output();
+
+    output.verbose("loading configuration");
+    output.print("building project");
+    output.result(&BuildResult { success: true });
+
+    Ok(())
+}
+```
+
+The `output()` method returns an [`Output`][output-type] instance with three
+methods: `print` for informational messages, `verbose` for debug detail, and
+`result` for primary command data. See [Output](./output) for the full
+explanation.
+
+[output-type]: https://docs.rs/clawless/latest/clawless/output/struct.Output.html
 
 ## Future features
 
@@ -133,29 +163,6 @@ pub async fn deploy(args: DeployArgs, context: Context) -> CommandResult {
 
 See [issue #118](https://github.com/aonyx-ai/clawless/issues/118) for the
 configuration system design.
-
-### Output abstraction (coming soon)
-
-Consistent logging and output with built-in verbosity levels:
-
-```rust
-#[command]
-pub async fn build(args: BuildArgs, context: Context) -> CommandResult {
-    // Future API (not yet implemented)
-    let output = context.output();
-
-    output.info("Starting build...");
-    output.debug("Loading configuration...");
-    output.success("Build completed!");
-
-    Ok(())
-}
-```
-
-The output abstraction will respect `--quiet` and `--verbose` flags
-automatically. See
-issues [#151](https://github.com/aonyx-ai/clawless/issues/151)
-and [#152](https://github.com/aonyx-ai/clawless/issues/152).
 
 ### Structured logging (coming soon)
 
@@ -226,7 +233,7 @@ execution:
 
 1. **Startup** - `Context::builder().build()?` is called by the `main!` macro
 2. **Initialization** - Environment information is captured (working directory,
-   etc.)
+   etc.) and output flags (`--quiet`, `--verbose`, `--json`) are parsed
 3. **Execution** - Context is cloned and passed to your command
 4. **Access** - Your command uses context methods to access features
 
@@ -234,6 +241,8 @@ execution:
 
 Now that you understand Context, learn about:
 
+- **[Output](./output)** - Framework-controlled command output with verbosity
+  and JSON support
 - **[Cancellation](./cancellation)** - How cooperative shutdown works through
   the cancellation token
 - **[Commands](./commands)** - How Context integrates with command functions
