@@ -59,7 +59,7 @@ subcommand:
 /// Database management commands
 #[command]  // No require_subcommand
 pub async fn db(args: DbArgs, context: Context) -> CommandResult {
-    println!("Use a subcommand: migrate, seed, reset");
+    context.output().print("Use a subcommand: migrate, seed, reset");
     Ok(())
 }
 ```

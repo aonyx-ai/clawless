@@ -115,7 +115,7 @@ pub struct GoodbyeArgs {
 /// Say goodbye to someone
 #[command]
 pub async fn goodbye(args: GoodbyeArgs, context: Context) -> CommandResult {
-    println!("Goodbye, {}!", args.name);
+    context.output().print(format!("Goodbye, {}!", args.name));
     Ok(())
 }
 ```

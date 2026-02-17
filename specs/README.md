@@ -18,7 +18,7 @@ specs.
 | #    | Project                                      | Status   |
 | ---- | -------------------------------------------- | -------- |
 | P001 | [Cancellation](projects/001-cancellation.md) | Complete |
-| P002 | [Output](projects/002-output.md)             | Planned  |
+| P002 | [Output](projects/002-output.md)             | Complete |
 
 Each project spec should include:
 
@@ -41,8 +41,8 @@ self-contained and follows a consistent template.
 | F001 | [Cancellation token](features/001-cancellation-token.md)     | Cancellation | Complete |
 | F002 | [Signal handling](features/002-signal-handling.md)           | Cancellation | Complete |
 | F003 | [Command cancellation](features/003-command-cancellation.md) | Cancellation | Complete |
-| F004 | [Output types](features/004-output-types.md)                 | Output       | Planned  |
-| F005 | [Command output](features/005-command-output.md)             | Output       | Planned  |
+| F004 | [Output types](features/004-output-types.md)                 | Output       | Complete |
+| F005 | [Command output](features/005-command-output.md)             | Output       | Complete |
 
 Each feature spec should include:
 

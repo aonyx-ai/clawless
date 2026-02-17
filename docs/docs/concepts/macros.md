@@ -111,7 +111,7 @@ pub struct GreetArgs {
 /// Greet the user
 #[command]
 pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
-    println!("Hello, {}!", args.name);
+    context.output().print(format!("Hello, {}!", args.name));
     Ok(())
 }
 ```

@@ -25,8 +25,14 @@ options, and how arguments integrate with commands.
 ### [Context](./context)
 
 The Context system provides commands with access to framework features. Explore
-how Context gives you environment information today and will provide access to
-configuration, output abstractions, and more in the future.
+how Context gives you environment information, output control, cancellation, and
+more.
+
+### [Output](./output)
+
+Framework-controlled command output with verbosity and JSON support. Learn how
+the `Output` type replaces direct `println!` calls, how `--quiet`, `--verbose`,
+and `--json` flags work, and when to use `print`, `verbose`, and `result`.
 
 ### [Cancellation](./cancellation)
 
@@ -88,11 +94,12 @@ If you're new to Clawless:
 1. Start with **[Commands](./commands)** and **[Arguments](./arguments)** to
    understand the basics
 2. Learn about **[Context](./context)** to access framework features
-3. Read **[Cancellation](./cancellation)** to understand cooperative shutdown
-4. Explore **[Project Structure](./project-structure)** to understand how to
+3. Read **[Output](./output)** to understand framework-controlled command output
+4. Read **[Cancellation](./cancellation)** to understand cooperative shutdown
+5. Explore **[Project Structure](./project-structure)** to understand how to
    organize your CLI
-5. Read **[Macros](./macros)** if you're curious about implementation details
-6. Reference **[Naming Conventions](./naming-conventions)** when you need to
+6. Read **[Macros](./macros)** if you're curious about implementation details
+7. Reference **[Naming Conventions](./naming-conventions)** when you need to
    look up specific rules
 
 For experienced developers, the **[Macros](./macros)** section provides insight
