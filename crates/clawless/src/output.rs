@@ -368,6 +368,43 @@ mod tests {
     }
 
     #[test]
+    fn artifact_in_json_mode_serializes_as_json() {
+        let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Json);
+
+        output.artifact(&"hello world");
+
+        assert_eq!(buffers.artifacts(), "\"hello world\"\n");
+    }
+
+    #[test]
+    fn artifact_in_quiet_mode_writes() {
+        let (output, buffers) = Output::new_test(Verbosity::Quiet, OutputMode::Text);
+
+        output.artifact(&"hello world");
+
+        assert_eq!(buffers.artifacts(), "hello world\n");
+    }
+
+    #[test]
+    fn artifact_in_text_mode_uses_display() {
+        let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Text);
+
+        output.artifact(&42);
+
+        assert_eq!(buffers.artifacts(), "42\n");
+    }
+
+    #[test]
+    fn artifact_with_multiple_calls_produces_multiple_lines() {
+        let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Text);
+
+        output.artifact(&"first");
+        output.artifact(&"second");
+
+        assert_eq!(buffers.artifacts(), "first\nsecond\n");
+    }
+
+    #[test]
     fn augment_command_adds_three_global_args() {
         let command = test_command();
         let args: Vec<&str> = command
@@ -388,6 +425,33 @@ mod tests {
 
         assert_eq!(output.verbosity(), Verbosity::Default);
         assert_eq!(output.mode(), OutputMode::Text);
+    }
+
+    #[test]
+    fn detail_in_default_mode_is_noop() {
+        let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Text);
+
+        output.detail("extra detail");
+
+        assert_eq!(buffers.messages(), "");
+    }
+
+    #[test]
+    fn detail_in_quiet_mode_is_noop() {
+        let (output, buffers) = Output::new_test(Verbosity::Quiet, OutputMode::Text);
+
+        output.detail("extra detail");
+
+        assert_eq!(buffers.messages(), "");
+    }
+
+    #[test]
+    fn detail_in_verbose_mode_writes() {
+        let (output, buffers) = Output::new_test(Verbosity::Verbose, OutputMode::Text);
+
+        output.detail("extra detail");
+
+        assert_eq!(buffers.messages(), "extra detail\n");
     }
 
     #[test]
@@ -431,13 +495,6 @@ mod tests {
     }
 
     #[test]
-    fn mode_returns_configured_mode() {
-        let (output, _buffers) = Output::new_test(Verbosity::Default, OutputMode::Json);
-
-        assert_eq!(output.mode(), OutputMode::Json);
-    }
-
-    #[test]
     fn message_in_default_mode_writes() {
         let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Text);
 
@@ -465,40 +522,10 @@ mod tests {
     }
 
     #[test]
-    fn artifact_in_json_mode_serializes_as_json() {
-        let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Json);
+    fn mode_returns_configured_mode() {
+        let (output, _buffers) = Output::new_test(Verbosity::Default, OutputMode::Json);
 
-        output.artifact(&"hello world");
-
-        assert_eq!(buffers.artifacts(), "\"hello world\"\n");
-    }
-
-    #[test]
-    fn artifact_in_quiet_mode_writes() {
-        let (output, buffers) = Output::new_test(Verbosity::Quiet, OutputMode::Text);
-
-        output.artifact(&"hello world");
-
-        assert_eq!(buffers.artifacts(), "hello world\n");
-    }
-
-    #[test]
-    fn artifact_in_text_mode_uses_display() {
-        let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Text);
-
-        output.artifact(&42);
-
-        assert_eq!(buffers.artifacts(), "42\n");
-    }
-
-    #[test]
-    fn artifact_with_multiple_calls_produces_multiple_lines() {
-        let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Text);
-
-        output.artifact(&"first");
-        output.artifact(&"second");
-
-        assert_eq!(buffers.artifacts(), "first\nsecond\n");
+        assert_eq!(output.mode(), OutputMode::Json);
     }
 
     #[test]
@@ -517,33 +544,6 @@ mod tests {
     fn trait_unpin() {
         fn assert_unpin<T: Unpin>() {}
         assert_unpin::<Output>();
-    }
-
-    #[test]
-    fn detail_in_default_mode_is_noop() {
-        let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Text);
-
-        output.detail("extra detail");
-
-        assert_eq!(buffers.messages(), "");
-    }
-
-    #[test]
-    fn detail_in_quiet_mode_is_noop() {
-        let (output, buffers) = Output::new_test(Verbosity::Quiet, OutputMode::Text);
-
-        output.detail("extra detail");
-
-        assert_eq!(buffers.messages(), "");
-    }
-
-    #[test]
-    fn detail_in_verbose_mode_writes() {
-        let (output, buffers) = Output::new_test(Verbosity::Verbose, OutputMode::Text);
-
-        output.detail("extra detail");
-
-        assert_eq!(buffers.messages(), "extra detail\n");
     }
 
     #[test]
