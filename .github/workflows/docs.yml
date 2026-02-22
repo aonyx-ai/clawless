@@ -6,6 +6,8 @@ name: Docs
   push:
     branches:
       - main
+  release:
+    types: [released]
   workflow_dispatch:
 
 permissions: {}
@@ -53,10 +55,10 @@ jobs:
 
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.upload-docs.outputs.page_url }}
 
-    # Only deploy to GitHub Pages from the main branch
-    if: github.ref == 'refs/heads/main'
+    # Only deploy to GitHub Pages when a release is published
+    if: github.event_name == 'release' && github.event.action == 'released'
 
     # The following permissions are required to deploy to GitHub Pages.
     permissions:
