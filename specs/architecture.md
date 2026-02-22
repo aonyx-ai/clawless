@@ -26,33 +26,33 @@ exit and long-running interactive sessions such as a full-screen TUI.
 
 ## Architecture overview
 
-```text
-                       ┌────────────────────────────────────────┐
-                       │            Domain core                 │
-                       │                                        │
-                       │  Application  Command  Argument        │
-                       │  Context   Task   Hook   Surface       │
-                       │                                        │
-                       │  Execution event    Progress           │
-                       │  Artifact  Diagnostic                  │
-                       │  Outcome   Cancellation                │
-                       │                                        │
-                       │  Tasks ── execution events ──▶ Surface │
-                       │                                        │
-                       └──────┬────────────────────┬────────────┘
-                              │                    │
-                    ┌─────────▼───┐          ┌──────▼──────────┐
-                    │  Presenter  │          │     Prompt      │
-                    │   (port)    │          │     (port)      │
-                    └──────┬──────┘          └──────┬──────────┘
-                          │                        │
-            ┌─────────────┼──────────┐       ┌─────┼──────────┐
-            ▼       ▼     ▼          ▼       ▼     ▼          ▼
-       ┌────────┐┌────────┐┌──────┐┌────┐  ┌───┐ ┌───┐  ┌──────┐
-       │Terminal││ratatui ││CI /  ││JSON│  │TTY│ │Env│  │ Test │
-       │        ││ (TUI)  ││plain ││    │  │   │ │var│  │      │
-       └────────┘└────────┘└──────┘└────┘  └───┘ └───┘  └──────┘
-        adapter   adapter   adapter adapter adapter adapter adapter
+```mermaid
+flowchart TB
+    subgraph domain["Domain core"]
+        App[Application]
+        App --> Cmd[Command]
+        App --> Hook[Hook]
+        App --> Ctx[Context]
+        App --> Sfc[Surface]
+        App --> Cancel[Cancellation]
+        Cmd --> Arg[Argument]
+        Cmd --> Task
+        Task -.->|produces| EE[Execution event]
+        EE -.->|one of| Progress & Artifact & Diagnostic
+        Cmd -.->|produces| Outcome
+    end
+
+    domain --> presenter["Presenter (port)"]
+    domain --> prompt["Prompt (port)"]
+
+    presenter --> terminal["Terminal adapter"]
+    presenter --> ratatui["ratatui adapter"]
+    presenter --> ci["CI adapter"]
+    presenter --> json["JSON adapter"]
+
+    prompt --> interactive["Interactive adapter"]
+    prompt --> noninteractive["Non-interactive adapter"]
+    prompt --> test["Test adapter"]
 ```
 
 Arrows flow outward from the domain through ports to adapters. The domain never
@@ -496,6 +496,33 @@ artifacts, raising diagnostics — and the framework translates those calls into
 events. This keeps the authoring API ergonomic and focused on domain concerns
 while giving the infrastructure a uniform, structured stream to work with.
 
+```mermaid
+sequenceDiagram
+    participant Command
+    participant RT as Root Task
+    participant ES as Event Stream
+    participant Surface
+    participant SL as Stateless adapter (Terminal / CI / JSON)
+    participant SF as Stateful adapter (ratatui / Test)
+
+    Command ->> RT: executes within
+    RT ->> ES: progress event
+    RT ->> ES: artifact event
+    RT ->> ES: diagnostic event
+
+    par Stateless consumption
+        ES ->> SL: subscribe and render
+    and Stateful consumption
+        ES ->> Surface: accumulate
+        SF ->> Surface: query snapshot
+        Surface -->> SF: current state
+        SF ->> SF: render frame
+    end
+
+    RT ->> ES: lifecycle event (completed)
+    Command -->> Command: produce Outcome
+```
+
 ## Surface model
 
 The surface is the API boundary for external consumers of execution state
@@ -522,6 +549,27 @@ The surface bridges this mismatch. It subscribes to the event stream, absorbs
 every event, and maintains a live, queryable projection of execution state. Push
 consumers can subscribe to the same event stream directly. Pull consumers query
 the surface. The domain does not need to know which consumption model is in use.
+
+```mermaid
+flowchart LR
+    T[Task] -->|emits events| ES[Event Stream]
+
+    ES -->|"push: render each event"| SL
+    ES -->|accumulate| Surface["Surface (materialized view)"]
+
+    subgraph SL["Stateless adapters"]
+        Terminal
+        CI
+        JSON
+    end
+
+    Surface -->|"pull: query snapshots"| SF
+
+    subgraph SF["Stateful adapters"]
+        ratatui
+        Test
+    end
+```
 
 ### Stateless rendering
 
@@ -570,6 +618,26 @@ regardless of the rendering model. The flow is the same in every environment:
    test value).
 5. The adapter submits the answer back through the surface.
 6. The requesting task unblocks and continues.
+
+```mermaid
+sequenceDiagram
+    participant Task
+    participant ES as Event Stream
+    participant Surface
+    participant PA as Prompt adapter
+    participant PR as Presenter adapter
+
+    Task ->> ES: prompt-requested event
+    ES ->> Surface: record pending prompt
+    PA ->> Surface: read pending prompt
+    Surface -->> PA: prompt details
+    PA ->> PR: render question
+    PR -->> PA: user answer
+    PA ->> Surface: submit answer
+    Surface ->> Surface: mark prompt resolved
+    Surface -->> Task: unblock
+    Task ->> Task: continues execution
+```
 
 Because both the request and the answer flow through the surface, the domain
 code that solicits input is identical regardless of the rendering model. A
@@ -632,27 +700,11 @@ Application
 ├── Context (built once, injected into commands)
 ├── Surface (receives execution events, provides queryable state)
 └── Presenter adapter (consumes events or queries surface)
-
-                      ┌──── port boundary ────┐
-
-Task emissions:       domain                  │  adapter
-  Task → Progress  ─┐                         │
-  Task → Artifact   ├─ events ─▶ Surface ─────┼──▶ Presenter
-  Task → Diagnostic ┘           (accumulates) │     (Terminal / ratatui /
-                                               │      CI / JSON / Test)
-
-Prompt interactions:  domain                  │  adapter
-  Task ── prompt ────▶ Surface (pending) ─────┼──▶ adapter presents, collects
-  Task ◀── answer ◀── Surface (resolved) ◀────┼◀── answer submitted back
-
-Task lifecycle:
-  Task → observes Cancellation token → graceful shutdown
-
-Command → root task → events → Surface
-Command → Outcome (after tasks complete)
 ```
 
-Arrows that cross the port boundary are the seams where adapters are swapped.
+See the data flow diagram in "Event model" and the prompt interaction diagram in
+"Surface model" for how data crosses these boundaries. Arrows that cross the port
+boundary are the seams where adapters are swapped.
 
 ## Lifecycle
 
