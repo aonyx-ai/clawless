@@ -15,7 +15,7 @@ pub struct CountArgs {
 /// Word count produced by the `count` command
 ///
 /// In text mode, displays as a plain number (e.g. `4`). In JSON mode, serializes as a structured
-/// object (e.g. `{"words":4}`), demonstrating how [`Output::result`] adapts to the output mode.
+/// object (e.g. `{"words":4}`), demonstrating how [`Output::artifact`] adapts to the output mode.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Serialize)]
 struct Count {
     words: usize,
@@ -29,18 +29,17 @@ impl fmt::Display for Count {
 
 /// Count whitespace-separated words in a sentence
 ///
-/// Demonstrates all three [`Output`] methods: [`Output::verbose`] logs the raw input,
-/// [`Output::print`] describes the operation, and [`Output::result`] emits the word count.
+/// Demonstrates all three [`Output`] methods: [`Output::detail`] logs the raw input,
+/// [`Output::message`] describes the operation, and [`Output::artifact`] emits the word count.
 #[command]
 pub async fn count(args: CountArgs, context: Context) -> CommandResult {
-    let output = context.output();
     let count = Count {
         words: args.sentence.split_whitespace().count(),
     };
 
-    output.verbose(format!("input: {}", args.sentence));
-    output.print("counting words");
-    output.result(&count);
+    detail!("input: {}", args.sentence);
+    message!("counting words");
+    artifact!(count);
 
     Ok(())
 }

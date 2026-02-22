@@ -82,7 +82,7 @@ pub struct GreetArgs {
 /// Greet someone by name
 #[command]
 pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
-    context.output().print(format!("Hello, {}!", args.name));
+    message!("Hello, {}!", args.name);
     Ok(())
 }
 ```

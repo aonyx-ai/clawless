@@ -63,7 +63,7 @@ pub struct VersionArgs {}
 /// Display version information
 #[command]
 pub async fn version(args: VersionArgs, context: Context) -> CommandResult {
-    context.output().print(format!("myapp v{}", env!("CARGO_PKG_VERSION")));
+    message!("myapp v{}", env!("CARGO_PKG_VERSION"));
     Ok(())
 }
 ```

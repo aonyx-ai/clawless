@@ -4,11 +4,11 @@ sidebar_position: 4
 
 # Macros
 
-Clawless uses three procedural macros to wire up your CLI application.
-Understanding how these macros work together helps you debug issues and
-appreciate the convention-based design.
+Clawless uses three procedural macros plus three output macros to wire up your
+CLI application. Understanding how these macros work together helps you debug
+issues and appreciate the convention-based design.
 
-## The three macros
+## Procedural macros
 
 ### `clawless::main!()`
 
@@ -111,7 +111,7 @@ pub struct GreetArgs {
 /// Greet the user
 #[command]
 pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
-    context.output().print(format!("Hello, {}!", args.name));
+    message!("Hello, {}!", args.name);
     Ok(())
 }
 ```
@@ -147,6 +147,60 @@ clawless::inventory::submit! {
     // Registration data structure
 }
 ```
+
+## Output macros
+
+Clawless provides three output macros that offer a convenient shorthand for
+writing to the framework-controlled [output](./output) system. These macros
+access the `context` parameter that every command receives, so they can only be
+used inside `#[command]` functions.
+
+### `message!`
+
+Writes an informational message that the user should see during normal
+operation. Suppressed by `--quiet`.
+
+```rust
+message!("Deploying to {}", environment);
+message!("Done");
+```
+
+`message!` accepts the same arguments as `format!`. A single string literal
+with no formatting arguments is also accepted.
+
+### `detail!`
+
+Writes a detail message that is only shown when `--verbose` is passed.
+Use this for progress information, diagnostics, or other context that helps
+during debugging but would be noisy in normal use.
+
+```rust
+detail!("loading configuration from {}", path.display());
+detail!("connection established");
+```
+
+### `artifact!`
+
+Writes the primary data output of a command. This is the machine-readable
+payload: the thing a script would pipe to `jq`, or the structured result a
+user specifically asked for. When `--json` is active, `artifact!` emits JSON;
+otherwise it uses the type's `Display` implementation.
+
+```rust
+artifact!(BuildResult { success: true });
+artifact!(users);
+```
+
+Unlike `message!` and `detail!`, `artifact!` takes a single expression rather
+than a format string.
+
+### When to use each macro
+
+| Macro       | Purpose                             | Shown by default | Hidden by `--quiet` | Requires `--verbose` |
+| ----------- | ----------------------------------- | ---------------- | ------------------- | -------------------- |
+| `message!`  | Informational messages for the user | Yes              | Yes                 | No                   |
+| `detail!`   | Debug and progress information      | No               | Yes                 | Yes                  |
+| `artifact!` | Primary command data or results     | Yes              | No                  | No                   |
 
 ## How they work together
 

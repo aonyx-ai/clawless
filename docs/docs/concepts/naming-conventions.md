@@ -157,7 +157,7 @@ pub struct VersionArgs {}
 /// Display version information
 #[command]
 pub async fn version(args: VersionArgs, context: Context) -> CommandResult {
-    context.output().print("v1.0.0");
+    message!("v1.0.0");
     Ok(())
 }
 ```
@@ -175,7 +175,7 @@ pub struct CheckUpdatesArgs {}
 /// Check for available updates
 #[command]
 pub async fn check_updates(args: CheckUpdatesArgs, context: Context) -> CommandResult {
-    context.output().print("Checking for updates...");
+    message!("Checking for updates...");
     Ok(())
 }
 ```
@@ -213,7 +213,7 @@ pub struct CreateUserArgs {
 #[command]
 pub async fn create_user(args: CreateUserArgs, context: Context) ->
 CommandResult {
-    context.output().print(format!("Creating user: {}", args.username));
+    message!("Creating user: {}", args.username);
     Ok(())
 }
 ```

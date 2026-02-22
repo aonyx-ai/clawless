@@ -27,7 +27,7 @@ pub struct GreetArgs {
 /// This command prints a greeting message to the console.
 #[command]
 pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
-    context.output().print(format!("Hello, {}!", args.name));
+    message!("Hello, {}!", args.name);
     Ok(())
 }
 ```
@@ -55,7 +55,7 @@ See [Arguments](./arguments) for details.
 ```rust
 #[command]
 pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
-    context.output().print(format!("Hello, {}!", args.name));
+    message!("Hello, {}!", args.name);
     Ok(())
 }
 ```
@@ -123,7 +123,7 @@ use clawless::prelude::*;
 #[command]
 pub async fn read_file(args: ReadArgs, context: Context) -> CommandResult {
     let contents = std::fs::read_to_string(&args.path)?;  // ? propagates errors
-    context.output().print(contents);
+    message!("{}", contents);
     Ok(())
 }
 ```
@@ -149,7 +149,7 @@ pub async fn read_config(args: ReadArgs, context: Context) -> CommandResult {
     let config: Config = toml::from_str(&contents)
         .context("Failed to parse TOML configuration")?;
 
-    context.output().print(format!("{:?}", config));
+    message!("{:?}", config);
     Ok(())
 }
 ```
@@ -230,7 +230,7 @@ pub struct VersionArgs {}
 /// Display version information
 #[command]
 pub async fn version(_args: VersionArgs, context: Context) -> CommandResult {
-    context.output().print(format!("myapp v{}", env!("CARGO_PKG_VERSION")));
+    message!("myapp v{}", env!("CARGO_PKG_VERSION"));
     Ok(())
 }
 ```
@@ -245,7 +245,7 @@ All commands are async by default, even if they don't use async features:
 ```rust
 #[command]
 pub async fn hello(_args: HelloArgs, context: Context) -> CommandResult {
-    context.output().print("Hello!");  // No await needed
+    message!("Hello!");  // No await needed
     Ok(())
 }
 ```
@@ -264,7 +264,7 @@ pub async fn fetch(args: FetchArgs, context: Context) -> CommandResult {
     let client = reqwest::Client::new();
     let response = client.get(&args.url).send().await?;
     let body = response.text().await?;
-    context.output().print(body);
+    message!("{}", body);
     Ok(())
 }
 ```

@@ -131,7 +131,7 @@ pub struct DbArgs {}
 #[command]
 pub async fn db(_args: DbArgs, context: Context) -> CommandResult {
     // This executes when user runs: myapp db
-    context.output().print("Use a subcommand: migrate, seed");
+    message!("Use a subcommand: migrate, seed");
     Ok(())
 }
 ```

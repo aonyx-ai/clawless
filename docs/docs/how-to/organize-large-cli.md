@@ -110,7 +110,7 @@ use crate::config_manager;  // Business logic
 #[command]
 pub async fn get(args: GetArgs, context: Context) -> CommandResult {
     let value = config_manager::get_value(&args.key)?;
-    context.output().print(value);
+    message!("{}", value);
     Ok(())
 }
 ```

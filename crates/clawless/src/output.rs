@@ -2,8 +2,8 @@
 //!
 //! Commands use [`Output`] instead of `println!` to produce user-facing text. In return, every
 //! command automatically gains `--quiet`, `--verbose`, and `--json` support without any extra
-//! work. Call [`Output::print`] for normal messages, [`Output::verbose`] for detail that only
-//! appears when the user asks for it, and [`Output::result`] for the primary data a command
+//! work. Call [`Output::message`] for normal messages, [`Output::detail`] for detail that only
+//! appears when the user asks for it, and [`Output::artifact`] for the primary data a command
 //! produces.
 //!
 //! [`Verbosity`] and [`OutputMode`] are the two axes of configuration. Verbosity controls
@@ -34,9 +34,9 @@ mod verbosity;
 ///
 /// Three methods cover every output need:
 ///
-/// - [`print`] — informational messages (suppressed by `--quiet`).
-/// - [`verbose`] — extra detail (shown only with `--verbose`).
-/// - [`result`] — the primary data a command produces (always shown, serialized as JSON in
+/// - [`message`] — informational messages (suppressed by `--quiet`).
+/// - [`detail`] — extra detail (shown only with `--verbose`).
+/// - [`artifact`] — the primary data a command produces (always shown, serialized as JSON in
 ///   `--json` mode).
 ///
 /// In text mode, all output goes to stdout. In JSON mode, messages redirect to stderr so that
@@ -49,26 +49,26 @@ mod verbosity;
 /// use clawless::prelude::*;
 ///
 /// let output = Output::new(Verbosity::Default, OutputMode::Text);
-/// output.print("processing files");
-/// output.verbose("scanning directory: /home/user/project");
+/// output.message("processing files");
+/// output.detail("scanning directory: /home/user/project");
 /// ```
 ///
-/// [`print`]: Output::print
-/// [`verbose`]: Output::verbose
-/// [`result`]: Output::result
+/// [`message`]: Output::message
+/// [`detail`]: Output::detail
+/// [`artifact`]: Output::artifact
 #[derive(Clone, Debug)]
 pub struct Output {
     verbosity: Verbosity,
     mode: OutputMode,
     message_writer: Writer,
-    result_writer: Writer,
+    artifact_writer: Writer,
 }
 
 impl Output {
     /// Creates a new [`Output`] with stdout and stderr as writer targets
     ///
-    /// In text mode, messages and results both go to stdout. In JSON mode, messages go to stderr
-    /// (keeping stdout reserved for machine-readable data) and results go to stdout.
+    /// In text mode, messages and artifacts both go to stdout. In JSON mode, messages go to stderr
+    /// (keeping stdout reserved for machine-readable data) and artifacts go to stdout.
     ///
     /// # Examples
     ///
@@ -89,11 +89,11 @@ impl Output {
             verbosity,
             mode,
             message_writer,
-            result_writer: Writer::Stdout,
+            artifact_writer: Writer::Stdout,
         }
     }
 
-    /// Writes a message followed by a newline
+    /// Writes an informational message followed by a newline
     ///
     /// The message is written to the message writer (stdout in text mode, stderr in JSON mode).
     /// This method is a no-op if verbosity is [`Verbosity::Quiet`].
@@ -108,9 +108,9 @@ impl Output {
     /// use clawless::prelude::*;
     ///
     /// let output = Output::new(Verbosity::Default, OutputMode::Text);
-    /// output.print("processing 42 files");
+    /// output.message("processing 42 files");
     /// ```
-    pub fn print(&self, message: impl Display) {
+    pub fn message(&self, message: impl Display) {
         match self.verbosity {
             Verbosity::Quiet => {}
             Verbosity::Default | Verbosity::Verbose => {
@@ -119,7 +119,7 @@ impl Output {
         }
     }
 
-    /// Writes a verbose message followed by a newline
+    /// Writes a supplementary detail followed by a newline
     ///
     /// The message is written to the message writer (stdout in text mode, stderr in JSON mode).
     /// This method only produces output when verbosity is [`Verbosity::Verbose`].
@@ -134,9 +134,9 @@ impl Output {
     /// use clawless::prelude::*;
     ///
     /// let output = Output::new(Verbosity::Verbose, OutputMode::Text);
-    /// output.verbose("scanning directory: /home/user/project");
+    /// output.detail("scanning directory: /home/user/project");
     /// ```
-    pub fn verbose(&self, message: impl Display) {
+    pub fn detail(&self, message: impl Display) {
         match self.verbosity {
             Verbosity::Quiet | Verbosity::Default => {}
             Verbosity::Verbose => {
@@ -145,10 +145,10 @@ impl Output {
         }
     }
 
-    /// Writes a result value followed by a newline
+    /// Writes an artifact value followed by a newline
     ///
     /// In text mode, the value is formatted via [`Display`] and written to stdout. In JSON mode,
-    /// the value is serialized via [`Serialize`] as compact JSON and written to stdout. Results
+    /// the value is serialized via [`Serialize`] as compact JSON and written to stdout. Artifacts
     /// are always written regardless of verbosity — they are the primary output of a command.
     ///
     /// # Panics
@@ -163,16 +163,16 @@ impl Output {
     /// use clawless::prelude::*;
     ///
     /// let output = Output::new(Verbosity::Default, OutputMode::Text);
-    /// output.result(&"hello");
+    /// output.artifact(&"hello");
     /// ```
-    pub fn result<T: Display + Serialize>(&self, value: &T) {
+    pub fn artifact<T: Display + Serialize>(&self, value: &T) {
         let line = match self.mode {
             OutputMode::Text => value.to_string(),
             OutputMode::Json => {
-                serde_json::to_string(value).expect("failed to serialize result to JSON")
+                serde_json::to_string(value).expect("failed to serialize artifact to JSON")
             }
         };
-        self.result_writer.write_line(&line);
+        self.artifact_writer.write_line(&line);
     }
 
     /// Returns the verbosity level
@@ -327,7 +327,7 @@ mod tests {
 
     struct TestOutputBuffers {
         messages: Arc<Mutex<Vec<u8>>>,
-        results: Arc<Mutex<Vec<u8>>>,
+        artifacts: Arc<Mutex<Vec<u8>>>,
     }
 
     impl TestOutputBuffers {
@@ -336,8 +336,8 @@ mod tests {
             String::from_utf8(guard.clone()).expect("should be valid UTF-8")
         }
 
-        fn results(&self) -> String {
-            let guard = self.results.lock().expect("should lock results buffer");
+        fn artifacts(&self) -> String {
+            let guard = self.artifacts.lock().expect("should lock artifacts buffer");
             String::from_utf8(guard.clone()).expect("should be valid UTF-8")
         }
     }
@@ -345,16 +345,19 @@ mod tests {
     impl Output {
         fn new_test(verbosity: Verbosity, mode: OutputMode) -> (Self, TestOutputBuffers) {
             let messages = Arc::new(Mutex::new(Vec::new()));
-            let results = Arc::new(Mutex::new(Vec::new()));
+            let artifacts = Arc::new(Mutex::new(Vec::new()));
 
             let output = Self {
                 verbosity,
                 mode,
                 message_writer: Writer::Buffer(Arc::clone(&messages)),
-                result_writer: Writer::Buffer(Arc::clone(&results)),
+                artifact_writer: Writer::Buffer(Arc::clone(&artifacts)),
             };
 
-            let buffers = TestOutputBuffers { messages, results };
+            let buffers = TestOutputBuffers {
+                messages,
+                artifacts,
+            };
 
             (output, buffers)
         }
@@ -435,67 +438,67 @@ mod tests {
     }
 
     #[test]
-    fn print_in_default_mode_writes_message() {
+    fn message_in_default_mode_writes() {
         let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Text);
 
-        output.print("hello world");
+        output.message("hello world");
 
         assert_eq!(buffers.messages(), "hello world\n");
     }
 
     #[test]
-    fn print_in_quiet_mode_is_noop() {
+    fn message_in_quiet_mode_is_noop() {
         let (output, buffers) = Output::new_test(Verbosity::Quiet, OutputMode::Text);
 
-        output.print("hello world");
+        output.message("hello world");
 
         assert_eq!(buffers.messages(), "");
     }
 
     #[test]
-    fn print_in_verbose_mode_writes_message() {
+    fn message_in_verbose_mode_writes() {
         let (output, buffers) = Output::new_test(Verbosity::Verbose, OutputMode::Text);
 
-        output.print("hello world");
+        output.message("hello world");
 
         assert_eq!(buffers.messages(), "hello world\n");
     }
 
     #[test]
-    fn result_in_json_mode_serializes_as_json() {
+    fn artifact_in_json_mode_serializes_as_json() {
         let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Json);
 
-        output.result(&"hello world");
+        output.artifact(&"hello world");
 
-        assert_eq!(buffers.results(), "\"hello world\"\n");
+        assert_eq!(buffers.artifacts(), "\"hello world\"\n");
     }
 
     #[test]
-    fn result_in_quiet_mode_writes() {
+    fn artifact_in_quiet_mode_writes() {
         let (output, buffers) = Output::new_test(Verbosity::Quiet, OutputMode::Text);
 
-        output.result(&"hello world");
+        output.artifact(&"hello world");
 
-        assert_eq!(buffers.results(), "hello world\n");
+        assert_eq!(buffers.artifacts(), "hello world\n");
     }
 
     #[test]
-    fn result_in_text_mode_uses_display() {
+    fn artifact_in_text_mode_uses_display() {
         let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Text);
 
-        output.result(&42);
+        output.artifact(&42);
 
-        assert_eq!(buffers.results(), "42\n");
+        assert_eq!(buffers.artifacts(), "42\n");
     }
 
     #[test]
-    fn result_with_multiple_calls_produces_multiple_lines() {
+    fn artifact_with_multiple_calls_produces_multiple_lines() {
         let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Text);
 
-        output.result(&"first");
-        output.result(&"second");
+        output.artifact(&"first");
+        output.artifact(&"second");
 
-        assert_eq!(buffers.results(), "first\nsecond\n");
+        assert_eq!(buffers.artifacts(), "first\nsecond\n");
     }
 
     #[test]
@@ -517,28 +520,28 @@ mod tests {
     }
 
     #[test]
-    fn verbose_in_default_mode_is_noop() {
+    fn detail_in_default_mode_is_noop() {
         let (output, buffers) = Output::new_test(Verbosity::Default, OutputMode::Text);
 
-        output.verbose("extra detail");
+        output.detail("extra detail");
 
         assert_eq!(buffers.messages(), "");
     }
 
     #[test]
-    fn verbose_in_quiet_mode_is_noop() {
+    fn detail_in_quiet_mode_is_noop() {
         let (output, buffers) = Output::new_test(Verbosity::Quiet, OutputMode::Text);
 
-        output.verbose("extra detail");
+        output.detail("extra detail");
 
         assert_eq!(buffers.messages(), "");
     }
 
     #[test]
-    fn verbose_in_verbose_mode_writes_message() {
+    fn detail_in_verbose_mode_writes() {
         let (output, buffers) = Output::new_test(Verbosity::Verbose, OutputMode::Text);
 
-        output.verbose("extra detail");
+        output.detail("extra detail");
 
         assert_eq!(buffers.messages(), "extra detail\n");
     }
