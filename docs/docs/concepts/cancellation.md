@@ -38,7 +38,7 @@ pub async fn process(_args: ProcessArgs, context: Context) -> CommandResult {
 
     loop {
         if cancellation.is_cancelled() {
-            context.output().print("shutting down");
+            message!("shutting down");
             break;
         }
 

@@ -32,7 +32,7 @@ use clawless::prelude::*;
 pub async fn deploy(args: DeployArgs, context: Context) -> CommandResult {
     // Access context features here
     let cwd = context.current_working_directory();
-    context.output().print(format!("Deploying from: {}", cwd.display()));
+    message!("Deploying from: {}", cwd.display());
     Ok(())
 }
 ```
@@ -43,7 +43,7 @@ use it:
 ```rust
 #[command]
 pub async fn version(args: VersionArgs, context: Context) -> CommandResult {
-    context.output().print(format!("v{}", env!("CARGO_PKG_VERSION")));
+    message!("v{}", env!("CARGO_PKG_VERSION"));
     Ok(())
 }
 ```
@@ -60,14 +60,12 @@ use clawless::prelude::*;
 #[command]
 pub async fn status(_args: StatusArgs, context: Context) -> CommandResult {
     let cwd = context.current_working_directory();
-    let output = context.output();
-
-    output.print(format!("Working directory: {}", cwd.display()));
+    message!("Working directory: {}", cwd.display());
 
     // Build paths relative to the working directory
     let config_path = cwd.join("config.toml");
     if config_path.exists() {
-        output.print(format!("Found config at: {}", config_path.display()));
+        message!("Found config at: {}", config_path.display());
     }
 
     Ok(())
@@ -95,13 +93,11 @@ use clawless::prelude::*;
 
 #[command]
 pub async fn serve(_args: ServeArgs, context: Context) -> CommandResult {
-    let output = context.output();
-
-    output.print("server started");
+    message!("server started");
 
     context.cancellation().cancelled().await;
 
-    output.print("shutting down");
+    message!("shutting down");
     Ok(())
 }
 ```
@@ -122,20 +118,19 @@ use clawless::prelude::*;
 
 #[command]
 pub async fn build(args: BuildArgs, context: Context) -> CommandResult {
-    let output = context.output();
-
-    output.verbose("loading configuration");
-    output.print("building project");
-    output.result(&BuildResult { success: true });
+    detail!("loading configuration");
+    message!("building project");
+    artifact!(BuildResult { success: true });
 
     Ok(())
 }
 ```
 
 The `output()` method returns an [`Output`][output-type] instance with three
-methods: `print` for informational messages, `verbose` for debug detail, and
-`result` for primary command data. See [Output](./output) for the full
-explanation.
+methods: `message` for informational messages, `detail` for debug detail, and
+`artifact` for primary command data. The output macros `message!`, `detail!`,
+and `artifact!` provide a convenient shorthand. See [Output](./output) for the
+full explanation.
 
 [output-type]: https://docs.rs/clawless/latest/clawless/output/struct.Output.html
 

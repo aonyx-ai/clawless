@@ -1,0 +1,7 @@
+error[E0425]: cannot find value `context` in this scope
+ --> tests/ui/fail-output-macro-without-context.rs:4:5
+  |
+4 |     message!("this should not compile");
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+  |
+  = note: this error originates in the macro `message` (in Nightly builds, run with -Z macro-backtrace for more info)

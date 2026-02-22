@@ -33,9 +33,9 @@ use clawless::prelude::*;
 pub async fn count(args: CountArgs, context: Context) -> CommandResult {
     let output = context.output();
 
-    output.verbose(format!("input: {}", args.sentence));
-    output.print("counting words");
-    output.result(&WordCount { words: 42 });
+    output.detail(format!("input: {}", args.sentence));
+    output.message("counting words");
+    output.artifact(&WordCount { words: 42 });
 
     Ok(())
 }
@@ -46,29 +46,29 @@ automatically. Your command doesn't need to declare or parse them.
 
 ## The three methods
 
-### `print`
+### `message`
 
 Writes an informational message. This is the replacement for `println!` in most
 cases:
 
 ```rust
-output.print("deploying to production");
-output.print(format!("found {} items", count));
+output.message("deploying to production");
+output.message(format!("found {} items", count));
 ```
 
-Messages from `print` are suppressed when the user passes `--quiet`.
+Messages from `message` are suppressed when the user passes `--quiet`.
 
-### `verbose`
+### `detail`
 
 Writes a message that only appears with `--verbose`. Use this for additional
 detail that is helpful when debugging but noisy in normal usage:
 
 ```rust
-output.verbose(format!("loading config from {}", path.display()));
-output.verbose("retrying connection");
+output.detail(format!("loading config from {}", path.display()));
+output.detail("retrying connection");
 ```
 
-### `result`
+### `artifact`
 
 Writes the primary data a command produces. In text mode, the value is
 formatted via [`Display`][display]. In JSON mode, it is serialized via
@@ -89,40 +89,67 @@ impl fmt::Display for WordCount {
     }
 }
 
-output.result(&WordCount { words: 42 });
+output.artifact(&WordCount { words: 42 });
 ```
 
-Results are always written, regardless of verbosity. This ensures that machine
+Artifacts are always written, regardless of verbosity. This ensures that machine
 consumers always get the data they need.
 
 ## Behavior matrix
 
 The interaction of method, verbosity, and mode:
 
-| Method    | Default    | `--quiet`  | `--verbose` | `--json`         |
-| --------- | ---------- | ---------- | ----------- | ---------------- |
-| `print`   | stdout     | suppressed | stdout      | stderr           |
-| `verbose` | suppressed | suppressed | stdout      | suppressed       |
-| `result`  | stdout     | stdout     | stdout      | stdout (as JSON) |
+| Method     | Default    | `--quiet`  | `--verbose` | `--json`         |
+| ---------- | ---------- | ---------- | ----------- | ---------------- |
+| `message`  | stdout     | suppressed | stdout      | stderr           |
+| `detail`   | suppressed | suppressed | stdout      | suppressed       |
+| `artifact` | stdout     | stdout     | stdout      | stdout (as JSON) |
 
-In JSON mode, `print` and `verbose` messages are redirected to stderr so that
-stdout contains only machine-readable JSON from `result`. This follows the same
-convention as `gh`, `kubectl`, and `jq`.
+In JSON mode, `message` and `detail` output is redirected to stderr so that
+stdout contains only machine-readable JSON from `artifact`. This follows the
+same convention as `gh`, `kubectl`, and `jq`.
+
+## Output macros
+
+The `message!`, `detail!`, and `artifact!` macros provide shorthand for the
+corresponding method calls. Each macro resolves `context` at the call site, so
+you do not need to extract the [`Output`][output-type] instance yourself.
+
+Here is the count example rewritten with macros:
+
+```rust
+use clawless::prelude::*;
+
+/// Count words in a sentence
+#[command]
+pub async fn count(args: CountArgs, context: Context) -> CommandResult {
+    detail!("input: {}", args.sentence);
+    message!("counting words");
+    artifact!(WordCount { words: 42 });
+
+    Ok(())
+}
+```
+
+The macros expand to `context.output().message(...)`, `context.output().detail(...)`,
+and `context.output().artifact(...)` respectively. They resolve `context` from
+the enclosing function scope — every `#[command]` function receives a `context`
+parameter, so no extra plumbing is needed.
 
 ## When to use each method
 
-**`print`** for informational messages that describe what the command is doing.
+**`message`** for informational messages that describe what the command is doing.
 Status updates, progress notes, and confirmations belong here.
 
-**`verbose`** for detail that helps with debugging or understanding internals.
+**`detail`** for information that helps with debugging or understanding internals.
 Raw inputs, resolved paths, retry attempts, and timing information belong here.
 
-**`result`** for the primary output of the command. If your command produces
-data that another program might consume, use `result`. The value must implement
+**`artifact`** for the primary output of the command. If your command produces
+data that another program might consume, use `artifact`. The value must implement
 both [`Display`][display] and [`Serialize`][serialize].
 
-Most commands only need `print`. Commands that produce structured data use
-`result`. Commands with complex internals add `verbose` for observability.
+Most commands only need `message`. Commands that produce structured data use
+`artifact`. Commands with complex internals add `detail` for observability.
 
 ## What's next
 

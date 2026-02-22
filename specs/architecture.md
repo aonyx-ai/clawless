@@ -746,23 +746,23 @@ or cancellation.
 
 ## Current state
 
-| Entity          | Current implementation                       | Status                                 |
-| --------------- | -------------------------------------------- | -------------------------------------- |
-| Application     | `main!()` macro                              | Implicit, no first-class type          |
-| Command         | `#[command]` async fn                        | Emergent from fn + attrs + module      |
-| Argument        | Clap `#[derive(Args)]`                       | Fully delegated to Clap                |
-| Context         | `Context` struct (CWD, Cancellation, Output) | Functional                             |
-| Prompt          | Not represented                              | Missing                                |
-| Hook            | Not represented                              | Missing                                |
-| Task            | Not represented                              | Missing; commands are monolithic       |
-| Surface         | Not represented                              | New concept, not yet implemented       |
-| Execution event | Not represented                              | New concept, not yet implemented       |
-| Cancellation    | `Cancellation` value object + signal adapter | Fully implemented                      |
-| Progress        | `Output::print()`, `Output::verbose()`       | Partial; no progress bars or spinners  |
-| Artifact        | `Output::result()` (`Display` + `Serialize`) | Partial; single value per command      |
-| Diagnostic      | `anyhow::Result`                             | Exists but unstructured                |
-| Outcome         | `CommandResult` = `anyhow::Result<()>`       | Thin alias, no exit code control       |
-| Presenter       | `Output` with `Verbosity` and `OutputMode`   | Partial; stateless text and JSON modes |
+| Entity          | Current implementation                         | Status                                 |
+| --------------- | ---------------------------------------------- | -------------------------------------- |
+| Application     | `main!()` macro                                | Implicit, no first-class type          |
+| Command         | `#[command]` async fn                          | Emergent from fn + attrs + module      |
+| Argument        | Clap `#[derive(Args)]`                         | Fully delegated to Clap                |
+| Context         | `Context` struct (CWD, Cancellation, Output)   | Functional                             |
+| Prompt          | Not represented                                | Missing                                |
+| Hook            | Not represented                                | Missing                                |
+| Task            | Not represented                                | Missing; commands are monolithic       |
+| Surface         | Not represented                                | New concept, not yet implemented       |
+| Execution event | Not represented                                | New concept, not yet implemented       |
+| Cancellation    | `Cancellation` value object + signal adapter   | Fully implemented                      |
+| Progress        | `Output::message()`, `Output::detail()`        | Partial; no progress bars or spinners  |
+| Artifact        | `Output::artifact()` (`Display` + `Serialize`) | Partial; single value per command      |
+| Diagnostic      | `anyhow::Result`                               | Exists but unstructured                |
+| Outcome         | `CommandResult` = `anyhow::Result<()>`         | Thin alias, no exit code control       |
+| Presenter       | `Output` with `Verbosity` and `OutputMode`     | Partial; stateless text and JSON modes |
 
 The current `Output` type is an early stateless implementation that predates the
 event model. It writes directly to stdout and stderr without an intermediate
@@ -787,17 +787,15 @@ Options:
   adapters for pipes, files, and test fixtures.
 - **Something else**: an approach not yet considered.
 
-### Output ergonomics
+### ~~Output ergonomics~~ (resolved)
 
-Should simple commands still be able to call `println!`, or must all output
-flow through Output?
-
-Output is the command-facing API; the Presenter port is behind it. A strict
-"everything through Output" rule ensures consistent rendering and Presenter
-agnosticism, but adds ceremony for commands that just want to print a line.
-Output's current design — simple methods like `print()` and `result()` — aims
-to keep this ceremony minimal, but the right balance between strictness and
-convenience remains open.
+The `message!`, `detail!`, and `artifact!` macros provide convenience helpers
+that route through `Output` transparently. Commands use these macros instead of
+`println!`, getting consistent rendering and Presenter agnosticism without
+additional ceremony. The macros expand to `Output::message()`,
+`Output::detail()`, and `Output::artifact()` calls respectively, keeping the
+command-facing API minimal while ensuring all output flows through the
+framework.
 
 ### Surface ownership and concurrency model
 

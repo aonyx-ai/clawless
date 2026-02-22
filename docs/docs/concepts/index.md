@@ -32,7 +32,7 @@ more.
 
 Framework-controlled command output with verbosity and JSON support. Learn how
 the `Output` type replaces direct `println!` calls, how `--quiet`, `--verbose`,
-and `--json` flags work, and when to use `print`, `verbose`, and `result`.
+and `--json` flags work, and when to use `message`, `detail`, and `artifact`.
 
 ### [Cancellation](./cancellation)
 

@@ -11,6 +11,97 @@ use crate::inventory::InventoryGenerator;
 mod command;
 mod inventory;
 
+/// Writes an informational message via the [`Output`] on [`Context`]
+///
+/// Expands to `context.output().message(format_args!(...))`, where `context` resolves to the
+/// local variable in the calling function's scope. This is the macro equivalent of
+/// [`Output::message`].
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use clawless::prelude::*;
+///
+/// #[command]
+/// pub async fn deploy(args: DeployArgs, context: Context) -> CommandResult {
+///     message!("deploying to {}", args.target);
+///     Ok(())
+/// }
+/// ```
+///
+/// [`Context`]: clawless::context::Context
+/// [`Output`]: clawless::output::Output
+/// [`Output::message`]: clawless::output::Output::message
+#[proc_macro]
+pub fn message(input: TokenStream) -> TokenStream {
+    output_format_macro(input, "message")
+}
+
+/// Writes a supplementary detail via the [`Output`] on [`Context`]
+///
+/// Expands to `context.output().detail(format_args!(...))`, where `context` resolves to the
+/// local variable in the calling function's scope. Detail is only shown when the user passes
+/// `--verbose`. This is the macro equivalent of [`Output::detail`].
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use clawless::prelude::*;
+///
+/// #[command]
+/// pub async fn deploy(args: DeployArgs, context: Context) -> CommandResult {
+///     detail!("config loaded from {}", args.config_path);
+///     Ok(())
+/// }
+/// ```
+///
+/// [`Context`]: clawless::context::Context
+/// [`Output`]: clawless::output::Output
+/// [`Output::detail`]: clawless::output::Output::detail
+#[proc_macro]
+pub fn detail(input: TokenStream) -> TokenStream {
+    output_format_macro(input, "detail")
+}
+
+/// Writes an artifact value via the [`Output`] on [`Context`]
+///
+/// Expands to `context.output().artifact(&(...))`, where `context` resolves to the local
+/// variable in the calling function's scope. Unlike [`message!`] and [`detail!`], this macro
+/// does not use `format_args!` — it takes an expression that implements [`Display`] and
+/// [`Serialize`]. This is the macro equivalent of [`Output::artifact`].
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use clawless::prelude::*;
+///
+/// #[command]
+/// pub async fn count(args: CountArgs, context: Context) -> CommandResult {
+///     let count = WordCount { words: 42 };
+///     artifact!(count);
+///     Ok(())
+/// }
+/// ```
+///
+/// [`Context`]: clawless::context::Context
+/// [`Display`]: std::fmt::Display
+/// [`Output`]: clawless::output::Output
+/// [`Output::artifact`]: clawless::output::Output::artifact
+/// [`Serialize`]: serde::Serialize
+#[proc_macro]
+pub fn artifact(input: TokenStream) -> TokenStream {
+    let input = proc_macro2::TokenStream::from(input);
+    let context = proc_macro2::Ident::new("context", proc_macro2::Span::call_site());
+    quote! { #context.output().artifact(&(#input)) }.into()
+}
+
+fn output_format_macro(input: TokenStream, method: &str) -> TokenStream {
+    let input = proc_macro2::TokenStream::from(input);
+    let context = proc_macro2::Ident::new("context", proc_macro2::Span::call_site());
+    let method = proc_macro2::Ident::new(method, proc_macro2::Span::call_site());
+    quote! { #context.output().#method(::core::format_args!(#input)) }.into()
+}
+
 /// Set up the commands module for a Clawless application
 ///
 /// This macro generates the root command for the command-line application and allows subcommands to
@@ -125,7 +216,7 @@ pub fn main(_input: TokenStream) -> TokenStream {
 ///
 /// #[command]
 /// pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
-///     println!("Hello, {}!", args.name);
+///     message!("Hello, {}!", args.name);
 ///     Ok(())
 /// }
 /// ```

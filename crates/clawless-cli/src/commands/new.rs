@@ -159,10 +159,7 @@ fn create_greeting_command(crate_path: &Path) -> Result<(), Error> {
 
         #[command]
         pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
-            // Print the greeting to the console
-            context.output().print(format!("Hello, {}!", args.name));
-
-            // Exit the CLI successfully
+            message!("Hello, {}!", args.name);
             Ok(())
         }
     "#};
