@@ -87,7 +87,7 @@ specs where they can be resolved with full context.
 [command-output]: ../features/005-command-output.md
 [context]: ../architecture.md#context
 [diagnostic]: ../architecture.md#diagnostic
-[formatter]: ../architecture.md#formatter-output-port
+[formatter]: ../architecture.md#presenter-output-port
 [output-types]: ../features/004-output-types.md
 [progress]: ../architecture.md#progress
 [task]: ../architecture.md#task
