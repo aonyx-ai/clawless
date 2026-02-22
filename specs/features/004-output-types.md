@@ -397,7 +397,7 @@ internal implementation detail that can be evaluated during the F004 PR.
 [context]: ../architecture.md#context
 [conventions]: ../../CLAUDE.md#enums-over-bools
 [diagnostic]: ../architecture.md#diagnostic
-[formatter]: ../architecture.md#formatter-output-port
+[formatter]: ../architecture.md#presenter-output-port
 [progress]: ../architecture.md#progress
 [project]: ../projects/002-output.md
 [task]: ../architecture.md#task
