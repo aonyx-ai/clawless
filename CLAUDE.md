@@ -470,7 +470,9 @@ fn helper() {}
 
 - Unit tests in the same file as the code they test.
 - Integration tests for `clawless-cli` using [trycmd][trycmd].
-- Compile-fail tests for `clawless-derive` using [trybuild][trybuild].
+- UI tests for macros using [trybuild][trybuild] (`crates/clawless/tests/ui/`).
+  Files use `pass-` and `fail-` prefixes. Each pass-test function should
+  isolate a single invocation style for targeted failure diagnostics.
 - Test functions ordered alphabetically within modules.
 - Name tests descriptively: `function_name_<condition>_<result>`, e.g.
   `greet_with_name_returns_greeting`.
@@ -479,7 +481,7 @@ Testing tools:
 
 - **nextest**: Test runner (used by `just test-rust`).
 - **trycmd**: CLI integration tests for `clawless-cli`.
-- **trybuild**: Compile-fail tests for `clawless-derive`.
+- **trybuild**: UI tests for macros (pass and compile-fail).
 
 #### Test structure
 
