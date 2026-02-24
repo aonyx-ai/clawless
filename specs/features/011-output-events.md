@@ -2,13 +2,16 @@
 
 - **Project**: [P003-presenter][project]
 - **Dependencies**: [F010-presenter-macros][presenter-macros]
-- **Breaking changes**: none (internal behavior change, public API unchanged)
+- **Breaking changes**: Output methods become async; macros hide this from
+  command authors
 
 ## Summary
 
 Switch [Output]'s `message()`, `detail()`, and `artifact()` methods from
 writing directly to stdout/stderr to sending [events][event-types] through the
-[event channel][event-channel]. This closes the event-driven loop: commands use
+[event channel][event-channel]. The methods become async to use the channel's
+async `send`, and the output macros include `.await` in their expansion so
+command authors see no change. This closes the event-driven loop: commands use
 Output macros, Output emits events, events travel through the channel, and the
 [TerminalPresenter] renders them to the terminal.
 
@@ -23,13 +26,13 @@ sends.
 After this feature, the data flow is fully event-driven:
 
 ```text
-command → message!() → Output::message() → EventSender → channel → EventReceiver → TerminalPresenter → stdout
+command → message!() → Output::message().await → EventSender → channel → EventReceiver → TerminalPresenter → stdout
 ```
 
-The public API is unchanged: `message!`, `detail!`, `artifact!` continue to
-work exactly as before. The `--quiet`, `--verbose`, and `--json` flags produce
-identical behavior. The only difference is internal: Output sends events instead
-of writing directly, and the Presenter renders them.
+The command-facing API is unchanged: `message!`, `detail!`, `artifact!`
+continue to work exactly as before. The `--quiet`, `--verbose`, and `--json`
+flags produce identical behavior. The only difference is internal: Output sends
+events instead of writing directly, and the Presenter renders them.
 
 ## Domain concepts
 
@@ -45,6 +48,44 @@ Artifact), and the [Presenter][presenter-rendering] decides what to render
 based on its `Verbosity` setting. This keeps commands and Output free from
 presentation concerns.
 
+### Async methods
+
+Output's `message()`, `detail()`, and `artifact()` methods become `async fn`.
+This allows them to use the channel's async `send()` method, which provides
+natural back-pressure without risking deadlocks.
+
+Calling `tokio::mpsc::Sender::blocking_send` from within a Tokio runtime
+thread can block the executor and deadlock under back-pressure if the receiver
+needs the same runtime resources to make progress. Async `send().await` avoids
+this by yielding the task when the channel is full, allowing the runtime to
+continue driving the receiver.
+
+The output macros (`message!`, `detail!`, `artifact!`) include `.await` in
+their expansion, making the async nature transparent to command authors.
+Command functions are already `async fn`, so the `.await` is always valid.
+
+### Macro changes
+
+The `message!` and `detail!` macros switch from `format_args!()` to
+`format!()` in their expansion. `format_args!()` produces an
+`std::fmt::Arguments<'_>` which borrows from temporary values and is not
+`Send`. Since the future returned by an async method must be `Send` (it runs
+on a multi-threaded Tokio runtime), the macro must produce a `String` instead.
+`format!()` returns a `String` which is `Send` and `'static`.
+
+```rust
+// Before (sync):
+//   message!("hello {}", name)
+//   expands to: context.output().message(format_args!("hello {}", name))
+
+// After (async):
+//   message!("hello {}", name)
+//   expands to: context.output().message(format!("hello {}", name)).await
+```
+
+The `artifact!` macro already takes an expression (not `format_args!`), so it
+only needs the `.await` addition.
+
 ### Artifact trait objects
 
 `Output::artifact<T: Display + Serialize>(&self, value: &T)` boxes the value
@@ -59,83 +100,97 @@ Tests that use `Output::new_test()` (with buffer writers) must continue to
 work. When Output has no `EventSender` (the test path), it falls back to
 direct writes via the existing `Writer` mechanism. When Output has an
 `EventSender` (the production path), it sends events through the channel.
+Tests using Output methods directly will need to run in an async context
+(`#[tokio::test]`).
 
 ## Functional requirements
 
-1. `Output::message()` sends `Event::Message` through the `EventSender`
-   unconditionally.
-2. `Output::detail()` sends `Event::Detail` through the `EventSender`
-   unconditionally.
-3. `Output::artifact()` boxes the value as `Box<dyn Artifact>` and sends
-   `Event::Artifact` through the `EventSender`.
+1. `Output::message()` becomes `async fn` and sends `Event::Message` through
+   the `EventSender` unconditionally.
+2. `Output::detail()` becomes `async fn` and sends `Event::Detail` through
+   the `EventSender` unconditionally.
+3. `Output::artifact()` becomes `async fn`, boxes the value as
+   `Box<dyn Artifact>`, and sends `Event::Artifact` through the `EventSender`.
 4. Output does not apply verbosity filtering. All events are emitted.
 5. When Output has no `EventSender` (tests, default construction), methods
    fall back to direct writes via the existing `Writer` mechanism.
-6. The public API of Output is unchanged: `message()`, `detail()`, and
-   `artifact()` have the same signatures and behavior.
-7. All existing tests pass.
-8. All examples produce identical output.
-9. `--quiet`, `--verbose`, and `--json` flags work as before.
-10. `just pre-commit` passes.
+6. The `message!` and `detail!` macros switch from `format_args!()` to
+   `format!()` and append `.await`.
+7. The `artifact!` macro appends `.await`.
+8. All existing tests pass (updated to async where necessary).
+9. All examples produce identical output.
+10. `--quiet`, `--verbose`, and `--json` flags work as before.
+11. `just pre-commit` passes.
 
 ## Non-functional requirements
 
-1. **Backwards compatibility**: the `message!`, `detail!`, `artifact!` macros
-   continue to work without changes. Command authors see no difference.
+1. **Transparent to command authors**: the macros hide the async nature.
+   `message!("hello")` works exactly as before in async command functions.
 2. **No output reordering**: events are sent in the order they are produced.
    The channel preserves FIFO order. The Presenter renders in order.
-3. **Graceful draining**: when the command completes, Output is dropped, which
+3. **No deadlock risk**: async `send().await` yields the task when the channel
+   is full, allowing the runtime to drive the receiver.
+4. **Graceful draining**: when the command completes, Output is dropped, which
    drops the EventSender, which closes the channel. The Presenter's render task
    drains any remaining events before `present` returns.
 
 ## API surface
 
-No new public API. This feature modifies the internal implementation of
-`Output::message()`, `Output::detail()`, and `Output::artifact()`.
+### Output method changes
 
-The `Output::new()` constructor continues to work as before (for tests and
-backwards compatibility). `Output::new_with_sender()` (introduced in F010) is
-the production path.
+```rust
+impl Output {
+    /// Sends a message event
+    pub async fn message(&self, message: impl Display + Send);
+
+    /// Sends a detail event
+    pub async fn detail(&self, message: impl Display + Send);
+
+    /// Sends an artifact event
+    pub async fn artifact<T: Display + Serialize + Debug + Send + Sync + 'static>(
+        &self,
+        value: &T,
+    );
+}
+```
+
+### Macro expansion changes
+
+| Macro       | Before                                        | After                                          |
+| ----------- | --------------------------------------------- | ---------------------------------------------- |
+| `message!`  | `context.output().message(format_args!(...))` | `context.output().message(format!(...)).await` |
+| `detail!`   | `context.output().detail(format_args!(...))`  | `context.output().detail(format!(...)).await`  |
+| `artifact!` | `context.output().artifact(&(...))`           | `context.output().artifact(&(...)).await`      |
 
 ## File changes
 
 ### Modified files
 
-| File                            | Change                                                 |
-| ------------------------------- | ------------------------------------------------------ |
-| `crates/clawless/src/output.rs` | Modify methods to send events when sender is available |
+| File                                | Change                                                                        |
+| ----------------------------------- | ----------------------------------------------------------------------------- |
+| `crates/clawless/src/output.rs`     | Make methods async; send events when sender is available                      |
+| `crates/clawless-derive/src/lib.rs` | Update macros: `format!` + `.await` for message/detail; `.await` for artifact |
 
 ## Edge cases
 
 | Case                                         | Expected behavior                                                        |
 | -------------------------------------------- | ------------------------------------------------------------------------ |
 | Output without sender (test construction)    | Falls back to direct Writer writes, same as before                       |
-| Output with sender, receiver already dropped | `send()` error is ignored (fire-and-forget semantics)                    |
+| Output with sender, receiver already dropped | `send()` returns error; ignored (fire-and-forget semantics)              |
 | Artifact serialization failure               | Does not occur at emission time; happens at render time in the Presenter |
-| Rapid event emission filling channel buffer  | `send()` blocks until space available (back-pressure)                    |
+| Channel full                                 | `send().await` yields the task until space is available (back-pressure)  |
 | Empty message string                         | Event is emitted with empty payload; presenter renders empty line        |
 | Multiple artifact calls                      | Each emits a separate event; all rendered in order                       |
 
 ## Out of scope
 
 - Removing the `Writer` abstraction (kept for test compatibility)
-- Changing the public API of Output
 - Progress or diagnostic events
 - Structured logging or tracing integration
 
 ## Open questions
 
-### Blocking vs. fire-and-forget sends
-
-Should `Output::message()` block (await) when the channel is full, or should
-it use `try_send` and drop events that cannot be delivered?
-
-**Recommendation**: use blocking sends. Output methods are called from async
-command functions, but they are currently synchronous (`fn`, not `async fn`).
-To send events, Output needs to use `tokio::mpsc::Sender::blocking_send` (from
-a sync context within an async runtime). This preserves back-pressure and
-ensures no events are lost. If this proves too restrictive, the methods can be
-made async in a future release.
+None. All design decisions for this feature have been resolved.
 
 [architecture]: ../architecture.md
 [event-channel]: 007-event-channel.md
