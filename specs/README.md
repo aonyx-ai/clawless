@@ -19,6 +19,7 @@ specs.
 | ---- | -------------------------------------------- | -------- |
 | P001 | [Cancellation](projects/001-cancellation.md) | Complete |
 | P002 | [Output](projects/002-output.md)             | Complete |
+| P003 | [Presenter](projects/003-presenter.md)       | Active   |
 
 Each project spec should include:
 
@@ -43,6 +44,12 @@ self-contained and follows a consistent template.
 | F003 | [Command cancellation](features/003-command-cancellation.md) | Cancellation | Complete |
 | F004 | [Output types](features/004-output-types.md)                 | Output       | Complete |
 | F005 | [Command output](features/005-command-output.md)             | Output       | Complete |
+| F006 | [Event types](features/006-event-types.md)                   | Presenter    | Active   |
+| F007 | [Event channel](features/007-event-channel.md)               | Presenter    | Active   |
+| F008 | [Presenter](features/008-presenter.md)                       | Presenter    | Active   |
+| F009 | [Presenter rendering](features/009-presenter-rendering.md)   | Presenter    | Active   |
+| F010 | [Presenter macros](features/010-presenter-macros.md)         | Presenter    | Active   |
+| F011 | [Output events](features/011-output-events.md)               | Presenter    | Active   |
 
 Each feature spec should include:
 
