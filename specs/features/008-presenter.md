@@ -66,9 +66,10 @@ result without consuming events.
 
 ## Non-functional requirements
 
-1. **Object safety**: the `Presenter` trait should support dynamic dispatch
-   for future per-command presenter selection.
-2. **Thread safety**: `TerminalPresenter` must be `Send + Sync`.
+1. **Thread safety**: `TerminalPresenter` must be `Send + Sync`.
+2. **No object safety yet**: the trait uses `impl Future` return, which
+   prevents `dyn Presenter`. Per-command presenter selection is out of scope;
+   if dynamic dispatch is needed later, the return type can be boxed.
 
 ## API surface
 
