@@ -3,7 +3,7 @@
 ## Summary
 
 Event-driven output rendering for Clawless commands. This project introduces the
-[execution event][execution-event] infrastructure, the [Presenter] port, and a
+[event][event] infrastructure, the [Presenter] port, and a
 concrete [Terminal adapter][terminal-adapter] that replaces [Output]'s direct
 stdout/stderr writes with event-driven rendering while preserving the existing
 command-facing API (`message!`, `detail!`, `artifact!`).
@@ -11,7 +11,7 @@ command-facing API (`message!`, `detail!`, `artifact!`).
 ## Motivation
 
 The [architecture] defines a rich output model where commands emit [execution
-events][execution-event] that flow through an event stream to [Presenter]
+events][event] that flow through an event stream to [Presenter]
 adapters for rendering. Today, [`Output`][output] writes directly to
 stdout/stderr — a pragmatic first step that predates the event model. This works
 for the simplest case but prevents the framework from evolving toward richer
@@ -24,7 +24,7 @@ building the minimum viable infrastructure through a single stateless presenter:
 
 | Architecture concept                 | This project's contribution              | Evolution path                          |
 | ------------------------------------ | ---------------------------------------- | --------------------------------------- |
-| [Execution event][execution-event]   | `Event` enum (Message, Detail, Artifact) | Progress, Diagnostic, lifecycle events  |
+| [Event][event]                       | `Event` enum (Message, Detail, Artifact) | Progress, Diagnostic, lifecycle events  |
 | Event stream                         | `tokio::mpsc` channel                    | Broadcast, persistence, replay          |
 | [Presenter] port                     | `Presenter` trait                        | Per-command presenter selection         |
 | [Terminal adapter][terminal-adapter] | `TerminalPresenter`                      | Colors, layout, spinners                |
@@ -91,7 +91,7 @@ specs where they can be resolved with full context.
 [architecture]: ../architecture.md
 [event-channel]: ../features/007-event-channel.md
 [event-types]: ../features/006-event-types.md
-[execution-event]: ../architecture.md#execution-event
+[event]: ../architecture.md#event
 [output]: ../../crates/clawless/src/output.rs
 [output-events]: ../features/011-output-events.md
 [presenter]: ../features/008-presenter.md

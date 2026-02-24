@@ -19,7 +19,7 @@ A raw `tokio::mpsc` channel would work, but wrapping it in domain types provides
 type safety, encapsulates the channel capacity decision, and establishes a clear
 vocabulary for the event bus pattern.
 
-The [architecture] envisions an event stream that carries execution events from
+The [architecture] envisions an event stream that carries events from
 tasks to the [Surface] and [Presenter] adapters. This feature builds the
 simplest version: a single bounded `mpsc` channel. Future features may evolve
 toward broadcast channels (multiple consumers) or more sophisticated routing,

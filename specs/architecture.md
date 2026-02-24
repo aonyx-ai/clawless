@@ -37,7 +37,7 @@ flowchart TB
         App --> Cancel[Cancellation]
         Cmd --> Arg[Argument]
         Cmd --> Task
-        Task -.->|produces| EE[Execution event]
+        Task -.->|produces| EE[Event]
         EE -.->|one of| Progress & Artifact & Diagnostic
         Cmd -.->|produces| Outcome
     end
@@ -57,7 +57,7 @@ flowchart TB
 
 Arrows flow outward from the domain through ports to adapters. The domain never
 depends on a specific adapter. Adapters depend on the port interface. Within the
-domain, tasks emit execution events that flow to the surface, building a
+domain, tasks emit events that flow to the surface, building a
 queryable projection of execution state. Presenter adapters consume this state
 either by subscribing to the event stream directly (stateless) or by querying
 the surface on each render frame (stateful).
@@ -76,22 +76,22 @@ Identity matters. These have lifecycles.
 | Command     | A node in the command tree; accepts arguments, creates a root task, produces an outcome |
 | Argument    | Declarative input parsed from argv before execution                                     |
 | Context     | Injected environment: CWD, config, env vars, services, terminal capabilities            |
-| Task        | Unit of work within a command; emits execution events, parallelizable, cancellable      |
+| Task        | Unit of work within a command; emits events, parallelizable, cancellable                |
 | Hook        | Cross-cutting lifecycle behavior (ordered pipeline)                                     |
-| Surface     | Queryable projection of execution state, built from the execution event stream          |
+| Surface     | Queryable projection of execution state, built from the event stream                    |
 
 ### Value objects
 
 Identity does not matter. These are data, state, or tokens.
 
-| Value object    | Role                                                                                |
-| --------------- | ----------------------------------------------------------------------------------- |
-| Execution event | Structured message emitted by a task; carries a payload tagged with source identity |
-| Progress        | Ephemeral status update emitted as an execution event payload                       |
-| Artifact        | Structured result data emitted as an execution event payload                        |
-| Diagnostic      | Rich error/warning info emitted as an execution event payload                       |
-| Outcome         | Final result of command execution; maps to exit code                                |
-| Cancellation    | Token-based shutdown signal; Tasks observe, framework manages                       |
+| Value object | Role                                                                                |
+| ------------ | ----------------------------------------------------------------------------------- |
+| Event        | Structured message emitted by a task; carries a payload tagged with source identity |
+| Progress     | Ephemeral status update emitted as an event payload                                 |
+| Artifact     | Structured result data emitted as an event payload                                  |
+| Diagnostic   | Rich error/warning info emitted as an event payload                                 |
+| Outcome      | Final result of command execution; maps to exit code                                |
+| Cancellation | Token-based shutdown signal; Tasks observe, framework manages                       |
 
 Cancellation is a value object (a token) in the domain. The mapping from OS
 signals to cancellation tokens is infrastructure.
@@ -101,10 +101,10 @@ signals to cancellation tokens is infrastructure.
 Interfaces with swappable adapters. The domain declares intent; the adapter
 decides how to fulfill it.
 
-| Port      | Direction | Role                                                                           |
-| --------- | --------- | ------------------------------------------------------------------------------ |
-| Presenter | Output    | Consumes execution events or queries the surface to render output for the user |
-| Prompt    | Input     | Resolves runtime input needs; answers flow back through the surface            |
+| Port      | Direction | Role                                                                 |
+| --------- | --------- | -------------------------------------------------------------------- |
+| Presenter | Output    | Consumes events or queries the surface to render output for the user |
+| Prompt    | Input     | Resolves runtime input needs; answers flow back through the surface  |
 
 ## Entity definitions
 
@@ -117,7 +117,7 @@ The aggregate root. Configures the CLI program.
 - **Hooks**: ordered lifecycle pipeline
 - **Cancellation**: signal handling, shutdown timeout/cleanup
 - **Context factory**: how to build the execution context
-- **Surface**: receives execution events, provides queryable execution state
+- **Surface**: receives events, provides queryable execution state
 - **Presenter**: the selected Presenter adapter, which consumes events from the
   surface or subscribes directly to the event stream
 
@@ -139,7 +139,7 @@ A node in the command tree.
 - **Root task**: every command execution creates an implicit root task. Simple
   commands emit events directly from this root task. Complex commands spawn
   child tasks beneath it, forming a tree. The root task ensures that every
-  execution event has a source, even when the command author does not explicitly
+  event has a source, even when the command author does not explicitly
   create tasks.
 - **Presentation agnosticism**: commands are free of presentation concerns.
   They interact with Output to produce messages and results, with Prompt to
@@ -191,12 +191,12 @@ implicit root task.
 
 - **Identity**: every task has a stable identifier and knows its parent, forming
   a tree rooted at the command's root task. This identity is carried on every
-  execution event the task emits, enabling consumers to attribute events to
+  event the task emits, enabling consumers to attribute events to
   their source and reconstruct the tree.
 - **Lifecycle**: a task progresses through observable states — pending, running,
   completed, failed. Each transition emits a lifecycle event, making the task
   tree's evolution visible to the surface and any consumers downstream.
-- **Events**: tasks emit execution events as they work. Progress updates,
+- **Events**: tasks emit events as they work. Progress updates,
   artifacts, diagnostics, and prompt requests all flow as structured events
   tagged with the emitting task's identity. The authoring API is designed to
   feel like direct ownership — a command author calls something like
@@ -230,7 +230,7 @@ Registration: attribute-based initially, builder pattern long-term.
 ### Surface
 
 The surface is the queryable projection of execution state. It accumulates
-execution events as they arrive and materializes them into a structured,
+events as they arrive and materializes them into a structured,
 read-only view that Presenter adapters and other external consumers can query
 at any time. Commands do not interact with the surface; they produce output
 through Output and manage tasks through direct task references.
@@ -267,9 +267,9 @@ through Output and manage tasks through direct task references.
 
 ## Value object definitions
 
-### Execution event
+### Event
 
-An execution event is a structured message emitted by a task during execution.
+An event is a structured message emitted by a task during execution.
 It is the primary output mechanism of the domain: every piece of information
 that flows from a running command to the outside world travels as an execution
 event.
@@ -286,7 +286,7 @@ event.
 - **Immutability**: events are immutable once emitted. They represent facts
   about what happened, not state to be modified.
 
-Command authors do not construct or interact with execution events directly.
+Command authors do not construct or interact with events directly.
 The task authoring API — methods like `task.progress(...)` and
 `task.artifact(...)` — emits events as an infrastructure concern. This keeps the
 authoring experience simple while providing a rich, structured event stream for
@@ -294,7 +294,7 @@ consumers.
 
 ### Progress
 
-Ephemeral status data emitted by tasks as execution event payloads. Progress is
+Ephemeral status data emitted by tasks as event payloads. Progress is
 a **domain value object**: a command updates it ("60% done", "processing
 file X"), and it flows as an event to the surface and then to Presenter
 adapters. Each progress event is tagged with the identity of the task that
@@ -303,18 +303,18 @@ emitted it, so consumers know which task the status belongs to.
 - Spinners, progress bars, step indicators, counters
 - Multi-task parallel progress display
 - Ephemeral: replaced/cleared after task completes
-- Emitted as execution event payloads, accumulated by the surface, consumed
+- Emitted as event payloads, accumulated by the surface, consumed
   through the Presenter port
 
 ### Artifact
 
-Structured result data produced by tasks, emitted as execution event payloads.
+Structured result data produced by tasks, emitted as event payloads.
 Each artifact is tagged with the identity of the task that produced it.
 
 - Typed, serializable (JSON, YAML, table, plain text)
 - Machine-readable (for piping, scripting)
 - Composable (multiple tasks produce merged artifacts)
-- Emitted as execution event payloads, accumulated by the surface, consumed
+- Emitted as event payloads, accumulated by the surface, consumed
   through the Presenter port
 
 A task produces artifacts over the course of its execution. They may arrive as
@@ -325,7 +325,7 @@ simply artifacts produced over time, each as its own event.
 
 ### Diagnostic
 
-Rich error/warning information raised by tasks, emitted as execution event
+Rich error/warning information raised by tasks, emitted as event
 payloads. Each diagnostic is tagged with the identity of the task that raised
 it.
 
@@ -335,7 +335,7 @@ it.
 - **Suggestion**: what to do ("did you mean --output?")
 - **Severity**: fatal, warning, hint
 - **Code**: machine-readable identifier
-- Emitted as execution event payloads, accumulated by the surface, consumed
+- Emitted as event payloads, accumulated by the surface, consumed
   through the Presenter port
 
 ### Outcome
@@ -371,7 +371,7 @@ Tasks do not know _why_ they were cancelled — only that the token was signaled
 
 The Presenter controls all output. It is the rendering engine in the
 architecture: it takes the structured data produced by the domain — either by
-subscribing to the execution event stream or by querying the surface — and
+subscribing to the event stream or by querying the surface — and
 presents it to the user.
 
 The port is named "Presenter" because its role is to present domain output to
@@ -411,7 +411,7 @@ carried on each event.
 
 **Interface** (what the domain sees):
 
-- Receives execution events or queries the surface for current state
+- Receives events or queries the surface for current state
 - Renders progress, artifacts, and diagnostics according to the adapter's
   strategy
 - Renders prompt interactions on behalf of the Prompt port
@@ -435,7 +435,7 @@ Prompt is a port, not a domain entity. A command declares "I need this
 information" — the Prompt adapter decides how to obtain it.
 
 Prompt interactions flow bidirectionally through the surface. When a task
-requests input, it emits a prompt-requested execution event. The surface records
+requests input, it emits a prompt-requested event. The surface records
 this as a pending prompt. The Prompt adapter reads the pending prompt and
 resolves it — in interactive environments by coordinating with the Presenter to
 display the question and collect the answer, in non-interactive environments by
@@ -469,7 +469,7 @@ variable, or a test fixture — the command's logic is identical in all cases.
 
 ## Event model
 
-The execution event stream is the backbone of Clawless's output architecture.
+The event stream is the backbone of Clawless's output architecture.
 Rather than having tasks push data directly to a Presenter adapter, every piece
 of output flows as a structured event. This indirection is what makes the
 architecture portable across rendering models.
@@ -533,7 +533,7 @@ surface exists, how it works, and what it enables.
 
 ### Push and pull
 
-The domain produces output by **push**: tasks emit execution events as work
+The domain produces output by **push**: tasks emit events as work
 happens, at whatever pace and in whatever order the work dictates. This is the
 natural model for a concurrent system where multiple tasks run in parallel and
 produce output independently.
@@ -698,7 +698,7 @@ Application
 ├── Hooks (lifecycle pipeline)
 ├── Cancellation (framework-level, propagated to tasks)
 ├── Context (built once, injected into commands)
-├── Surface (receives execution events, provides queryable state)
+├── Surface (receives events, provides queryable state)
 └── Presenter adapter (consumes events or queries surface)
 ```
 
@@ -720,7 +720,7 @@ boundary are the seams where adapters are swapped.
  9. Command executes within its root task
     - Root task is created implicitly; all events have a source
     - Optionally spawns child tasks (or emits directly for simple commands)
-    - Tasks emit execution events → surface accumulates state
+    - Tasks emit events → surface accumulates state
     - Progress events → surface updates → Presenter adapter renders
     - Artifact events → surface accumulates → Presenter adapter renders
     - Diagnostic events → surface records → Presenter adapter renders
@@ -746,23 +746,23 @@ or cancellation.
 
 ## Current state
 
-| Entity          | Current implementation                         | Status                                 |
-| --------------- | ---------------------------------------------- | -------------------------------------- |
-| Application     | `main!()` macro                                | Implicit, no first-class type          |
-| Command         | `#[command]` async fn                          | Emergent from fn + attrs + module      |
-| Argument        | Clap `#[derive(Args)]`                         | Fully delegated to Clap                |
-| Context         | `Context` struct (CWD, Cancellation, Output)   | Functional                             |
-| Prompt          | Not represented                                | Missing                                |
-| Hook            | Not represented                                | Missing                                |
-| Task            | Not represented                                | Missing; commands are monolithic       |
-| Surface         | Not represented                                | New concept, not yet implemented       |
-| Execution event | Not represented                                | New concept, not yet implemented       |
-| Cancellation    | `Cancellation` value object + signal adapter   | Fully implemented                      |
-| Progress        | `Output::message()`, `Output::detail()`        | Partial; no progress bars or spinners  |
-| Artifact        | `Output::artifact()` (`Display` + `Serialize`) | Partial; single value per command      |
-| Diagnostic      | `anyhow::Result`                               | Exists but unstructured                |
-| Outcome         | `CommandResult` = `anyhow::Result<()>`         | Thin alias, no exit code control       |
-| Presenter       | `Output` with `Verbosity` and `OutputMode`     | Partial; stateless text and JSON modes |
+| Entity       | Current implementation                         | Status                                 |
+| ------------ | ---------------------------------------------- | -------------------------------------- |
+| Application  | `main!()` macro                                | Implicit, no first-class type          |
+| Command      | `#[command]` async fn                          | Emergent from fn + attrs + module      |
+| Argument     | Clap `#[derive(Args)]`                         | Fully delegated to Clap                |
+| Context      | `Context` struct (CWD, Cancellation, Output)   | Functional                             |
+| Prompt       | Not represented                                | Missing                                |
+| Hook         | Not represented                                | Missing                                |
+| Task         | Not represented                                | Missing; commands are monolithic       |
+| Surface      | Not represented                                | New concept, not yet implemented       |
+| Event        | Not represented                                | New concept, not yet implemented       |
+| Cancellation | `Cancellation` value object + signal adapter   | Fully implemented                      |
+| Progress     | `Output::message()`, `Output::detail()`        | Partial; no progress bars or spinners  |
+| Artifact     | `Output::artifact()` (`Display` + `Serialize`) | Partial; single value per command      |
+| Diagnostic   | `anyhow::Result`                               | Exists but unstructured                |
+| Outcome      | `CommandResult` = `anyhow::Result<()>`         | Thin alias, no exit code control       |
+| Presenter    | `Output` with `Verbosity` and `OutputMode`     | Partial; stateless text and JSON modes |
 
 The current `Output` type is an early stateless implementation that predates the
 event model. It writes directly to stdout and stderr without an intermediate

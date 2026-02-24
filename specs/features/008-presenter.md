@@ -16,7 +16,7 @@ yet consume events — that behavior is added in [F009][presenter-rendering].
 ## Motivation
 
 The [architecture] defines the [Presenter] as the output port that consumes
-execution events or queries the [Surface] to render output. Today, rendering is
+events or queries the [Surface] to render output. Today, rendering is
 implicit — [Output] writes directly to stdout/stderr. To evolve toward
 swappable presenters (terminal, CI, ratatui, test), the framework needs a trait
 that defines the presenter contract and at least one concrete implementation.

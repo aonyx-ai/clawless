@@ -15,7 +15,7 @@ it — via `Display` for text mode or `Serialize` for JSON mode.
 
 ## Motivation
 
-The [architecture] defines [execution events][execution-event] as structured
+The [architecture] defines [events][event] as structured
 messages emitted by tasks. Today, [Output] writes directly to stdout/stderr,
 coupling production and rendering into a single step. To decouple them, we need
 a concrete event type that can travel from the producer (Output) to the consumer
@@ -238,7 +238,7 @@ None. All design decisions for this feature have been resolved.
 [`erased-serde`]: https://docs.rs/erased-serde
 [architecture]: ../architecture.md
 [event-channel]: 007-event-channel.md
-[execution-event]: ../architecture.md#execution-event
+[event]: ../architecture.md#event
 [output]: ../../crates/clawless/src/output.rs
 [output-events]: 011-output-events.md
 [presenter]: ../architecture.md#presenter-output-port
