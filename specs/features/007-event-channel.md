@@ -56,8 +56,10 @@ without changing the public API.
 4. The channel is bounded with a reasonable default capacity (e.g., 256).
 5. `EventSender` is `Clone + Send + Sync`.
 6. `EventReceiver` is `Send`.
-7. When all senders are dropped, `recv()` returns `None` (channel closed).
-8. Types are defined in `crates/clawless/src/event_channel.rs`.
+7. `SendError` is a struct wrapping the unsent `Event`, returned when the receiver has been dropped.
+8. `SendError` implements `Debug`, `Display`, and `Error`.
+9. When all senders are dropped, `recv()` returns `None` (channel closed).
+10. Types are defined in `crates/clawless/src/event_channel.rs`.
 
 ## Non-functional requirements
 
@@ -116,6 +118,24 @@ impl EventReceiver {
 }
 ```
 
+### SendError
+
+```rust
+/// Error returned when sending an event fails
+///
+/// A send fails when the [`EventReceiver`] has been dropped, meaning the
+/// consumer is no longer listening. The error carries the unsent [`Event`]
+/// so callers can log or inspect what was lost.
+#[derive(Debug)]
+pub struct SendError(pub Event);
+
+impl Display for SendError {
+    // "event channel closed"
+}
+
+impl Error for SendError {}
+```
+
 ### Factory function
 
 ```rust
@@ -131,9 +151,9 @@ pub fn event_channel() -> (EventSender, EventReceiver);
 
 ### New files
 
-| File                                   | Contents                                          |
-| -------------------------------------- | ------------------------------------------------- |
-| `crates/clawless/src/event_channel.rs` | `EventSender`, `EventReceiver`, `event_channel()` |
+| File                                   | Contents                                                       |
+| -------------------------------------- | -------------------------------------------------------------- |
+| `crates/clawless/src/event_channel.rs` | `EventSender`, `EventReceiver`, `SendError`, `event_channel()` |
 
 ### Modified files
 
