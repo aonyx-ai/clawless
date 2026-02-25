@@ -44,7 +44,7 @@ self-contained and follows a consistent template.
 | F003 | [Command cancellation](features/003-command-cancellation.md) | Cancellation | Complete |
 | F004 | [Output types](features/004-output-types.md)                 | Output       | Complete |
 | F005 | [Command output](features/005-command-output.md)             | Output       | Complete |
-| F006 | [Event types](features/006-event-types.md)                   | Presenter    | Active   |
+| F006 | [Event types](features/006-event-types.md)                   | Presenter    | Complete |
 | F007 | [Event channel](features/007-event-channel.md)               | Presenter    | Active   |
 | F008 | [Presenter](features/008-presenter.md)                       | Presenter    | Active   |
 | F009 | [Presenter rendering](features/009-presenter-rendering.md)   | Presenter    | Active   |

@@ -25,6 +25,7 @@ pub use error::{CommandResult, Error, ErrorContext};
 pub mod cancellation;
 pub mod context;
 mod error;
+pub mod event;
 pub mod macros;
 pub mod output;
 
