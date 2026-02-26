@@ -20,6 +20,7 @@ pub use self::terminal::TerminalPresenter;
 use crate::error::CommandResult;
 
 mod terminal;
+mod writer;
 
 /// Output port for rendering command output
 ///
