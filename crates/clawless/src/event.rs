@@ -17,6 +17,14 @@ use std::fmt::{Debug, Display};
 
 use serde::Serialize;
 
+pub use self::channel::{SendError, event_channel};
+pub use self::receiver::EventReceiver;
+pub use self::sender::EventSender;
+
+mod channel;
+mod receiver;
+mod sender;
+
 /// Trait for artifact values that can be rendered as text or JSON
 ///
 /// `Artifact` combines [`Display`] (for text rendering), [`Serialize`] (for JSON rendering), and
