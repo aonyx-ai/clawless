@@ -28,6 +28,7 @@ mod error;
 pub mod event;
 pub mod macros;
 pub mod output;
+pub mod presenter;
 
 // Re-export the clap crate for use with the `clawless-derive` crate
 #[doc(hidden)]
