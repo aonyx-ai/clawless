@@ -19,6 +19,7 @@ rust-version = "1.88.0"
 [workspace.dependencies]
 anyhow = "1.0.16"
 assert_cmd = "2.1.1"
+async-trait = "0.1"
 bon = "3"
 clap = { version = "4.3.0", features = ["cargo", "derive"] }
 clawless = { path = "crates/clawless", version = "=0.5.0" }
