@@ -221,6 +221,7 @@ dependencies = [
  "async-trait",
  "bon",
  "clap",
+ "clawless-core",
  "clawless-derive",
  "erased-serde",
  "getset",
@@ -246,6 +247,14 @@ dependencies = [
  "tempfile",
  "trycmd",
  "typed-fields",
+]
+
+[[package]]
+name = "clawless-core"
+version = "0.5.0"
+dependencies = [
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]

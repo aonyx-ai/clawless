@@ -9,20 +9,19 @@
 pub mod prelude {
     pub use clap;
     pub use clap::{Args, FromArgMatches};
+    pub use clawless_core::prelude::*;
     pub use clawless_derive::{artifact, command, commands, detail, main, message};
     pub use serde::Serialize;
 
-    pub use super::cancellation::*;
     pub use super::context::*;
     pub use super::error::{CommandResult, Error, ErrorContext};
     pub use super::output::*;
 }
 
-pub use cancellation::Cancellation;
+pub use clawless_core::cancellation;
 pub use clawless_derive::{artifact, command, commands, detail, main, message};
 pub use error::{CommandResult, Error, ErrorContext};
 
-pub mod cancellation;
 pub mod context;
 mod error;
 pub mod event;
@@ -33,12 +32,12 @@ pub mod presenter;
 // Re-export the clap crate for use with the `clawless-derive` crate
 #[doc(hidden)]
 pub use clap;
+// Signal-to-cancellation adapter used by the `main!()` macro expansion
+#[doc(hidden)]
+pub use clawless_core::signal;
 // Re-export the inventory crate for use with the `clawless-derive` crate
 #[doc(hidden)]
 pub use inventory;
-// Signal-to-cancellation adapter used by the `main!()` macro expansion
-#[doc(hidden)]
-pub mod signal;
 // Re-export the tokio crate to run commands in an async runtime
 #[doc(hidden)]
 pub use tokio;

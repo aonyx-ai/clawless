@@ -9,10 +9,10 @@
 
 use anyhow::Result;
 use bon::bon;
+use clawless_core::prelude::Cancellation;
 use getset::Getters;
 
 pub use self::current_working_directory::CurrentWorkingDirectory;
-use crate::cancellation::Cancellation;
 use crate::output::Output;
 
 mod current_working_directory;
