@@ -1,0 +1,16 @@
+specs (
+    {
+        name clawless
+        include (specs/**/*.md)
+        impls (
+            {
+                name clawless
+                include (crates/**/*.rs)
+            }
+            {
+                name examples
+                include (examples/**/tests/**/*.rs)
+            }
+        )
+    }
+)
