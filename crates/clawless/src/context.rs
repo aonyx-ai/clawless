@@ -42,6 +42,7 @@ pub struct Context {
     current_working_directory: CurrentWorkingDirectory,
 
     /// The cancellation token for cooperative shutdown
+    // r[impl cancel.context.field]
     #[getset(get = "pub")]
     cancellation: Cancellation,
 
@@ -73,6 +74,8 @@ impl Context {
     ///     .current_working_directory(tmp.path())
     ///     .build()?;
     /// ```
+    // r[impl cancel.context.default]
+    // r[impl cancel.context.injectable]
     #[builder]
     pub fn new(
         #[builder(into)] current_working_directory: Option<CurrentWorkingDirectory>,
@@ -99,6 +102,8 @@ mod tests {
     use super::*;
     use crate::output::{OutputMode, Verbosity};
 
+    // r[verify cancel.context.injectable]
+    // r[verify cancel.context.field]
     #[test]
     fn new_with_cancellation_uses_provided_token() {
         let cancellation = Cancellation::new();
@@ -157,6 +162,7 @@ mod tests {
         assert_eq!(context.output().mode(), OutputMode::Json);
     }
 
+    // r[verify cancel.context.default]
     #[test]
     fn new_with_defaults_has_uncancelled_token() {
         let context = Context::builder()

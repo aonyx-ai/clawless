@@ -33,6 +33,8 @@ use crate::cancellation::Cancellation;
 ///
 /// Panics if the OS signal handler cannot be registered, which indicates system resource
 /// exhaustion.
+// r[impl cancel.os.first]
+// r[impl cancel.os.second]
 pub fn wait_for_shutdown(cancellation: Cancellation) -> impl Future<Output = ()> + Send {
     let first_signal = first_signal_listener();
 
@@ -48,6 +50,8 @@ pub fn wait_for_shutdown(cancellation: Cancellation) -> impl Future<Output = ()>
     }
 }
 
+// r[impl cancel.os.unix]
+// r[impl cancel.os.eager]
 #[cfg(unix)]
 fn first_signal_listener() -> impl Future<Output = ()> + Send {
     use tokio::signal::unix::SignalKind;
