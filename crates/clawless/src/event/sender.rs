@@ -12,6 +12,8 @@ use super::Event;
 ///
 /// [`EventReceiver`]: super::EventReceiver
 /// [`Output`]: crate::output::Output
+// r[impl event.safety.producer-clone]
+// r[impl event.safety.producer-concurrent]
 #[derive(Clone, Debug)]
 pub struct EventSender {
     inner: mpsc::Sender<Event>,
@@ -48,6 +50,7 @@ mod tests {
         assert_send::<EventSender>();
     }
 
+    // r[verify event.safety.producer-concurrent]
     #[test]
     fn trait_sync() {
         fn assert_sync<T: Sync>() {}

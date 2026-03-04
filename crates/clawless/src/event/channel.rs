@@ -10,6 +10,7 @@ use super::sender::EventSender;
 ///
 /// A send fails when the [`EventReceiver`] has been dropped, meaning the consumer is no longer
 /// listening. The error carries the unsent [`Event`] so callers can log or inspect what was lost.
+// r[impl event.transport.error]
 #[derive(Debug)]
 pub struct SendError(pub Event);
 
@@ -30,6 +31,13 @@ impl std::error::Error for SendError {}
 /// will await until space is available, providing natural back-pressure.
 ///
 /// [`recv`]: EventReceiver::recv
+// r[impl event.transport.async]
+// r[impl event.transport.multi-producer]
+// r[impl event.transport.single-consumer]
+// r[impl event.transport.ordered]
+// r[impl event.transport.backpressure]
+// r[impl event.transport.completion]
+// r[impl event.transport.drain]
 pub fn event_channel() -> (EventSender, EventReceiver) {
     let (tx, rx) = mpsc::channel(256);
     (EventSender::new(tx), EventReceiver::new(rx))
@@ -39,6 +47,8 @@ pub fn event_channel() -> (EventSender, EventReceiver) {
 mod tests {
     use super::*;
 
+    // r[verify event.transport.drain]
+    // r[verify event.transport.completion]
     #[tokio::test]
     async fn event_channel_recv_drains_buffered_events_after_sender_dropped() {
         let (sender, mut receiver) = event_channel();
@@ -62,6 +72,7 @@ mod tests {
         assert!(done.is_none());
     }
 
+    // r[verify event.transport.completion]
     #[tokio::test]
     async fn event_channel_recv_returns_none_when_all_senders_dropped() {
         let (sender, mut receiver) = event_channel();
@@ -73,6 +84,7 @@ mod tests {
         assert!(result.is_none());
     }
 
+    // r[verify event.transport.error]
     #[tokio::test]
     async fn event_channel_send_after_receiver_dropped_returns_error() {
         let (sender, receiver) = event_channel();
@@ -87,6 +99,8 @@ mod tests {
         assert!(matches!(error.0, Event::Message(ref s) if s == "hello"));
     }
 
+    // r[verify event.transport.async]
+    // r[verify event.transport.ordered]
     #[tokio::test]
     async fn event_channel_send_and_recv_delivers_event() {
         let (sender, mut receiver) = event_channel();
