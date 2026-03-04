@@ -9,5 +9,10 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+erased-serde = { workspace = true }
+serde = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

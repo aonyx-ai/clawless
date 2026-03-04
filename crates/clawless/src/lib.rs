@@ -19,12 +19,12 @@ pub mod prelude {
 }
 
 pub use clawless_core::cancellation;
+pub use clawless_core::event;
 pub use clawless_derive::{artifact, command, commands, detail, main, message};
 pub use error::{CommandResult, Error, ErrorContext};
 
 pub mod context;
 mod error;
-pub mod event;
 pub mod macros;
 pub mod output;
 pub mod presenter;

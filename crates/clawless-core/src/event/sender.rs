@@ -4,14 +4,13 @@ use super::Event;
 
 /// Sender handle for the event channel
 ///
-/// `EventSender` is a clonable handle that commands (via [`Output`]) use to emit events into the
-/// channel. The paired [`EventReceiver`] consumes these events for rendering.
+/// `EventSender` is a clonable handle that commands use to emit events into the channel. The
+/// paired [`EventReceiver`] consumes these events for rendering.
 ///
 /// Internally, `EventSender` wraps a [`tokio::sync::mpsc::Sender<Event>`]. Cloning an
 /// `EventSender` produces another handle to the same channel, not an independent channel.
 ///
 /// [`EventReceiver`]: super::EventReceiver
-/// [`Output`]: crate::output::Output
 // r[impl event.safety.producer-clone]
 // r[impl event.safety.producer-concurrent]
 #[derive(Clone, Debug)]

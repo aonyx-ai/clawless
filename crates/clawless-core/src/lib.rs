@@ -2,6 +2,7 @@
 #![warn(missing_docs)]
 
 pub mod cancellation;
+pub mod event;
 
 // Signal-to-cancellation adapter used by the `main!()` macro expansion
 #[doc(hidden)]
