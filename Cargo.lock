@@ -253,6 +253,9 @@ dependencies = [
 name = "clawless-core"
 version = "0.5.0"
 dependencies = [
+ "erased-serde",
+ "serde",
+ "serde_json",
  "tokio",
  "tokio-util",
 ]

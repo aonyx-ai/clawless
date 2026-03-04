@@ -2,16 +2,13 @@
 //!
 //! This module defines [`Event`], the structured message type that commands produce and the
 //! Presenter consumes. Events decouple output production from rendering: a command emits events
-//! through [`Output`], and the Presenter decides how to render them based on its output mode and
+//! through Output, and the Presenter decides how to render them based on its output mode and
 //! verbosity settings.
 //!
 //! The [`Artifact`] trait enables the [`Event::Artifact`] variant to carry a type-erased value that
 //! supports both text rendering ([`Display`]) and JSON serialization ([`Serialize`]). A blanket
 //! implementation covers any type satisfying the required bounds, so command authors derive the
-//! usual traits and pass values to [`Output::artifact`] without manual trait implementation.
-//!
-//! [`Output`]: crate::output::Output
-//! [`Output::artifact`]: crate::output::Output::artifact
+//! usual traits and pass values to Output without manual trait implementation.
 
 use std::fmt::{Debug, Display};
 
@@ -52,7 +49,7 @@ mod sender;
 /// }
 ///
 /// // UserCount automatically implements Artifact — no manual impl needed.
-/// let artifact: Box<dyn clawless::event::Artifact> = Box::new(UserCount { count: 42 });
+/// let artifact: Box<dyn clawless_core::event::Artifact> = Box::new(UserCount { count: 42 });
 /// assert_eq!(artifact.to_string(), "42 users");
 /// ```
 ///
@@ -68,23 +65,19 @@ erased_serde::serialize_trait_object!(Artifact);
 /// Structured output event produced by commands
 ///
 /// An `Event` represents a single piece of output that a command has produced. Events travel from
-/// the producer ([`Output`]) through an async channel to the Presenter, decoupling production from
-/// rendering.
+/// the producer through an async channel to the Presenter, decoupling production from rendering.
 ///
-/// Three variants mirror [`Output`]'s methods:
+/// Three variants:
 ///
 /// - [`Message`] — informational text (shown at default verbosity and above).
 /// - [`Detail`] — supplementary text (shown only at verbose verbosity).
 /// - [`Event::Artifact`] — the primary data a command produces, carried as a trait object that the
 ///   Presenter can render via [`Display`] or [`Serialize`].
 ///
-/// The Presenter decides which events to render based on its [`Verbosity`] setting. [`Output`]
-/// emits all events unconditionally.
+/// The Presenter decides which events to render based on its verbosity setting.
 ///
 /// [`Detail`]: Event::Detail
 /// [`Message`]: Event::Message
-/// [`Output`]: crate::output::Output
-/// [`Verbosity`]: crate::output::Verbosity
 // r[impl event.safety.event-send]
 #[derive(Debug)]
 pub enum Event {
