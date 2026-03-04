@@ -56,8 +56,11 @@ mod sender;
 /// assert_eq!(artifact.to_string(), "42 users");
 /// ```
 ///
+// r[impl event.artifact.structured]
+// r[impl event.artifact.text]
 pub trait Artifact: Display + Debug + Send + Sync + erased_serde::Serialize {}
 
+// r[impl event.artifact.zero-cost]
 impl<T> Artifact for T where T: Display + Serialize + Debug + Send + Sync + 'static {}
 
 erased_serde::serialize_trait_object!(Artifact);
@@ -82,13 +85,17 @@ erased_serde::serialize_trait_object!(Artifact);
 /// [`Message`]: Event::Message
 /// [`Output`]: crate::output::Output
 /// [`Verbosity`]: crate::output::Verbosity
+// r[impl event.safety.event-send]
 #[derive(Debug)]
 pub enum Event {
     /// Informational message
+    // r[impl event.output.message]
     Message(String),
     /// Supplementary detail
+    // r[impl event.output.detail]
     Detail(String),
     /// Primary command output
+    // r[impl event.output.artifact]
     Artifact(Box<dyn Artifact>),
 }
 
@@ -126,6 +133,7 @@ mod tests {
         assert!(debug.contains("hello"));
     }
 
+    // r[verify event.artifact.text]
     #[test]
     fn artifact_display_renders_via_display_trait() {
         let boxed: Box<dyn Artifact> = Box::new(test_artifact());
@@ -135,6 +143,7 @@ mod tests {
         assert_eq!(display, "hello");
     }
 
+    // r[verify event.artifact.structured]
     #[test]
     fn artifact_serializes_via_erased_serde() {
         let boxed: Box<dyn Artifact> = Box::new(test_artifact());
@@ -144,6 +153,7 @@ mod tests {
         assert_eq!(json, r#"{"value":"hello"}"#);
     }
 
+    // r[verify event.output.detail]
     #[test]
     fn detail_with_empty_string_is_valid() {
         let event = Event::Detail(String::new());
@@ -153,6 +163,7 @@ mod tests {
         assert!(debug.contains("Detail"));
     }
 
+    // r[verify event.output.message]
     #[test]
     fn message_with_empty_string_is_valid() {
         let event = Event::Message(String::new());
@@ -162,6 +173,7 @@ mod tests {
         assert!(debug.contains("Message"));
     }
 
+    // r[verify event.safety.event-send]
     #[test]
     fn trait_send() {
         fn assert_send<T: Send>() {}
