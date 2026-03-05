@@ -5,3 +5,13 @@ error[E0425]: cannot find value `context` in this scope
   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
   |
   = note: this error originates in the macro `message` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0728]: `await` is only allowed inside `async` functions and blocks
+ --> tests/ui/fail-output-macro-without-context.rs:4:5
+  |
+3 | fn no_context() {
+  | --------------- this is not `async`
+4 |     message!("this should not compile");
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ only allowed inside `async` functions and blocks
+  |
+  = note: this error originates in the macro `message` (in Nightly builds, run with -Z macro-backtrace for more info)

@@ -1,6 +1,6 @@
 /// Level of output detail requested by the user
 ///
-/// `Verbosity` controls whether [`Output`] methods produce output. It is
+/// `Verbosity` controls whether events are rendered by the presenter. It is
 /// orthogonal to [`OutputMode`], which controls format and destination.
 ///
 /// Three levels are available:
@@ -18,7 +18,7 @@
 /// assert_eq!(verbosity, Verbosity::Default);
 /// ```
 ///
-/// [`Output`]: super::Output
+/// [`OutputFlags`]: super::OutputFlags
 /// [`OutputMode`]: super::OutputMode
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub enum Verbosity {

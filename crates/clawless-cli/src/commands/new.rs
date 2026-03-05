@@ -173,9 +173,16 @@ fn create_greeting_command(crate_path: &Path) -> Result<(), Error> {
 mod tests {
     use std::fs::{create_dir_all, read_to_string};
 
+    use clawless::event::event_channel;
+    use clawless::output::Output;
     use tempfile::TempDir;
 
     use super::*;
+
+    fn test_output() -> Output {
+        let (sender, _receiver) = event_channel();
+        Output::new(sender)
+    }
 
     #[test]
     fn create_binary_crate_creates_directory() {
@@ -183,6 +190,7 @@ mod tests {
 
         let context = Context::builder()
             .current_working_directory(cwd.path())
+            .output(test_output())
             .build()
             .expect("failed to create context");
 
@@ -199,6 +207,7 @@ mod tests {
 
         let context = Context::builder()
             .current_working_directory(cwd.path())
+            .output(test_output())
             .build()
             .expect("failed to create context");
 
@@ -216,6 +225,7 @@ mod tests {
 
         let context = Context::builder()
             .current_working_directory(cwd.path())
+            .output(test_output())
             .build()
             .expect("failed to create context");
 

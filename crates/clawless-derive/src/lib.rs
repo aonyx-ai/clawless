@@ -13,9 +13,11 @@ mod inventory;
 
 /// Writes an informational message via the [`Output`] on [`Context`]
 ///
-/// Expands to `context.output().message(format_args!(...))`, where `context` resolves to the
-/// local variable in the calling function's scope. This is the macro equivalent of
-/// [`Output::message`].
+/// Expands to `context.output().message(format!(...)).await.expect("event channel closed")`,
+/// where `context` resolves to the local variable in the calling function's scope. This is the
+/// macro equivalent of [`Output::message`].
+///
+/// The macro must be called from an async function because the core [`Output`] methods are async.
 ///
 /// # Examples
 ///
@@ -30,8 +32,8 @@ mod inventory;
 /// ```
 ///
 /// [`Context`]: clawless::context::Context
-/// [`Output`]: clawless::output::Output
-/// [`Output::message`]: clawless::output::Output::message
+/// [`Output`]: clawless_core::output::Output
+/// [`Output::message`]: clawless_core::output::Output::message
 #[proc_macro]
 pub fn message(input: TokenStream) -> TokenStream {
     output_format_macro(input, "message")
@@ -39,9 +41,11 @@ pub fn message(input: TokenStream) -> TokenStream {
 
 /// Writes a supplementary detail via the [`Output`] on [`Context`]
 ///
-/// Expands to `context.output().detail(format_args!(...))`, where `context` resolves to the
-/// local variable in the calling function's scope. Detail is only shown when the user passes
-/// `--verbose`. This is the macro equivalent of [`Output::detail`].
+/// Expands to `context.output().detail(format!(...)).await.expect("event channel closed")`,
+/// where `context` resolves to the local variable in the calling function's scope. Detail is only
+/// shown when the user passes `--verbose`. This is the macro equivalent of [`Output::detail`].
+///
+/// The macro must be called from an async function because the core [`Output`] methods are async.
 ///
 /// # Examples
 ///
@@ -56,8 +60,8 @@ pub fn message(input: TokenStream) -> TokenStream {
 /// ```
 ///
 /// [`Context`]: clawless::context::Context
-/// [`Output`]: clawless::output::Output
-/// [`Output::detail`]: clawless::output::Output::detail
+/// [`Output`]: clawless_core::output::Output
+/// [`Output::detail`]: clawless_core::output::Output::detail
 #[proc_macro]
 pub fn detail(input: TokenStream) -> TokenStream {
     output_format_macro(input, "detail")
@@ -65,10 +69,13 @@ pub fn detail(input: TokenStream) -> TokenStream {
 
 /// Writes an artifact value via the [`Output`] on [`Context`]
 ///
-/// Expands to `context.output().artifact(&(...))`, where `context` resolves to the local
-/// variable in the calling function's scope. Unlike [`message!`] and [`detail!`], this macro
-/// does not use `format_args!` — it takes an expression that implements [`Display`] and
-/// [`Serialize`]. This is the macro equivalent of [`Output::artifact`].
+/// Expands to `context.output().artifact(...).await.expect("event channel closed")`, where
+/// `context` resolves to the local variable in the calling function's scope. Unlike [`message!`]
+/// and [`detail!`], this macro does not use `format!` — it takes an expression that implements
+/// [`Display`], [`Serialize`], and [`Debug`]. This is the macro equivalent of
+/// [`Output::artifact`].
+///
+/// The macro must be called from an async function because the core [`Output`] methods are async.
 ///
 /// # Examples
 ///
@@ -84,22 +91,33 @@ pub fn detail(input: TokenStream) -> TokenStream {
 /// ```
 ///
 /// [`Context`]: clawless::context::Context
+/// [`Debug`]: std::fmt::Debug
 /// [`Display`]: std::fmt::Display
-/// [`Output`]: clawless::output::Output
-/// [`Output::artifact`]: clawless::output::Output::artifact
+/// [`Output`]: clawless_core::output::Output
+/// [`Output::artifact`]: clawless_core::output::Output::artifact
 /// [`Serialize`]: serde::Serialize
 #[proc_macro]
 pub fn artifact(input: TokenStream) -> TokenStream {
     let input = proc_macro2::TokenStream::from(input);
     let context = proc_macro2::Ident::new("context", proc_macro2::Span::call_site());
-    quote! { #context.output().artifact(&(#input)) }.into()
+    quote! {
+        #context.output().artifact(#input)
+            .await
+            .expect("event channel closed")
+    }
+    .into()
 }
 
 fn output_format_macro(input: TokenStream, method: &str) -> TokenStream {
     let input = proc_macro2::TokenStream::from(input);
     let context = proc_macro2::Ident::new("context", proc_macro2::Span::call_site());
     let method = proc_macro2::Ident::new(method, proc_macro2::Span::call_site());
-    quote! { #context.output().#method(::core::format_args!(#input)) }.into()
+    quote! {
+        #context.output().#method(format!(#input))
+            .await
+            .expect("event channel closed")
+    }
+    .into()
 }
 
 /// Set up the commands module for a Clawless application
@@ -134,8 +152,10 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 
 /// Initialize and run a Clawless application
 ///
-/// This macro generates the `main` function for a Clawless application.
-/// It should be called in `src/main.rs` after declaring the `commands` module.
+/// This macro generates the `main` function for a Clawless application. It sets up the event
+/// channel, constructs the [`Context`] with a core [`Output`], parses CLI flags into
+/// [`OutputFlags`], builds a [`TerminalPresenter`] to render events, and runs the command through
+/// the presenter.
 ///
 /// # Example
 ///
@@ -145,20 +165,38 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 ///
 /// clawless::main!();
 /// ```
+///
+/// [`Context`]: clawless::context::Context
+/// [`Output`]: clawless_core::output::Output
+/// [`OutputFlags`]: clawless::output::OutputFlags
+/// [`TerminalPresenter`]: clawless::presenter::TerminalPresenter
 #[proc_macro]
 pub fn main(_input: TokenStream) -> TokenStream {
     let output = quote! {
         fn main() -> Result<(), Box<dyn std::error::Error>> {
+            use clawless::presenter::Presenter;
+
             let cancellation = clawless::cancellation::Cancellation::new();
 
-            let app = clawless::output::Output::augment_command(commands::clawless_init());
+            let app = clawless::output::OutputFlags::augment_command(
+                commands::clawless_init(),
+            );
             let matches = app.get_matches();
-            let output = clawless::output::Output::from_arg_matches(&matches);
+            let output_flags = clawless::output::OutputFlags::from_arg_matches(&matches);
+
+            let (sender, receiver) = clawless::event::event_channel();
+            let output = clawless::output::Output::new(sender);
 
             let context = clawless::context::Context::builder()
                 .cancellation(cancellation.clone())
                 .output(output)
                 .build()?;
+
+            let presenter = clawless::presenter::TerminalPresenter::builder()
+                .receiver(receiver)
+                .verbosity(output_flags.verbosity())
+                .mode(output_flags.mode())
+                .build();
 
             let rt = clawless::tokio::runtime::Runtime::new()?;
             rt.block_on(async {
@@ -166,7 +204,9 @@ pub fn main(_input: TokenStream) -> TokenStream {
                     clawless::signal::wait_for_shutdown(cancellation)
                 );
 
-                commands::clawless_exec(matches, context).await
+                presenter.present(Box::pin(
+                    commands::clawless_exec(matches, context)
+                )).await
             })?;
 
             Ok(())

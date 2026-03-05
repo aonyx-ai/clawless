@@ -9,11 +9,11 @@
 
 use anyhow::Result;
 use bon::bon;
+use clawless_core::output::Output;
 use clawless_core::prelude::Cancellation;
 use getset::Getters;
 
 pub use self::current_working_directory::CurrentWorkingDirectory;
-use crate::output::Output;
 
 mod current_working_directory;
 
@@ -46,7 +46,7 @@ pub struct Context {
     #[getset(get = "pub")]
     cancellation: Cancellation,
 
-    /// The output handler for user-facing messages
+    /// The output handler for sending events to the presenter
     #[getset(get = "pub")]
     output: Output,
 }
@@ -67,11 +67,14 @@ impl Context {
     ///
     /// ```rust,ignore
     /// // Production: CWD auto-detected
-    /// let context = Context::builder().build()?;
+    /// let context = Context::builder()
+    ///     .output(output)
+    ///     .build()?;
     ///
     /// // Tests: explicit CWD
     /// let context = Context::builder()
     ///     .current_working_directory(tmp.path())
+    ///     .output(output)
     ///     .build()?;
     /// ```
     // r[impl cancel.context.default]
@@ -80,7 +83,7 @@ impl Context {
     pub fn new(
         #[builder(into)] current_working_directory: Option<CurrentWorkingDirectory>,
         #[builder(default)] cancellation: Cancellation,
-        #[builder(default)] output: Output,
+        output: Output,
     ) -> Result<Self> {
         let current_working_directory = match current_working_directory {
             Some(cwd) => cwd,
@@ -99,8 +102,14 @@ impl Context {
 mod tests {
     use std::path::Path;
 
+    use clawless_core::event::event_channel;
+
     use super::*;
-    use crate::output::{OutputMode, Verbosity};
+
+    fn test_output() -> Output {
+        let (sender, _receiver) = event_channel();
+        Output::new(sender)
+    }
 
     // r[verify cancel.context.injectable]
     // r[verify cancel.context.field]
@@ -112,6 +121,7 @@ mod tests {
         let context = Context::builder()
             .current_working_directory(Path::new("/tmp"))
             .cancellation(cancellation)
+            .output(test_output())
             .build()
             .expect("should create context");
 
@@ -122,6 +132,7 @@ mod tests {
     fn new_with_cwd_uses_provided_value() {
         let context = Context::builder()
             .current_working_directory(Path::new("/tmp"))
+            .output(test_output())
             .build()
             .expect("should create context");
 
@@ -129,37 +140,15 @@ mod tests {
     }
 
     #[test]
-    fn new_with_defaults_has_default_output() {
-        let context = Context::builder()
-            .current_working_directory(Path::new("/tmp"))
-            .build()
-            .expect("should create context");
-
-        assert_eq!(context.output().verbosity(), Verbosity::Default);
-        assert_eq!(context.output().mode(), OutputMode::Text);
-    }
-
-    #[test]
     fn new_with_defaults_detects_cwd() {
         let expected = std::env::current_dir().expect("should get current dir");
 
-        let context = Context::builder().build().expect("should create context");
-
-        assert_eq!(context.current_working_directory().get(), expected);
-    }
-
-    #[test]
-    fn new_with_output_uses_provided_value() {
-        let output = Output::new(Verbosity::Verbose, OutputMode::Json);
-
         let context = Context::builder()
-            .current_working_directory(Path::new("/tmp"))
-            .output(output)
+            .output(test_output())
             .build()
             .expect("should create context");
 
-        assert_eq!(context.output().verbosity(), Verbosity::Verbose);
-        assert_eq!(context.output().mode(), OutputMode::Json);
+        assert_eq!(context.current_working_directory().get(), expected);
     }
 
     // r[verify cancel.context.default]
@@ -167,6 +156,7 @@ mod tests {
     fn new_with_defaults_has_uncancelled_token() {
         let context = Context::builder()
             .current_working_directory(Path::new("/tmp"))
+            .output(test_output())
             .build()
             .expect("should create context");
 
