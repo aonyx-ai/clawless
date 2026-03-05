@@ -13,27 +13,34 @@
 //!
 //! # Expansion
 //!
-//! [`message!`] and [`detail!`] accept `format_args!`-style arguments and expand to a
-//! `format_args!` call, avoiding an intermediate [`String`] allocation:
+//! [`message!`] and [`detail!`] accept `format!`-style arguments and expand to an async send
+//! through the event channel:
 //!
 //! ```rust,ignore
 //! // This:
 //! message!("found {} items", count);
 //!
 //! // Expands to:
-//! context.output().message(format_args!("found {} items", count));
+//! context.output().message(format!("found {} items", count))
+//!     .await
+//!     .expect("event channel closed");
 //! ```
 //!
 //! [`artifact!`] takes an expression rather than format arguments, because artifacts must
-//! implement both [`Display`] and [`Serialize`]:
+//! implement [`Display`], [`Serialize`], and [`Debug`]:
 //!
 //! ```rust,ignore
 //! // This:
 //! artifact!(count);
 //!
 //! // Expands to:
-//! context.output().artifact(&(count));
+//! context.output().artifact(count)
+//!     .await
+//!     .expect("event channel closed");
 //! ```
+//!
+//! Because the expansion includes `.await`, all three macros must be called from an async
+//! function.
 //!
 //! # Examples
 //!
@@ -50,8 +57,9 @@
 //! ```
 //!
 //! [`Context`]: crate::context::Context
+//! [`Debug`]: std::fmt::Debug
 //! [`Display`]: std::fmt::Display
-//! [`Output`]: crate::output::Output
+//! [`Output`]: clawless_core::output::Output
 //! [`Serialize`]: serde::Serialize
 //! [`artifact!`]: crate::artifact
 //! [`detail!`]: crate::detail

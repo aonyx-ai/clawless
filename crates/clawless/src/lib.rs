@@ -15,7 +15,7 @@ pub mod prelude {
 
     pub use super::context::*;
     pub use super::error::{CommandResult, Error, ErrorContext};
-    pub use super::output::*;
+    pub use super::output::{Output, OutputMode, Verbosity};
 }
 
 pub use clawless_core::cancellation;

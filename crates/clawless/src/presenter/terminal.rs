@@ -15,10 +15,8 @@
 //! [`Verbosity`]: crate::output::Verbosity
 //! [`present`]: super::Presenter::present
 
-// TODO: Remove when the presenter is actually used
-#![allow(dead_code)]
-
 use std::future::Future;
+use std::io::Write;
 use std::pin::Pin;
 
 use async_trait::async_trait;
@@ -26,7 +24,7 @@ use bon::Builder;
 
 use super::Presenter;
 use crate::error::CommandResult;
-use crate::event::EventReceiver;
+use crate::event::{Event, EventReceiver};
 use crate::output::OutputMode;
 use crate::output::Verbosity;
 
@@ -66,13 +64,66 @@ pub struct TerminalPresenter {
     receiver: EventReceiver,
 }
 
+fn render_event(event: Event, verbosity: Verbosity, mode: OutputMode) {
+    match event {
+        Event::Message(msg) => match verbosity {
+            Verbosity::Quiet => {}
+            Verbosity::Default | Verbosity::Verbose => match mode {
+                OutputMode::Text => {
+                    let mut handle = std::io::stdout().lock();
+                    writeln!(handle, "{msg}").expect("should write message");
+                }
+                OutputMode::Json => {
+                    let mut handle = std::io::stderr().lock();
+                    writeln!(handle, "{msg}").expect("should write message");
+                }
+            },
+        },
+        Event::Detail(msg) => match verbosity {
+            Verbosity::Quiet | Verbosity::Default => {}
+            Verbosity::Verbose => match mode {
+                OutputMode::Text => {
+                    let mut handle = std::io::stdout().lock();
+                    writeln!(handle, "{msg}").expect("should write detail");
+                }
+                OutputMode::Json => {
+                    let mut handle = std::io::stderr().lock();
+                    writeln!(handle, "{msg}").expect("should write detail");
+                }
+            },
+        },
+        Event::Artifact(artifact) => {
+            let line = match mode {
+                OutputMode::Text => artifact.to_string(),
+                OutputMode::Json => {
+                    serde_json::to_string(&artifact).expect("should serialize artifact to JSON")
+                }
+            };
+            let mut handle = std::io::stdout().lock();
+            writeln!(handle, "{line}").expect("should write artifact");
+        }
+    }
+}
+
 #[async_trait(?Send)]
 impl Presenter for TerminalPresenter {
     async fn present(
         self,
         command: Pin<Box<dyn Future<Output = CommandResult> + Send>>,
     ) -> CommandResult {
-        command.await
+        let Self {
+            verbosity,
+            mode,
+            mut receiver,
+        } = self;
+
+        let command_handle = tokio::spawn(command);
+
+        while let Some(event) = receiver.recv().await {
+            render_event(event, verbosity, mode);
+        }
+
+        command_handle.await.expect("command task panicked")
     }
 }
 
@@ -116,12 +167,32 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn present_consumes_events_from_channel() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+
+        presenter
+            .present(Box::pin(async move {
+                sender
+                    .send(Event::Message("consumed".to_string()))
+                    .await
+                    .expect("should send");
+                Ok(())
+            }))
+            .await
+            .expect("should succeed");
+    }
+
+    #[tokio::test]
     async fn present_with_error_propagates_error() {
-        let (_sender, receiver) = event_channel();
+        let (sender, receiver) = event_channel();
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
 
         let error = presenter
-            .present(Box::pin(async { Err(anyhow::anyhow!("command failed")) }))
+            .present(Box::pin(async move {
+                drop(sender);
+                Err(anyhow::anyhow!("command failed"))
+            }))
             .await
             .expect_err("should fail");
 
@@ -130,11 +201,14 @@ mod tests {
 
     #[tokio::test]
     async fn present_with_ok_returns_ok() {
-        let (_sender, receiver) = event_channel();
+        let (sender, receiver) = event_channel();
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
 
         presenter
-            .present(Box::pin(async { Ok(()) }))
+            .present(Box::pin(async move {
+                drop(sender);
+                Ok(())
+            }))
             .await
             .expect("should succeed");
     }
