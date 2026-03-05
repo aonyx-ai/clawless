@@ -3,6 +3,7 @@
 
 pub mod cancellation;
 pub mod event;
+pub mod output;
 
 // Signal-to-cancellation adapter used by the `main!()` macro expansion
 #[doc(hidden)]
