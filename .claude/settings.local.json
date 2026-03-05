@@ -1,11 +1,13 @@
 {
   "permissions": {
     "allow": [
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(git switch:*)",
       "Bash(just format-rust:*)",
       "Bash(just lint-rust:*)",
+      "Bash(just pre-commit:*)",
       "Bash(just test-rust:*)",
-      "Skill(rust-style)",
-      "Skill(rustdoc)",
       "WebFetch(domain:clawless.rs)"
     ]
   }
