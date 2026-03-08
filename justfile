@@ -133,9 +133,7 @@ prettier fix="false" extension="*":
 
 # Publish the crates to crates.io
 publish:
-    cargo publish -p clawless-derive -v --all-features
-    cargo publish -p clawless -v --all-features
-    cargo publish -p clawless-cli -v --all-features
+    cargo publish --all-features --verbose --workspace
 
 # Run the tests
 test-rust:

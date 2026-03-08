@@ -1,0 +1,4 @@
+args = ["clawless", "new", "cli"]
+bin.name = "cargo-clawless"
+fs.sandbox = true
+status.code = 0

@@ -31,12 +31,12 @@ pub struct GenerateCommandArgs {
 ///
 /// Generate a simple command:
 /// ```shell
-/// clawless generate command deploy
+/// cargo clawless generate command deploy
 /// ```
 ///
 /// Generate a nested command:
 /// ```shell
-/// clawless generate command db/migrate
+/// cargo clawless generate command db/migrate
 /// ```
 #[command(alias = "c")]
 pub async fn command(args: GenerateCommandArgs, context: Context) -> CommandResult {

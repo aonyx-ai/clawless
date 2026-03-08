@@ -1,5 +1,5 @@
 [package]
-name = "clawless-cli"
+name = "cargo-clawless"
 description = "Generate and develop CLIs with Clawless"
 
 version.workspace = true
@@ -12,7 +12,7 @@ categories = ["command-line-utilities"]
 keywords = ["cli", "framework"]
 
 [[bin]]
-name = "clawless"
+name = "cargo-clawless"
 path = "src/main.rs"
 
 [dependencies]

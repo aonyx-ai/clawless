@@ -1,28 +1,28 @@
-# 🦦 Clawless CLI
+# 🦦 cargo-clawless
 
-`clawless-cli` is the official command-line tool for working with Clawless
-projects. It provides scaffolding and code generation capabilities to help you
-quickly build and extend command-line applications.
+`cargo-clawless` is the official scaffolding tool for working with Clawless
+projects. It provides code generation capabilities to help you quickly build
+and extend command-line applications.
 
-The CLI itself is built using the Clawless framework, serving as both a useful
-tool and a reference implementation.
+The tool itself is built using the Clawless framework, serving as both a
+useful tool and a reference implementation.
 
 ## Installation
 
-Install the CLI using `cargo`:
+Install the tool using `cargo`:
 
 ```shell
-cargo install clawless-cli
+cargo install cargo-clawless
 ```
 
 ## Commands
 
-### `clawless new`
+### `cargo clawless new`
 
 Create a new Clawless project with a complete setup:
 
 ```shell
-clawless new my-app
+cargo clawless new my-app
 ```
 
 This command:
@@ -32,18 +32,18 @@ This command:
 - Sets up the project structure with `main.rs` and `commands.rs`
 - Creates a sample `greet` command to get you started
 
-### `clawless generate command`
+### `cargo clawless generate command`
 
 Generate a new command in an existing Clawless project:
 
 ```shell
-clawless generate command my-command
+cargo clawless generate command my-command
 ```
 
 For nested commands, use slash notation:
 
 ```shell
-clawless generate command db/migrate
+cargo clawless generate command db/migrate
 ```
 
 This command:
@@ -52,22 +52,22 @@ This command:
 - Adds the necessary `mod` statement to the parent module
 - Supports nested command hierarchies
 
-## Usage in Projects
+## Usage in projects
 
 The typical workflow is:
 
 1. Create a new project:
 
    ```shell
-   clawless new my-cli
+   cargo clawless new my-cli
    cd my-cli
    ```
 
 2. Generate additional commands:
 
    ```shell
-   clawless generate command deploy
-   clawless generate command config/set
+   cargo clawless generate command deploy
+   cargo clawless generate command config/set
    ```
 
 3. Build and run your CLI:

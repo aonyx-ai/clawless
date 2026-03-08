@@ -1,0 +1,4 @@
+args = ["clawless", "g", "c", "greet/shout"]
+bin.name = "cargo-clawless"
+fs.sandbox = true
+status.code = 0

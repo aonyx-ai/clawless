@@ -16,7 +16,7 @@ pub struct GenerateArgs {}
 /// # Examples
 ///
 /// ```shell
-/// clawless generate command my-command
+/// cargo clawless generate command my-command
 /// ```
 #[command(require_subcommand, alias = "g")]
 pub async fn generate(_args: GenerateArgs, _context: Context) -> CommandResult {
