@@ -232,20 +232,31 @@ checksum = "3a822ea5bc7590f9d40f1ba12c0dc3c2760f3482c6984db1573ad11031420831"
 name = "clawless"
 version = "0.5.0"
 dependencies = [
+ "clap",
+ "clawless-cli",
+ "clawless-core",
+ "clawless-derive",
+ "inventory",
+ "serde",
+ "tokio",
+ "trybuild",
+]
+
+[[package]]
+name = "clawless-cli"
+version = "0.5.0"
+dependencies = [
  "anyhow",
  "async-trait",
  "bon",
  "clap",
  "clawless-core",
- "clawless-derive",
  "erased-serde",
  "getset",
- "inventory",
  "serde",
  "serde_json",
  "tokio",
  "tokio-util",
- "trybuild",
  "typed-fields",
 ]
 

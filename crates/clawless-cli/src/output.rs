@@ -11,7 +11,6 @@
 //! [`TerminalPresenter`]: crate::presenter::TerminalPresenter
 
 use clap::{Arg, ArgAction, ArgMatches};
-pub use clawless_core::output::Output;
 
 pub use self::output_mode::OutputMode;
 pub use self::verbosity::Verbosity;
@@ -31,14 +30,14 @@ mod verbosity;
 /// # Examples
 ///
 /// ```
-/// use clawless::output::OutputFlags;
+/// use clawless_cli::output::OutputFlags;
 ///
 /// let flags = OutputFlags::new(
-///     clawless::output::Verbosity::Default,
-///     clawless::output::OutputMode::Text,
+///     clawless_cli::output::Verbosity::Default,
+///     clawless_cli::output::OutputMode::Text,
 /// );
-/// assert_eq!(flags.verbosity(), clawless::output::Verbosity::Default);
-/// assert_eq!(flags.mode(), clawless::output::OutputMode::Text);
+/// assert_eq!(flags.verbosity(), clawless_cli::output::Verbosity::Default);
+/// assert_eq!(flags.mode(), clawless_cli::output::OutputMode::Text);
 /// ```
 ///
 /// [`Output`]: clawless_core::output::Output
@@ -55,7 +54,7 @@ impl OutputFlags {
     /// # Examples
     ///
     /// ```
-    /// use clawless::output::{OutputFlags, OutputMode, Verbosity};
+    /// use clawless_cli::output::{OutputFlags, OutputMode, Verbosity};
     ///
     /// let flags = OutputFlags::new(Verbosity::Default, OutputMode::Text);
     /// assert_eq!(flags.verbosity(), Verbosity::Default);
@@ -70,7 +69,7 @@ impl OutputFlags {
     /// # Examples
     ///
     /// ```
-    /// use clawless::output::{OutputFlags, OutputMode, Verbosity};
+    /// use clawless_cli::output::{OutputFlags, OutputMode, Verbosity};
     ///
     /// let flags = OutputFlags::new(Verbosity::Verbose, OutputMode::Text);
     /// assert_eq!(flags.verbosity(), Verbosity::Verbose);
@@ -84,7 +83,7 @@ impl OutputFlags {
     /// # Examples
     ///
     /// ```
-    /// use clawless::output::{OutputFlags, OutputMode, Verbosity};
+    /// use clawless_cli::output::{OutputFlags, OutputMode, Verbosity};
     ///
     /// let flags = OutputFlags::new(Verbosity::Default, OutputMode::Json);
     /// assert_eq!(flags.mode(), OutputMode::Json);
@@ -105,7 +104,7 @@ impl OutputFlags {
     ///
     /// ```
     /// let command = clap::Command::new("test");
-    /// let command = clawless::output::OutputFlags::augment_command(command);
+    /// let command = clawless_cli::output::OutputFlags::augment_command(command);
     /// ```
     pub fn augment_command(command: clap::Command) -> clap::Command {
         command
@@ -148,12 +147,12 @@ impl OutputFlags {
     /// # Examples
     ///
     /// ```
-    /// let command = clawless::output::OutputFlags::augment_command(
+    /// let command = clawless_cli::output::OutputFlags::augment_command(
     ///     clap::Command::new("test"),
     /// );
     /// let matches = command.get_matches_from(vec!["test", "--quiet"]);
-    /// let flags = clawless::output::OutputFlags::from_arg_matches(&matches);
-    /// assert_eq!(flags.verbosity(), clawless::output::Verbosity::Quiet);
+    /// let flags = clawless_cli::output::OutputFlags::from_arg_matches(&matches);
+    /// assert_eq!(flags.verbosity(), clawless_cli::output::Verbosity::Quiet);
     /// ```
     ///
     /// [`augment_command`]: OutputFlags::augment_command

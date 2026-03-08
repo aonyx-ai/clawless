@@ -1,3 +1,8 @@
+//! Error types and result aliases for Clawless commands
+//!
+//! This module re-exports [`anyhow`] error handling primitives and defines the [`CommandResult`]
+//! type alias used as the standard return type for command functions.
+
 /// Trait for adding context to errors
 ///
 /// This is a re-export of `anyhow::Context` that provides the `.context()` method

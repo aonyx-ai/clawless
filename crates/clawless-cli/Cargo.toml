@@ -1,0 +1,23 @@
+[package]
+name = "clawless-cli"
+description = "CLI presentation layer for the Clawless framework"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+bon = { workspace = true }
+clap = { workspace = true }
+clawless-core = { workspace = true }
+erased-serde = { workspace = true }
+getset = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+typed-fields = { workspace = true }
