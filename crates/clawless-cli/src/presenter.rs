@@ -45,7 +45,7 @@ mod terminal;
 /// presenter.present(Box::pin(command_future)).await?;
 /// ```
 ///
-/// [`EventReceiver`]: crate::event::EventReceiver
+/// [`EventReceiver`]: clawless_core::event::EventReceiver
 /// [`present`]: Presenter::present
 #[async_trait(?Send)]
 pub trait Presenter {
@@ -63,7 +63,7 @@ pub trait Presenter {
     /// Returns the command's error if the command fails. Implementations propagate the
     /// command's [`CommandResult`] without modification.
     ///
-    /// [`EventReceiver`]: crate::event::EventReceiver
+    /// [`EventReceiver`]: clawless_core::event::EventReceiver
     async fn present(
         self,
         command: Pin<Box<dyn Future<Output = CommandResult> + Send>>,

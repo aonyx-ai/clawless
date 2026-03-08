@@ -11,7 +11,7 @@
 /// # Examples
 ///
 /// ```
-/// use clawless::prelude::*;
+/// use clawless_cli::output::OutputMode;
 ///
 /// let mode = OutputMode::default();
 /// assert_eq!(mode, OutputMode::Text);

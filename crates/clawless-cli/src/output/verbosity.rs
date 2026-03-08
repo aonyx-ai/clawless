@@ -12,7 +12,7 @@
 /// # Examples
 ///
 /// ```
-/// use clawless::prelude::*;
+/// use clawless_cli::output::Verbosity;
 ///
 /// let verbosity = Verbosity::default();
 /// assert_eq!(verbosity, Verbosity::Default);

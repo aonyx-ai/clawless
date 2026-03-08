@@ -9,25 +9,32 @@
 pub mod prelude {
     pub use clap;
     pub use clap::{Args, FromArgMatches};
+    pub use clawless_cli::context::*;
+    pub use clawless_cli::error::{CommandResult, Error, ErrorContext};
+    pub use clawless_core::output::Output;
     pub use clawless_core::prelude::*;
     pub use clawless_derive::{artifact, command, commands, detail, main, message};
     pub use serde::Serialize;
 
-    pub use super::context::*;
-    pub use super::error::{CommandResult, Error, ErrorContext};
-    pub use super::output::{Output, OutputMode, Verbosity};
+    pub use super::output::{OutputMode, Verbosity};
 }
 
+pub use clawless_cli::context;
+pub use clawless_cli::error::{CommandResult, Error, ErrorContext};
+pub use clawless_cli::macros;
+pub use clawless_cli::presenter;
 pub use clawless_core::cancellation;
 pub use clawless_core::event;
 pub use clawless_derive::{artifact, command, commands, detail, main, message};
-pub use error::{CommandResult, Error, ErrorContext};
 
-pub mod context;
-mod error;
-pub mod macros;
-pub mod output;
-pub mod presenter;
+/// CLI flag configuration and output types
+///
+/// This module re-exports output types from both [`clawless_cli`] and [`clawless_core`], providing
+/// a unified `clawless::output` module that contains everything needed for output configuration.
+pub mod output {
+    pub use clawless_cli::output::{OutputFlags, OutputMode, Verbosity};
+    pub use clawless_core::output::Output;
+}
 
 // Re-export the clap crate for use with the `clawless-derive` crate
 #[doc(hidden)]

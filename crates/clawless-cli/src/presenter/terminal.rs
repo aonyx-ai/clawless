@@ -9,7 +9,7 @@
 //! and defaults [`Verbosity`] to [`Verbosity::Default`] and [`OutputMode`] to
 //! [`OutputMode::Text`].
 //!
-//! [`EventReceiver`]: crate::event::EventReceiver
+//! [`EventReceiver`]: clawless_core::event::EventReceiver
 //! [`OutputMode`]: crate::output::OutputMode
 //! [`Presenter`]: super::Presenter
 //! [`Verbosity`]: crate::output::Verbosity
@@ -21,10 +21,10 @@ use std::pin::Pin;
 
 use async_trait::async_trait;
 use bon::Builder;
+use clawless_core::event::{Event, EventReceiver};
 
 use super::Presenter;
 use crate::error::CommandResult;
-use crate::event::{Event, EventReceiver};
 use crate::output::OutputMode;
 use crate::output::Verbosity;
 
@@ -42,15 +42,15 @@ use crate::output::Verbosity;
 /// # Examples
 ///
 /// ```
-/// use clawless::event::event_channel;
-/// use clawless::presenter::TerminalPresenter;
+/// use clawless_core::event::event_channel;
+/// use clawless_cli::presenter::TerminalPresenter;
 ///
 /// let (_sender, receiver) = event_channel();
 /// let presenter = TerminalPresenter::builder().receiver(receiver).build();
 /// ```
 ///
-/// [`EventReceiver`]: crate::event::EventReceiver
-/// [`EventSender`]: crate::event::EventSender
+/// [`EventReceiver`]: clawless_core::event::EventReceiver
+/// [`EventSender`]: clawless_core::event::EventSender
 /// [`present`]: super::Presenter::present
 /// [builder]: TerminalPresenter::builder
 #[derive(Debug, Builder)]
@@ -129,8 +129,9 @@ impl Presenter for TerminalPresenter {
 
 #[cfg(test)]
 mod tests {
+    use clawless_core::event::event_channel;
+
     use super::*;
-    use crate::event::event_channel;
 
     #[test]
     fn builder_with_defaults_uses_default_verbosity_and_mode() {
@@ -221,7 +222,7 @@ mod tests {
         presenter
             .present(Box::pin(async move {
                 sender
-                    .send(crate::event::Event::Message("hello".to_string()))
+                    .send(clawless_core::event::Event::Message("hello".to_string()))
                     .await
                     .expect("should send while presenter holds receiver");
                 Ok(())
