@@ -1,4 +1,0 @@
-args = ["new", "cli"]
-bin.name = "clawless"
-fs.sandbox = true
-status.code = 0

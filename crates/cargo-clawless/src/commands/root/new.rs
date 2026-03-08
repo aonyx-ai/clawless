@@ -29,7 +29,7 @@ pub struct NewArgs {
 /// # Examples
 ///
 /// ```shell
-/// clawless new my-app
+/// cargo clawless new my-app
 /// ```
 #[command(alias = "n")]
 pub async fn new(args: NewArgs, context: Context) -> CommandResult {

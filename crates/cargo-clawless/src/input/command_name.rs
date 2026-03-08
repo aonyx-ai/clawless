@@ -15,8 +15,9 @@ const COMMAND_SEPARATOR: &str = "/";
 ///
 /// # Examples
 ///
-/// ```
-/// # use clawless_cli::input::CommandName;
+/// ```rust,ignore
+/// use crate::input::CommandName;
+///
 /// // Simple command: "greet"
 /// let simple = CommandName::builder()
 ///     .name("greet")
