@@ -93,26 +93,28 @@ than large rewrites.
 ### Specifications
 
 The `specs/` directory contains the project's design specifications.
-[`specs/architecture.md`][architecture] defines the ubiquitous language and
-hexagonal architecture; consult it before introducing new domain concepts or
-modifying architectural boundaries. New features should have a spec before
-implementation begins. See [`specs/README.md`][specs-readme] for templates and
-process. Specs for already-shipped features are historical records; do not
-update their API references when the API changes in a later PR.
+[`specs/README.md`][specs-readme] defines the ubiquitous language, hexagonal
+architecture, and layered crate structure; consult it before introducing new
+domain concepts or modifying architectural boundaries. New features should have
+a spec before implementation begins. Specs for already-shipped features are
+historical records; do not update their API references when the API changes in
+a later PR.
 
 ### Structure
 
 ```text
 crates/
-  ├── clawless/              # Core framework library
+  ├── cargo-clawless/        # Scaffolding tool (`cargo clawless`)
+  ├── clawless/              # Facade re-exporting core, cli, and tui
+  ├── clawless-cli/          # CLI presentation layer (push-based)
+  ├── clawless-core/         # Domain types, events, and abstract ports
   ├── clawless-derive/       # Procedural macros
-  └── clawless-cli/          # CLI scaffolding tool
+  └── clawless-tui/          # TUI presentation layer (pull-based)
 examples/
   ├── cancellation/          # Cooperative cancellation example
   └── hello-world/           # Reference example project
 docs/                        # Docusaurus documentation site
 specs/                       # Design specifications
-  └── architecture.md        # Domain model and ubiquitous language
 ```
 
 Each example should demonstrate a single concept. Prefer creating a new example
@@ -163,13 +165,19 @@ commands, and the `#[main]` macro generates the application entry point.
 File paths map to subcommand hierarchy automatically. Placing a command at
 `commands/generate/command.rs` creates the `<cli> generate command` subcommand.
 
-#### Library and binary separation
+#### Layered architecture
 
-- **clawless** (library): Core framework providing the runtime, `Context`,
-  error types, and the prelude. Platform-agnostic.
+- **clawless-core** (library): Domain types, event system, and abstract ports.
+  Platform-agnostic.
+- **clawless-cli** (library): CLI presentation layer. Push-based adapter that
+  renders events as they arrive (stateless commands).
+- **clawless-tui** (library): TUI presentation layer. Pull-based adapter that
+  aggregates events into a queryable projection (stateful applications).
 - **clawless-derive** (proc macros): The `#[command]`, `#[commands]`, and
   `#[main]` macros that generate the CLI structure.
-- **clawless-cli** (binary): Scaffolding tool for creating new Clawless
+- **clawless** (facade): Re-exports `clawless-core`, `clawless-cli`, and
+  `clawless-tui` so users need a single dependency.
+- **cargo-clawless** (binary): Scaffolding tool for creating new Clawless
   projects and generating commands.
 
 ### Development environment
@@ -747,7 +755,6 @@ This `CLAUDE.md` file was adopted from
 [nextest's AGENTS.md][nextest-agents], which is published under the
 Apache-2.0 or MIT license.
 
-[architecture]: specs/architecture.md
 [flox]: https://flox.dev
 [nextest-agents]: https://github.com/nextest-rs/nextest/blob/main/AGENTS.md
 [specs-readme]: specs/README.md

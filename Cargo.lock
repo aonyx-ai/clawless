@@ -283,6 +283,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "clawless-tui"
+version = "0.5.0"
+
+[[package]]
 name = "colorchoice"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
