@@ -285,6 +285,11 @@ dependencies = [
 [[package]]
 name = "clawless-tui"
 version = "0.5.0"
+dependencies = [
+ "clawless-core",
+ "serde",
+ "tokio",
+]
 
 [[package]]
 name = "colorchoice"
