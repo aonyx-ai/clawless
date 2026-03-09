@@ -9,3 +9,8 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+clawless-core = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+serde = { workspace = true }

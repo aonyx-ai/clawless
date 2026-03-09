@@ -26,6 +26,7 @@ clawless = { path = "crates/clawless", version = "=0.5.0" }
 clawless-cli = { path = "crates/clawless-cli", version = "=0.5.0" }
 clawless-core = { path = "crates/clawless-core", version = "=0.5.0" }
 clawless-derive = { path = "crates/clawless-derive", version = "=0.5.0" }
+clawless-tui = { path = "crates/clawless-tui", version = "=0.5.0" }
 convert_case = ">=0.1,<1"
 libc = "0.2"
 darling = ">=0.23,<1"
