@@ -102,7 +102,10 @@ mod tests {
         let artifacts = state.artifacts();
 
         assert_eq!(artifacts.len(), 1);
-        assert!(matches!(&artifacts[0], Entry::Artifact(a) if a.to_string() == "art"));
+        let Entry::Artifact(a) = &artifacts[0] else {
+            panic!("expected Entry::Artifact");
+        };
+        assert_eq!(a.to_string(), "art");
     }
 
     #[test]
@@ -123,8 +126,14 @@ mod tests {
         let details = state.details();
 
         assert_eq!(details.len(), 2);
-        assert!(matches!(&details[0], Entry::Detail(s) if s == "dtl"));
-        assert!(matches!(&details[1], Entry::Detail(s) if s == "dtl2"));
+        let Entry::Detail(s) = &details[0] else {
+            panic!("expected Entry::Detail");
+        };
+        assert_eq!(s, "dtl");
+        let Entry::Detail(s) = &details[1] else {
+            panic!("expected Entry::Detail");
+        };
+        assert_eq!(s, "dtl2");
     }
 
     #[test]
@@ -137,8 +146,14 @@ mod tests {
         let messages = state.messages();
 
         assert_eq!(messages.len(), 2);
-        assert!(matches!(&messages[0], Entry::Message(s) if s == "msg"));
-        assert!(matches!(&messages[1], Entry::Message(s) if s == "msg2"));
+        let Entry::Message(s) = &messages[0] else {
+            panic!("expected Entry::Message");
+        };
+        assert_eq!(s, "msg");
+        let Entry::Message(s) = &messages[1] else {
+            panic!("expected Entry::Message");
+        };
+        assert_eq!(s, "msg2");
     }
 
     #[test]
@@ -149,7 +164,10 @@ mod tests {
 
         let entries = state.entries();
         assert_eq!(entries.len(), 1);
-        assert!(matches!(&entries[0], Entry::Message(s) if s == "hello"));
+        let Entry::Message(s) = &entries[0] else {
+            panic!("expected Entry::Message");
+        };
+        assert_eq!(s, "hello");
     }
 
     // r[verify projection.entry.order]
@@ -163,9 +181,18 @@ mod tests {
 
         let entries = state.entries();
         assert_eq!(entries.len(), 3);
-        assert!(matches!(&entries[0], Entry::Message(s) if s == "first"));
-        assert!(matches!(&entries[1], Entry::Detail(s) if s == "second"));
-        assert!(matches!(&entries[2], Entry::Message(s) if s == "third"));
+        let Entry::Message(s) = &entries[0] else {
+            panic!("expected Entry::Message");
+        };
+        assert_eq!(s, "first");
+        let Entry::Detail(s) = &entries[1] else {
+            panic!("expected Entry::Detail");
+        };
+        assert_eq!(s, "second");
+        let Entry::Message(s) = &entries[2] else {
+            panic!("expected Entry::Message");
+        };
+        assert_eq!(s, "third");
     }
 
     // r[verify projection.lifecycle.complete]

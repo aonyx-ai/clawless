@@ -65,7 +65,10 @@ mod tests {
 
         let cloned = entry.clone();
 
-        assert!(matches!(cloned, Entry::Detail(ref s) if s == "info"));
+        let Entry::Detail(s) = &cloned else {
+            panic!("expected Entry::Detail");
+        };
+        assert_eq!(s, "info");
     }
 
     #[test]
@@ -74,7 +77,10 @@ mod tests {
 
         let cloned = entry.clone();
 
-        assert!(matches!(cloned, Entry::Message(ref s) if s == "hello"));
+        let Entry::Message(s) = &cloned else {
+            panic!("expected Entry::Message");
+        };
+        assert_eq!(s, "hello");
     }
 
     #[test]
