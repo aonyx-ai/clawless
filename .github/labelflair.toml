@@ -7,12 +7,14 @@ color = "#4ade80"
 prefix = "A-"
 colors = { tailwind = "lime" }
 labels = [
+  { name = "cargo-clawless", description = "An issue related to cargo-clawless" },
   { name = "clawless", description = "An issue related to clawless" },
   { name = "cli", description = "An issue related to clawless-cli" },
   { name = "core", description = "An issue related to clawless-core" },
   { name = "docs", description = "An issue related to the documentation" },
-  { name = "macros", description = "An issue related to clawless-derive" },
   { name = "github-actions", description = "An issue related to GitHub Actions" },
+  { name = "macros", description = "An issue related to clawless-derive" },
+  { name = "tui", description = "An issue related to clawless-tui" },
 ]
 
 [[group]]

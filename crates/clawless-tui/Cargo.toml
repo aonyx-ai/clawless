@@ -1,0 +1,11 @@
+[package]
+name = "clawless-tui"
+description = "Presentation layer for TUI-based applications using the Clawless framework"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
