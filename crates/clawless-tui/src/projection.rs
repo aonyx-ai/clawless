@@ -7,7 +7,8 @@
 //!
 //! The projection translates internal [`Event`]s into [`Entry`] values so that TUI consumers never
 //! interact with the event system directly. Queries return cloned snapshots of the accumulated
-//! state, allowing the render loop to read without blocking the drain task.
+//! state. The read lock is held only while cloning the snapshot, keeping contention with the
+//! drain task's write lock brief.
 //!
 //! # Examples
 //!
