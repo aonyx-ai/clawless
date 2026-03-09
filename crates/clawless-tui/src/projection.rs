@@ -108,6 +108,10 @@ impl Projection {
     /// The returned projection is immediately ready to query. Early queries return empty results
     /// until events arrive.
     ///
+    /// # Panics
+    ///
+    /// Panics if called outside of a Tokio runtime.
+    ///
     /// # Examples
     ///
     /// ```
