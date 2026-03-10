@@ -2,6 +2,7 @@
 #![warn(missing_docs)]
 
 pub mod cancellation;
+pub mod context;
 pub mod event;
 pub mod output;
 
@@ -16,4 +17,5 @@ pub mod signal;
 /// define and run commands without needing to import each item individually.
 pub mod prelude {
     pub use super::cancellation::Cancellation;
+    pub use super::context::{Context, ContextError, CurrentWorkingDirectory};
 }
