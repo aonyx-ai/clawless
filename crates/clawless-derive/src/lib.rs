@@ -152,10 +152,9 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 
 /// Initialize and run a Clawless application
 ///
-/// This macro generates the `main` function for a Clawless application. It sets up the event
-/// channel, constructs the [`Context`] with a core [`Output`], parses CLI flags into
-/// [`OutputFlags`], builds a [`TerminalPresenter`] to render events, and runs the command through
-/// the presenter.
+/// This macro generates the `main` function for a Clawless application. It delegates to
+/// [`CommandRunner::run`], which handles the full lifecycle: argument parsing, event channel
+/// creation, context construction, signal handling, and terminal presentation.
 ///
 /// # Example
 ///
@@ -166,50 +165,15 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 /// clawless::main!();
 /// ```
 ///
-/// [`Context`]: clawless::context::Context
-/// [`Output`]: clawless_core::output::Output
-/// [`OutputFlags`]: clawless::output::OutputFlags
-/// [`TerminalPresenter`]: clawless::presenter::TerminalPresenter
+/// [`CommandRunner::run`]: clawless::runner::CommandRunner::run
 #[proc_macro]
 pub fn main(_input: TokenStream) -> TokenStream {
     let output = quote! {
         fn main() -> Result<(), Box<dyn std::error::Error>> {
-            use clawless::presenter::Presenter;
-
-            let cancellation = clawless::cancellation::Cancellation::new();
-
-            let app = clawless::output::OutputFlags::augment_command(
-                commands::clawless_init(),
-            );
-            let matches = app.get_matches();
-            let output_flags = clawless::output::OutputFlags::from_arg_matches(&matches);
-
-            let (sender, receiver) = clawless::event::event_channel();
-            let output = clawless::output::Output::new(sender);
-
-            let context = clawless::context::Context::builder()
-                .cancellation(cancellation.clone())
-                .output(output)
-                .build()?;
-
-            let presenter = clawless::presenter::TerminalPresenter::builder()
-                .receiver(receiver)
-                .verbosity(output_flags.verbosity())
-                .mode(output_flags.mode())
-                .build();
-
-            let rt = clawless::tokio::runtime::Runtime::new()?;
-            rt.block_on(async {
-                clawless::tokio::spawn(
-                    clawless::signal::wait_for_shutdown(cancellation)
-                );
-
-                presenter.present(Box::pin(
-                    commands::clawless_exec(matches, context)
-                )).await
-            })?;
-
-            Ok(())
+            clawless::runner::CommandRunner::run(
+                commands::clawless_init,
+                commands::clawless_exec,
+            )
         }
     };
     output.into()
