@@ -22,6 +22,7 @@ pub mod prelude {
 pub use clawless_cli::error::{CommandResult, Error, ErrorContext};
 pub use clawless_cli::macros;
 pub use clawless_cli::presenter;
+pub use clawless_cli::runner;
 pub use clawless_core::cancellation;
 pub use clawless_core::context;
 pub use clawless_core::event;
@@ -39,12 +40,6 @@ pub mod output {
 // Re-export the clap crate for use with the `clawless-derive` crate
 #[doc(hidden)]
 pub use clap;
-// Signal-to-cancellation adapter used by the `main!()` macro expansion
-#[doc(hidden)]
-pub use clawless_core::signal;
 // Re-export the inventory crate for use with the `clawless-derive` crate
 #[doc(hidden)]
 pub use inventory;
-// Re-export the tokio crate to run commands in an async runtime
-#[doc(hidden)]
-pub use tokio;
