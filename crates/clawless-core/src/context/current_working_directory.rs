@@ -1,5 +1,6 @@
-use anyhow::Result;
 use typed_fields::path;
+
+use crate::context::ContextError;
 
 path!(
     /// The working directory in which a command was called
@@ -13,12 +14,17 @@ path!(
 );
 
 impl CurrentWorkingDirectory {
-    /// Create a `CurrentWorkingDirectory` from the environment
+    /// Creates a [`CurrentWorkingDirectory`] from the environment
     ///
     /// This function retrieves the current working directory from the environment and creates a
-    /// `CurrentWorkingDirectory` instance. If the current directory cannot be determined, an error
+    /// [`CurrentWorkingDirectory`] instance. If the current directory cannot be determined, an error
     /// is returned.
-    pub fn try_from_env() -> Result<CurrentWorkingDirectory> {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`std::io::Error`] if the current directory cannot be determined from the
+    /// environment.
+    pub fn try_from_env() -> Result<CurrentWorkingDirectory, ContextError> {
         let cwd = std::env::current_dir()?;
         Ok(CurrentWorkingDirectory::new(cwd))
     }

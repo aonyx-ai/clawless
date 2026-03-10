@@ -9,8 +9,8 @@
 pub mod prelude {
     pub use clap;
     pub use clap::{Args, FromArgMatches};
-    pub use clawless_cli::context::*;
     pub use clawless_cli::error::{CommandResult, Error, ErrorContext};
+    pub use clawless_core::context::*;
     pub use clawless_core::output::Output;
     pub use clawless_core::prelude::*;
     pub use clawless_derive::{artifact, command, commands, detail, main, message};
@@ -19,11 +19,11 @@ pub mod prelude {
     pub use super::output::{OutputMode, Verbosity};
 }
 
-pub use clawless_cli::context;
 pub use clawless_cli::error::{CommandResult, Error, ErrorContext};
 pub use clawless_cli::macros;
 pub use clawless_cli::presenter;
 pub use clawless_core::cancellation;
+pub use clawless_core::context;
 pub use clawless_core::event;
 pub use clawless_derive::{artifact, command, commands, detail, main, message};
 

@@ -13,7 +13,6 @@
 //! [`clawless-derive`]: https://docs.rs/clawless-derive
 #![warn(missing_docs)]
 
-pub mod context;
 pub mod error;
 pub mod macros;
 pub mod output;
