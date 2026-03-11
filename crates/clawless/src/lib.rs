@@ -30,6 +30,16 @@ pub use clawless_derive::{artifact, command, commands, detail, main, message};
 
 pub mod resolved_leaf;
 
+/// TUI presentation layer re-exports
+///
+/// Re-exports [`clawless_tui`] modules so that the facade provides access to both presentation
+/// layers through a single dependency. The `main!()` macro expansion references
+/// `clawless::tui::runner::ApplicationRunner` for application leaves.
+pub mod tui {
+    pub use clawless_tui::projection;
+    pub use clawless_tui::runner;
+}
+
 /// CLI flag configuration and output types
 ///
 /// This module re-exports output types from both [`clawless_cli`] and [`clawless_core`], providing
