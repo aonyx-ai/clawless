@@ -20,7 +20,6 @@ pub mod prelude {
 }
 
 pub use clawless_cli::error::{CommandResult, Error, ErrorContext};
-pub use clawless_cli::macros;
 pub use clawless_cli::presenter;
 pub use clawless_cli::runner;
 pub use clawless_core::cancellation;

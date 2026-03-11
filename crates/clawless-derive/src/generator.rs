@@ -105,6 +105,13 @@ pub trait Generator {
     }
 }
 
+/// Macro attributes parsed by darling from `#[command(...)]` and `#[application(...)]`
+///
+/// Both macro flavors share the same attribute surface (`alias`, `require_subcommand`, `root`).
+/// The `Generator` trait's default methods read these values to configure the generated clap
+/// `Command`: aliases become `.visible_aliases(...)`, `require_subcommand` becomes
+/// `.arg_required_else_help(true)`, and `root` switches the about text to
+/// `clap::crate_description!()`.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, FromMeta)]
 pub struct Attributes {
     #[darling(default)]
@@ -116,19 +123,31 @@ pub struct Attributes {
 }
 
 impl Attributes {
+    /// When true, `build_command` adds `.arg_required_else_help(true)` so clap shows help instead
+    /// of running the command body when no subcommand is provided
     pub fn require_subcommand(&self) -> bool {
         self.require_subcommand
     }
 
+    /// When true, `build_command` uses `clap::crate_description!()` for the about text instead of
+    /// the function's doc comment, and `InventoryGenerator::submit` skips registration since the
+    /// root is the entry point, not a subcommand
     pub fn root(&self) -> bool {
         self.root
     }
 
+    /// Aliases that `build_command` passes to `.visible_aliases(...)` on the clap `Command`
     pub fn alias(&self) -> &[String] {
         &self.alias
     }
 }
 
+/// Doc comment extracted from a `#[command]` or `#[application]` function
+///
+/// Clap supports separate short (`.about`) and long (`.long_about`) help text. The short form is
+/// the first line of the doc comment; the long form is all lines joined. `build_command` passes
+/// both to the generated clap `Command` so that `--help` shows the full comment while the
+/// subcommand list shows only the first line.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Documentation {
     short: String,
@@ -136,15 +155,25 @@ pub struct Documentation {
 }
 
 impl Documentation {
+    /// First line of the doc comment, used as clap's `.about()` text in subcommand listings
     pub fn short(&self) -> &str {
         &self.short
     }
 
+    /// All lines joined by newlines, used as clap's `.long_about()` text in `--help` output
     pub fn long(&self) -> &str {
         &self.long
     }
 }
 
+/// Parses darling attributes from a `#[command(...)]` or `#[application(...)]` invocation
+///
+/// The `macro_name` parameter is used in error messages so that a mistake in `#[application(...)]`
+/// shows `#[application]` in the help text, not `#[command]`.
+///
+/// # Errors
+///
+/// Returns a compile error if the attribute syntax is invalid or contains unsupported keys.
 pub fn parse_attributes(attrs: TokenStream, macro_name: &str) -> Result<Attributes> {
     let argument_list = NestedMeta::parse_meta_list(attrs.clone()).map_err(|e| {
         Error::new_spanned(
@@ -172,6 +201,11 @@ pub fn parse_attributes(attrs: TokenStream, macro_name: &str) -> Result<Attribut
     })
 }
 
+/// Extracts `///` doc comments from a function's attributes
+///
+/// Walks the function's `#[doc = "..."]` attributes (which is how the compiler represents `///`
+/// comments) and collects them into a `Documentation` with separate short and long forms for
+/// clap's `.about()` and `.long_about()`.
 pub fn extract_function_documentation(input_fn: &ItemFn) -> Option<Documentation> {
     let mut docs = Vec::new();
 

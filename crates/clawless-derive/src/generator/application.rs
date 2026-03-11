@@ -4,6 +4,14 @@ use syn::{Error, FnArg, Ident, ItemFn, PatType, Result, Type};
 
 use super::{Attributes, Generator, parse_attributes};
 
+/// Code generator for `#[application]` functions
+///
+/// Applications are stateful TUI leaves that receive `(args, context, projection)` and are
+/// executed through `ApplicationRunner`, which sets up a pull-based `Projection` instead of a
+/// presenter. This generator validates the three-parameter signature at macro expansion time and
+/// implements `Generator` to emit `ResolvedLeaf::Application` in the resolve function body. All
+/// other code generation is inherited from `Generator`'s default methods, identical to
+/// `CommandGenerator`.
 #[derive(Debug)]
 pub struct ApplicationGenerator {
     attrs: Attributes,
@@ -49,6 +57,15 @@ impl Generator for ApplicationGenerator {
 }
 
 impl ApplicationGenerator {
+    /// Validates the function signature and parses macro attributes
+    ///
+    /// Signature validation happens eagerly here so that users get a clear compile error pointing
+    /// at the function definition rather than a cryptic error from generated code.
+    ///
+    /// # Errors
+    ///
+    /// Returns a compile error if the function does not accept exactly three parameters (args,
+    /// context, and projection) or if the macro attributes are invalid.
     pub fn new(attrs: TokenStream, input: ItemFn) -> Result<Self> {
         let attrs = parse_attributes(attrs, "application")?;
         let ident = input.sig.ident.clone();

@@ -14,7 +14,6 @@
 #![warn(missing_docs)]
 
 pub mod error;
-pub mod macros;
 pub mod output;
 pub mod presenter;
 pub mod runner;

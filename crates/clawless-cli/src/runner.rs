@@ -24,7 +24,7 @@ use crate::presenter::{Presenter, TerminalPresenter};
 /// Encapsulates the lifecycle of running a CLI command: creating the event channel, constructing
 /// the [`Context`], registering signal handlers, and presenting output through a
 /// [`TerminalPresenter`]. The `main!()` macro dispatches to [`CommandRunner::run`] when the
-/// resolved leaf is a [`ResolvedLeaf::Command`].
+/// resolved leaf is a `ResolvedLeaf::Command`.
 ///
 /// # Examples
 ///
@@ -34,8 +34,6 @@ use crate::presenter::{Presenter, TerminalPresenter};
 ///     clawless::runner::CommandRunner::run(matches, exec)
 /// }
 /// ```
-///
-/// [`ResolvedLeaf::Command`]: clawless::resolved_leaf::ResolvedLeaf::Command
 // r[impl dispatch.exec.command-runner]
 pub struct CommandRunner;
 
