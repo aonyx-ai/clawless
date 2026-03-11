@@ -11,13 +11,13 @@ use crate::inventory::InventoryGenerator;
 mod generator;
 mod inventory;
 
-/// Writes an informational message via the [`Output`] on [`Context`]
+/// Writes an informational message via the `Output` on `Context`
 ///
 /// Expands to `context.output().message(format!(...)).await.expect("event channel closed")`,
 /// where `context` resolves to the local variable in the calling function's scope. This is the
-/// macro equivalent of [`Output::message`].
+/// macro equivalent of `Output::message`.
 ///
-/// The macro must be called from an async function because the core [`Output`] methods are async.
+/// The macro must be called from an async function because the core `Output` methods are async.
 ///
 /// # Examples
 ///
@@ -30,22 +30,18 @@ mod inventory;
 ///     Ok(())
 /// }
 /// ```
-///
-/// [`Context`]: clawless::context::Context
-/// [`Output`]: clawless_core::output::Output
-/// [`Output::message`]: clawless_core::output::Output::message
 #[proc_macro]
 pub fn message(input: TokenStream) -> TokenStream {
     output_format_macro(input, "message")
 }
 
-/// Writes a supplementary detail via the [`Output`] on [`Context`]
+/// Writes a supplementary detail via the `Output` on `Context`
 ///
 /// Expands to `context.output().detail(format!(...)).await.expect("event channel closed")`,
 /// where `context` resolves to the local variable in the calling function's scope. Detail is only
-/// shown when the user passes `--verbose`. This is the macro equivalent of [`Output::detail`].
+/// shown when the user passes `--verbose`. This is the macro equivalent of `Output::detail`.
 ///
-/// The macro must be called from an async function because the core [`Output`] methods are async.
+/// The macro must be called from an async function because the core `Output` methods are async.
 ///
 /// # Examples
 ///
@@ -58,24 +54,19 @@ pub fn message(input: TokenStream) -> TokenStream {
 ///     Ok(())
 /// }
 /// ```
-///
-/// [`Context`]: clawless::context::Context
-/// [`Output`]: clawless_core::output::Output
-/// [`Output::detail`]: clawless_core::output::Output::detail
 #[proc_macro]
 pub fn detail(input: TokenStream) -> TokenStream {
     output_format_macro(input, "detail")
 }
 
-/// Writes an artifact value via the [`Output`] on [`Context`]
+/// Writes an artifact value via the `Output` on `Context`
 ///
 /// Expands to `context.output().artifact(...).await.expect("event channel closed")`, where
-/// `context` resolves to the local variable in the calling function's scope. Unlike [`message!`]
-/// and [`detail!`], this macro does not use `format!` — it takes an expression that implements
-/// [`Display`], [`Serialize`], and [`Debug`]. This is the macro equivalent of
-/// [`Output::artifact`].
+/// `context` resolves to the local variable in the calling function's scope. Unlike `message!`
+/// and `detail!`, this macro does not use `format!` — it takes an expression that implements
+/// `Display`, `Serialize`, and `Debug`. This is the macro equivalent of `Output::artifact`.
 ///
-/// The macro must be called from an async function because the core [`Output`] methods are async.
+/// The macro must be called from an async function because the core `Output` methods are async.
 ///
 /// # Examples
 ///
@@ -89,13 +80,6 @@ pub fn detail(input: TokenStream) -> TokenStream {
 ///     Ok(())
 /// }
 /// ```
-///
-/// [`Context`]: clawless::context::Context
-/// [`Debug`]: std::fmt::Debug
-/// [`Display`]: std::fmt::Display
-/// [`Output`]: clawless_core::output::Output
-/// [`Output::artifact`]: clawless_core::output::Output::artifact
-/// [`Serialize`]: serde::Serialize
 #[proc_macro]
 pub fn artifact(input: TokenStream) -> TokenStream {
     let input = proc_macro2::TokenStream::from(input);
@@ -154,7 +138,7 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 ///
 /// This macro generates the `main` function for a Clawless application. It uses two-phase
 /// dispatch: first it parses arguments and resolves the subcommand tree to find the leaf, then
-/// it matches on the [`ResolvedLeaf`] variant to delegate to the appropriate runner.
+/// it matches on the `ResolvedLeaf` variant to delegate to the appropriate runner.
 ///
 /// # Example
 ///
@@ -164,8 +148,6 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 ///
 /// clawless::main!();
 /// ```
-///
-/// [`ResolvedLeaf`]: clawless::resolved_leaf::ResolvedLeaf
 #[proc_macro]
 pub fn main(_input: TokenStream) -> TokenStream {
     let output = quote! {
@@ -301,8 +283,8 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// Application functions must accept exactly three parameters:
 /// 1. An `args` parameter: a `clap::Args` struct with the application's arguments
-/// 2. A `context` parameter: the [`Context`] for emitting events and cooperative shutdown
-/// 3. A `projection` parameter: the [`Projection`] for querying accumulated state
+/// 2. A `context` parameter: the `Context` for emitting events and cooperative shutdown
+/// 3. A `projection` parameter: the `Projection` for querying accumulated state
 ///
 /// # Attributes
 ///
@@ -332,8 +314,6 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// [`Context`]: clawless::context::Context
-/// [`Projection`]: clawless::tui::projection::Projection
 #[proc_macro_attribute]
 pub fn application(attrs: TokenStream, input: TokenStream) -> TokenStream {
     let input_function = parse_macro_input!(input as ItemFn);

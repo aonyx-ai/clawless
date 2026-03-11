@@ -4,6 +4,14 @@ use syn::{Error, FnArg, Ident, ItemFn, PatType, Result, Type};
 
 use super::{Attributes, Generator, parse_attributes};
 
+/// Code generator for `#[command]` functions
+///
+/// Commands are stateless CLI leaves that receive `(args, context)` and are executed through
+/// `CommandRunner`, which sets up a push-based `TerminalPresenter`. This generator validates the
+/// two-parameter signature at macro expansion time and implements `Generator` to emit
+/// `ResolvedLeaf::Command` in the resolve function body. All other code generation (the `_init`
+/// function, `_resolve` function, clap `Command` construction, and inventory submission) is
+/// inherited from `Generator`'s default methods.
 #[derive(Debug)]
 pub struct CommandGenerator {
     attrs: Attributes,
@@ -49,6 +57,15 @@ impl Generator for CommandGenerator {
 }
 
 impl CommandGenerator {
+    /// Validates the function signature and parses macro attributes
+    ///
+    /// Signature validation happens eagerly here so that users get a clear compile error pointing
+    /// at the function definition rather than a cryptic error from generated code.
+    ///
+    /// # Errors
+    ///
+    /// Returns a compile error if the function does not accept exactly two parameters (args and
+    /// context) or if the macro attributes are invalid.
     pub fn new(attrs: TokenStream, input: ItemFn) -> Result<Self> {
         let attrs = parse_attributes(attrs, "command")?;
         let ident = input.sig.ident.clone();

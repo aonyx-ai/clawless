@@ -22,7 +22,7 @@ use crate::projection::Projection;
 ///
 /// Encapsulates the lifecycle of running a TUI application: creating the event channel,
 /// constructing the [`Context`], building a [`Projection`] inside a Tokio runtime, registering
-/// signal handlers, and calling the application function. Unlike [`CommandRunner`], there is no
+/// signal handlers, and calling the application function. Unlike `CommandRunner`, there is no
 /// presenter — the application owns its own render loop and queries the projection for accumulated
 /// state.
 ///
@@ -35,7 +35,6 @@ use crate::projection::Projection;
 /// }
 /// ```
 ///
-/// [`CommandRunner`]: clawless_cli::runner::CommandRunner
 /// [`Context`]: clawless_core::context::Context
 /// [`Projection`]: crate::projection::Projection
 // r[impl dispatch.exec.application-runner]
