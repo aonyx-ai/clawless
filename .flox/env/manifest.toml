@@ -1,5 +1,4 @@
-# Flox manifest version managed by Flox CLI
-version = 1
+schema-version = "1.10.0"
 
 [install]
 # Rustup installs rustc, cargo, clippy, rust-analyzer, and rustfmt
@@ -8,6 +7,7 @@ rustup.pkg-path = "rustup"
 # The standard library links against this package on macOS.
 libiconv.pkg-path = "libiconv"
 libiconv.systems = ["aarch64-darwin", "x86_64-darwin"]
+libiconv.outputs = "all"
 
 # This package provides the source code for the standard library, which is used
 # by rust-analyzer below to provide diagnostics and documentation.
@@ -19,22 +19,29 @@ clang.pkg-path = "clang"
 clang.systems = ["aarch64-darwin", "x86_64-darwin"]
 gcc.pkg-path = "gcc"
 gcc.systems = ["aarch64-linux", "x86_64-linux"]
+gcc.outputs = "all"
 
 # Node.js is required for the Docusaurus website
 nodejs.pkg-path = "nodejs"
+nodejs.outputs = "all"
 
 # Local development tools
 cargo-deny.pkg-path = "cargo-deny"
 cargo-nextest.pkg-path = "cargo-nextest"
 cargo-udeps.pkg-path = "cargo-udeps"
 git.pkg-path = "git"
+git.outputs = "all"
 just.pkg-path = "just"
+just.outputs = "all"
 markdownlint-cli.pkg-path = "markdownlint-cli"
 parallel.pkg-path = "parallel"
+parallel.outputs = "all"
 pre-commit.pkg-path = "pre-commit"
+pre-commit.outputs = "all"
 prettier.pkg-path = "prettier"
 taplo.pkg-path = "taplo"
 yamllint.pkg-path = "yamllint"
+yamllint.outputs = "all"
 zizmor.pkg-path = "zizmor"
 
 [vars]
