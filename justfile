@@ -32,6 +32,12 @@ check-latest-deps force="false":
     if [[ {{force}} != "true" && -n $(git status --porcelain -- ':!.flox/env/manifest.lock') ]]; then
         echo "Git working directory is not clean. Commit or stash changes before running this recipe. Aborting."
         git status --porcelain
+
+        # Print diff on GitHub Actions
+        if [ -n "$GITHUB_ACTIONS" ]; then
+            git diff
+        fi
+
         exit 1
     fi
 
@@ -53,6 +59,12 @@ check-minimal-deps force="false":
     if [[ {{force}} != "true" && -n $(git status --porcelain -- ':!.flox/env/manifest.lock') ]]; then
         echo "Git working directory is not clean. Commit or stash changes before running this recipe. Aborting."
         git status --porcelain
+
+        # Print diff on GitHub Actions
+        if [ -n "$GITHUB_ACTIONS" ]; then
+            git diff
+        fi
+
         exit 1
     fi
 
