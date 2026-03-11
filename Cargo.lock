@@ -236,6 +236,7 @@ dependencies = [
  "clawless-cli",
  "clawless-core",
  "clawless-derive",
+ "clawless-tui",
  "inventory",
  "serde",
  "tokio",

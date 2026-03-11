@@ -28,6 +28,8 @@ pub use clawless_core::context;
 pub use clawless_core::event;
 pub use clawless_derive::{artifact, command, commands, detail, main, message};
 
+pub mod resolved_leaf;
+
 /// CLI flag configuration and output types
 ///
 /// This module re-exports output types from both [`clawless_cli`] and [`clawless_core`], providing

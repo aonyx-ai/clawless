@@ -16,6 +16,7 @@ clap = { workspace = true }
 clawless-cli = { workspace = true }
 clawless-core = { workspace = true }
 clawless-derive = { workspace = true }
+clawless-tui = { workspace = true }
 inventory = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true }
