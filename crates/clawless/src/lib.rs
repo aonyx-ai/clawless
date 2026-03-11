@@ -13,7 +13,7 @@ pub mod prelude {
     pub use clawless_core::context::*;
     pub use clawless_core::output::Output;
     pub use clawless_core::prelude::*;
-    pub use clawless_derive::{artifact, command, commands, detail, main, message};
+    pub use clawless_derive::{application, artifact, command, commands, detail, main, message};
     pub use serde::Serialize;
 
     pub use super::output::{OutputMode, Verbosity};
@@ -26,7 +26,7 @@ pub use clawless_cli::runner;
 pub use clawless_core::cancellation;
 pub use clawless_core::context;
 pub use clawless_core::event;
-pub use clawless_derive::{artifact, command, commands, detail, main, message};
+pub use clawless_derive::{application, artifact, command, commands, detail, main, message};
 
 pub mod resolved_leaf;
 

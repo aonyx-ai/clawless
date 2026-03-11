@@ -5,10 +5,10 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{ItemFn, parse_macro_input};
 
-use crate::command::CommandGenerator;
+use crate::generator::{ApplicationGenerator, CommandGenerator, Generator};
 use crate::inventory::InventoryGenerator;
 
-mod command;
+mod generator;
 mod inventory;
 
 /// Writes an informational message via the [`Output`] on [`Context`]
@@ -273,7 +273,7 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
     let inventory_generator = InventoryGenerator::new(&command_generator);
 
     let inventory_struct_for_subcommands = inventory_generator.inventory();
-    let submit_command_to_inventory = inventory_generator.submit_command();
+    let submit_command_to_inventory = inventory_generator.submit();
 
     let initialization_function_for_command = command_generator.initialization_function();
     let resolve_function_for_command = command_generator.resolve_function();
@@ -288,6 +288,79 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
         #resolve_function_for_command
 
         #submit_command_to_inventory
+    };
+
+    output.into()
+}
+
+/// Add a TUI application to a Clawless project
+///
+/// This macro attribute registers a function as a TUI application in a Clawless project. Unlike
+/// `#[command]`, which creates a stateless CLI command rendered through a push-based presenter,
+/// `#[application]` creates a stateful TUI application that queries a pull-based projection.
+///
+/// Application functions must accept exactly three parameters:
+/// 1. An `args` parameter: a `clap::Args` struct with the application's arguments
+/// 2. A `context` parameter: the [`Context`] for emitting events and cooperative shutdown
+/// 3. A `projection` parameter: the [`Projection`] for querying accumulated state
+///
+/// # Attributes
+///
+/// - `alias = "name"` - Add a visible alias for the application. Can be repeated.
+/// - `require_subcommand` - Require a subcommand; show help if invoked without one.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use clawless::prelude::*;
+/// use clawless::tui::projection::Projection;
+///
+/// #[derive(Debug, Args)]
+/// pub struct DashboardArgs {
+///     #[arg(short, long, default_value = "3000")]
+///     port: u16,
+/// }
+///
+/// /// Interactive project dashboard
+/// #[application]
+/// pub async fn dashboard(
+///     args: DashboardArgs,
+///     context: Context,
+///     projection: Projection,
+/// ) -> CommandResult {
+///     Ok(())
+/// }
+/// ```
+///
+/// [`Context`]: clawless::context::Context
+/// [`Projection`]: clawless::tui::projection::Projection
+#[proc_macro_attribute]
+pub fn application(attrs: TokenStream, input: TokenStream) -> TokenStream {
+    let input_function = parse_macro_input!(input as ItemFn);
+
+    let application_generator =
+        match ApplicationGenerator::new(attrs.into(), input_function.clone()) {
+            Ok(generator) => generator,
+            Err(e) => return e.into_compile_error().into(),
+        };
+    let inventory_generator = InventoryGenerator::new(&application_generator);
+
+    let inventory_struct_for_subcommands = inventory_generator.inventory();
+    let submit_application_to_inventory = inventory_generator.submit();
+
+    let initialization_function = application_generator.initialization_function();
+    let resolve_function = application_generator.resolve_function();
+
+    let output = quote! {
+        #inventory_struct_for_subcommands
+
+        #input_function
+
+        #initialization_function
+
+        #resolve_function
+
+        #submit_application_to_inventory
     };
 
     output.into()

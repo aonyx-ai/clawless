@@ -2,17 +2,17 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Ident;
 
-use crate::command::CommandGenerator;
+use crate::generator::Generator;
 
 const INVENTORY_NAME: &str = "ClawlessSubcommands";
 
 pub struct InventoryGenerator<'a> {
-    command_generator: &'a CommandGenerator,
+    generator: &'a dyn Generator,
 }
 
 impl<'a> InventoryGenerator<'a> {
-    pub fn new(command_generator: &'a CommandGenerator) -> Self {
-        Self { command_generator }
+    pub fn new(generator: &'a dyn Generator) -> Self {
+        Self { generator }
     }
 
     // r[impl dispatch.resolve.uniform]
@@ -29,19 +29,19 @@ impl<'a> InventoryGenerator<'a> {
         }
     }
 
-    pub fn submit_command(&self) -> TokenStream {
-        if self.command_generator.is_root() {
+    pub fn submit(&self) -> TokenStream {
+        if self.generator.is_root() {
             return quote! {};
         }
 
         let inventory_name = inventory_name();
-        let command = self.command_generator.ident().to_string();
-        let init_fn_name = self.command_generator.initialization_function_name();
-        let resolve_fn_name = self.command_generator.resolve_function_name();
+        let name = self.generator.ident().to_string();
+        let init_fn_name = self.generator.initialization_function_name();
+        let resolve_fn_name = self.generator.resolve_function_name();
 
         quote! {
             clawless::inventory::submit!(super::#inventory_name {
-                name: #command,
+                name: #name,
                 init: #init_fn_name,
                 resolve: #resolve_fn_name,
             });

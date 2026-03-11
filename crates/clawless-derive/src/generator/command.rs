@@ -1,10 +1,8 @@
-use darling::FromMeta;
-use darling::ast::NestedMeta;
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
-use syn::{Error, Expr, FnArg, Ident, ItemFn, Lit, Meta, PatType, Result, Type};
+use quote::quote;
+use syn::{Error, FnArg, Ident, ItemFn, PatType, Result, Type};
 
-use crate::inventory::inventory_name;
+use super::{Attributes, Generator, parse_attributes};
 
 #[derive(Debug)]
 pub struct CommandGenerator {
@@ -13,135 +11,26 @@ pub struct CommandGenerator {
     ident: Ident,
 }
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, FromMeta, Default)]
-struct Attributes {
-    /// Require a subcommand; show help if invoked without one
-    #[darling(default)]
-    require_subcommand: bool,
-    #[darling(default)]
-    root: bool,
-    #[darling(default, multiple)]
-    alias: Vec<String>,
-}
-
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-struct Documentation {
-    short: String,
-    long: String,
-}
-
-impl CommandGenerator {
-    pub fn new(attrs: TokenStream, input: ItemFn) -> Result<Self> {
-        let attrs = parse_attributes(attrs)?;
-        let ident = input.sig.ident.clone();
-
-        // Validate function signature early to catch errors
-        extract_function_argument_type(&input)?;
-
-        Ok(Self {
-            attrs,
-            input,
-            ident,
-        })
-    }
-
-    pub fn ident(&self) -> Ident {
+impl Generator for CommandGenerator {
+    fn ident(&self) -> Ident {
         self.ident.clone()
     }
 
-    pub fn is_root(&self) -> bool {
-        self.attrs.root
+    fn attrs(&self) -> &Attributes {
+        &self.attrs
     }
 
-    pub fn initialization_function_name(&self) -> Ident {
-        format_ident!("{}_init", self.ident)
+    fn input(&self) -> &ItemFn {
+        &self.input
     }
 
-    pub fn resolve_function_name(&self) -> Ident {
-        format_ident!("{}_resolve", self.ident)
-    }
-
-    pub fn initialization_function(&self) -> TokenStream {
-        let function_name = self.initialization_function_name();
-        let command_new = self.command_new();
-        let inventory_name = inventory_name();
-
-        quote! {
-            pub fn #function_name() -> clawless::clap::Command {
-                let mut command = #command_new;
-
-                for subcommand in clawless::inventory::iter::<#inventory_name> {
-                    command = command.subcommand((subcommand.init)());
-                }
-
-                command
-            }
-        }
-    }
-
-    // r[impl dispatch.resolve.sync]
-    pub fn resolve_function(&self) -> TokenStream {
-        let resolve_function_name = self.resolve_function_name();
-        let resolve_function_body = self.resolve_function_body();
-        let inventory_name = inventory_name();
-
-        // r[impl dispatch.resolve.delegate]
-        quote! {
-            pub fn #resolve_function_name(matches: clawless::clap::ArgMatches) -> clawless::resolved_leaf::ResolvedLeaf {
-                for subcommand in clawless::inventory::iter::<#inventory_name> {
-                    if let Some(sub_matches) = matches.subcommand_matches(subcommand.name) {
-                        return (subcommand.resolve)(sub_matches.clone());
-                    }
-                }
-
-                #resolve_function_body
-            }
-        }
-    }
-
-    fn command_new(&self) -> TokenStream {
-        let command_name = self.ident.to_string();
-        // Safe to unwrap: validated in CommandGenerator::new()
-        let args_type = extract_function_argument_type(&self.input)
-            .expect("function arguments must be validated in CommandGenerator::new()");
-        let docs = extract_function_documentation(&self.input);
-
-        let mut command = quote! {
-            #args_type::augment_args(clawless::clap::Command::new(#command_name))
-        };
-
-        if self.is_root() {
-            command = quote! {
-                #command.about(clawless::clap::crate_description!())
-            };
-        } else if let Some(docs) = docs {
-            let Documentation { short, long } = docs;
-
-            command = quote! {
-                #command.about(#short).long_about(#long)
-            };
-        }
-
-        if self.attrs.require_subcommand {
-            command = quote! {
-                #command.arg_required_else_help(true)
-            };
-        }
-
-        if !self.attrs.alias.is_empty() {
-            let aliases = &self.attrs.alias;
-            command = quote! {
-                #command.visible_aliases([#(#aliases),*])
-            };
-        }
-
-        command
+    fn args_type(&self) -> Box<Type> {
+        extract_command_argument_type(&self.input)
+            .expect("function arguments must be validated in CommandGenerator::new()")
     }
 
     fn resolve_function_body(&self) -> TokenStream {
-        // Safe to unwrap: validated in CommandGenerator::new()
-        let args_type = extract_function_argument_type(&self.input)
-            .expect("function arguments must be validated in CommandGenerator::new()");
+        let args_type = self.args_type();
         let command = self.ident();
 
         quote! {
@@ -159,34 +48,22 @@ impl CommandGenerator {
     }
 }
 
-fn parse_attributes(attrs: TokenStream) -> Result<Attributes> {
-    let argument_list = NestedMeta::parse_meta_list(attrs.clone()).map_err(|e| {
-        Error::new_spanned(
-            attrs.clone(),
-            format!(
-                "invalid attribute syntax: {e}\n\n\
-                 = help: use one of the supported attributes\n\n    \
-                 #[command]\n    \
-                 #[command(alias = \"g\")]\n    \
-                 #[command(require_subcommand)]\n    \
-                 #[command(alias = \"g\", require_subcommand)]"
-            ),
-        )
-    })?;
+impl CommandGenerator {
+    pub fn new(attrs: TokenStream, input: ItemFn) -> Result<Self> {
+        let attrs = parse_attributes(attrs, "command")?;
+        let ident = input.sig.ident.clone();
 
-    Attributes::from_list(&argument_list).map_err(|e| {
-        Error::new_spanned(
+        extract_command_argument_type(&input)?;
+
+        Ok(Self {
             attrs,
-            format!(
-                "{e}\n\n\
-                 = help: supported attributes are `alias` and `require_subcommand`\n\n    \
-                 #[command(alias = \"g\", require_subcommand)]"
-            ),
-        )
-    })
+            input,
+            ident,
+        })
+    }
 }
 
-fn extract_function_argument_type(input_fn: &ItemFn) -> Result<Box<Type>> {
+fn extract_command_argument_type(input_fn: &ItemFn) -> Result<Box<Type>> {
     let mut function_arguments = input_fn.sig.inputs.iter().filter_map(|arg| match arg {
         FnArg::Receiver(_) => None,
         FnArg::Typed(PatType { ty, .. }) => Some(ty.clone()),
@@ -194,7 +71,6 @@ fn extract_function_argument_type(input_fn: &ItemFn) -> Result<Box<Type>> {
 
     let args = function_arguments.next();
     let context = function_arguments.next();
-
     let extra = function_arguments.next();
 
     if extra.is_some() {
@@ -237,36 +113,8 @@ fn extract_function_argument_type(input_fn: &ItemFn) -> Result<Box<Type>> {
     }
 }
 
-fn extract_function_documentation(input_fn: &ItemFn) -> Option<Documentation> {
-    let mut docs = Vec::new();
-
-    for attr in input_fn.attrs.iter() {
-        if let Meta::NameValue(meta) = &attr.meta {
-            if !attr.meta.path().is_ident("doc") {
-                continue;
-            }
-
-            if let Expr::Lit(expr) = &meta.value
-                && let Lit::Str(lit) = &expr.lit
-            {
-                docs.push(lit.value().trim().to_string());
-            }
-        }
-    }
-
-    if docs.is_empty() {
-        None
-    } else {
-        Some(Documentation {
-            short: docs[0].clone(),
-            long: docs.join("\n"),
-        })
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use indoc::indoc;
     use quote::ToTokens;
 
     use super::*;
@@ -366,25 +214,25 @@ mod tests {
     }
 
     #[test]
-    fn extract_function_argument_type_with_all_params() {
+    fn extract_command_argument_type_with_all_params() {
         let input = quote! {
             fn foo(args: Args, context: Context) {}
         };
 
         let input_fn = syn::parse2(input).unwrap();
-        let args_type = extract_function_argument_type(&input_fn).unwrap();
+        let args_type = extract_command_argument_type(&input_fn).unwrap();
 
         assert_eq!("Args", args_type.to_token_stream().to_string());
     }
 
     #[test]
-    fn extract_function_argument_type_with_one_param_returns_error() {
+    fn extract_command_argument_type_with_one_param_returns_error() {
         let input = quote! {
             fn foo(args: Args) {}
         };
 
         let input_fn = syn::parse2(input).unwrap();
-        let result = extract_function_argument_type(&input_fn);
+        let result = extract_command_argument_type(&input_fn);
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -392,13 +240,13 @@ mod tests {
     }
 
     #[test]
-    fn extract_function_argument_type_with_three_params_returns_error() {
+    fn extract_command_argument_type_with_three_params_returns_error() {
         let input = quote! {
             fn foo(args: Args, context: Context, extra: Extra) {}
         };
 
         let input_fn = syn::parse2(input).unwrap();
-        let result = extract_function_argument_type(&input_fn);
+        let result = extract_command_argument_type(&input_fn);
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -406,61 +254,17 @@ mod tests {
     }
 
     #[test]
-    fn extract_function_argument_type_without_params_returns_error() {
+    fn extract_command_argument_type_without_params_returns_error() {
         let input = quote! {
             fn foo() {}
         };
 
         let input_fn = syn::parse2(input).unwrap();
-        let result = extract_function_argument_type(&input_fn);
+        let result = extract_command_argument_type(&input_fn);
 
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("missing required parameters"));
-    }
-
-    #[test]
-    fn extract_function_documentation_with_single_line_comment() {
-        let input = quote! {
-            /// This is a test function
-            fn foo() {}
-        };
-
-        let input_fn = syn::parse2(input).unwrap();
-        let documentation = extract_function_documentation(&input_fn);
-
-        assert_eq!(
-            Some(Documentation {
-                short: "This is a test function".to_string(),
-                long: "This is a test function".to_string(),
-            }),
-            documentation
-        );
-    }
-
-    #[test]
-    fn extract_function_documentation_with_multiple_line_comment() {
-        let comment = indoc! { r#"
-            This is a test comment
-            with multiple lines"#
-        };
-
-        let input = quote! {
-            /// This is a test comment
-            /// with multiple lines
-            fn foo() {}
-        };
-
-        let input_fn = syn::parse2(input).unwrap();
-        let documentation = extract_function_documentation(&input_fn);
-
-        assert_eq!(
-            Some(Documentation {
-                short: "This is a test comment".to_string(),
-                long: comment.to_string(),
-            }),
-            documentation
-        );
     }
 
     #[test]
@@ -482,27 +286,6 @@ mod tests {
         let actual = generator.command_new();
         let expected = quote! {
             Args::augment_args(clawless::clap::Command::new("foo")).arg_required_else_help(true)
-        };
-
-        assert_eq!(actual.to_string(), expected.to_string());
-    }
-
-    #[test]
-    fn resolve_function_body() {
-        let generator = generator_with_args();
-
-        let actual = generator.resolve_function_body();
-        let expected = quote! {
-            clawless::resolved_leaf::ResolvedLeaf::Command {
-                matches,
-                exec: |matches, context| {
-                    Box::pin(async move {
-                        use clawless::clap::FromArgMatches;
-                        let args = Args::from_arg_matches(&matches).unwrap();
-                        foo(args, context).await
-                    })
-                },
-            }
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
@@ -539,6 +322,27 @@ mod tests {
         let actual = generator.command_new();
         let expected = quote! {
             Args::augment_args(clawless::clap::Command::new("foo")).arg_required_else_help(true).visible_aliases(["f"])
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn resolve_function_body() {
+        let generator = generator_with_args();
+
+        let actual = generator.resolve_function_body();
+        let expected = quote! {
+            clawless::resolved_leaf::ResolvedLeaf::Command {
+                matches,
+                exec: |matches, context| {
+                    Box::pin(async move {
+                        use clawless::clap::FromArgMatches;
+                        let args = Args::from_arg_matches(&matches).unwrap();
+                        foo(args, context).await
+                    })
+                },
+            }
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
