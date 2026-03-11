@@ -1,0 +1,26 @@
+error: application function has too many parameters
+
+       = help: application functions must accept exactly three parameters: arguments, context, and projection
+
+           #[application]
+           pub async fn my_app(args: MyArgs, context: Context, projection: Projection) -> CommandResult {
+               ...
+           }
+  --> tests/ui/fail-application-too-many-params.rs:8:5
+   |
+ 8 |   pub async fn dashboard(
+   |  _____^
+ 9 | |     _args: DashboardArgs,
+10 | |     _context: Context,
+11 | |     _projection: Projection,
+12 | |     _extra: String,
+13 | | ) -> CommandResult {
+   | |__________________^
+
+warning: unused import: `clawless::tui::projection::Projection`
+ --> tests/ui/fail-application-too-many-params.rs:2:5
+  |
+2 | use clawless::tui::projection::Projection;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default

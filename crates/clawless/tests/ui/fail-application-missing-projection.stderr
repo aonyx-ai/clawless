@@ -1,0 +1,16 @@
+error: application function is missing the `projection` parameter
+
+       = help: application functions must accept `projection: Projection` as the third parameter
+
+           #[application]
+           pub async fn my_app(args: MyArgs, context: Context, projection: Projection) -> CommandResult {
+               ...
+           }
+  --> tests/ui/fail-application-missing-projection.rs:7:5
+   |
+ 7 |   pub async fn dashboard(
+   |  _____^
+ 8 | |     _args: DashboardArgs,
+ 9 | |     _context: Context,
+10 | | ) -> CommandResult {
+   | |__________________^
