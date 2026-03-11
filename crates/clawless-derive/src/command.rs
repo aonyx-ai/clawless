@@ -57,8 +57,8 @@ impl CommandGenerator {
         format_ident!("{}_init", self.ident)
     }
 
-    pub fn wrapper_function_name(&self) -> Ident {
-        format_ident!("{}_exec", self.ident)
+    pub fn resolve_function_name(&self) -> Ident {
+        format_ident!("{}_resolve", self.ident)
     }
 
     pub fn initialization_function(&self) -> TokenStream {
@@ -79,20 +79,22 @@ impl CommandGenerator {
         }
     }
 
-    pub fn wrapper_function(&self) -> TokenStream {
-        let wrapper_function_name = self.wrapper_function_name();
-        let wrapper_function_body = self.wrapper_function_body();
+    // r[impl dispatch.resolve.sync]
+    pub fn resolve_function(&self) -> TokenStream {
+        let resolve_function_name = self.resolve_function_name();
+        let resolve_function_body = self.resolve_function_body();
         let inventory_name = inventory_name();
 
+        // r[impl dispatch.resolve.delegate]
         quote! {
-            pub async fn #wrapper_function_name(args: clawless::clap::ArgMatches, context: clawless::context::Context) -> clawless::CommandResult {
+            pub fn #resolve_function_name(matches: clawless::clap::ArgMatches) -> clawless::resolved_leaf::ResolvedLeaf {
                 for subcommand in clawless::inventory::iter::<#inventory_name> {
-                    if let Some(matches) = args.subcommand_matches(subcommand.name) {
-                        return (subcommand.func)(matches.clone(), context).await;
+                    if let Some(sub_matches) = matches.subcommand_matches(subcommand.name) {
+                        return (subcommand.resolve)(sub_matches.clone());
                     }
                 }
 
-                #wrapper_function_body
+                #resolve_function_body
             }
         }
     }
@@ -136,16 +138,23 @@ impl CommandGenerator {
         command
     }
 
-    fn wrapper_function_body(&self) -> TokenStream {
+    fn resolve_function_body(&self) -> TokenStream {
         // Safe to unwrap: validated in CommandGenerator::new()
         let args_type = extract_function_argument_type(&self.input)
             .expect("function arguments must be validated in CommandGenerator::new()");
         let command = self.ident();
 
         quote! {
-            use clawless::clap::FromArgMatches;
-            let args = #args_type::from_arg_matches(&args).unwrap();
-            #command(args, context).await
+            clawless::resolved_leaf::ResolvedLeaf::Command {
+                matches,
+                exec: |matches, context| {
+                    Box::pin(async move {
+                        use clawless::clap::FromArgMatches;
+                        let args = #args_type::from_arg_matches(&matches).unwrap();
+                        #command(args, context).await
+                    })
+                },
+            }
         }
     }
 }
@@ -479,14 +488,21 @@ mod tests {
     }
 
     #[test]
-    fn wrapper_function_body() {
+    fn resolve_function_body() {
         let generator = generator_with_args();
 
-        let actual = generator.wrapper_function_body();
+        let actual = generator.resolve_function_body();
         let expected = quote! {
-            use clawless::clap::FromArgMatches;
-            let args = Args::from_arg_matches(&args).unwrap();
-            foo(args, context).await
+            clawless::resolved_leaf::ResolvedLeaf::Command {
+                matches,
+                exec: |matches, context| {
+                    Box::pin(async move {
+                        use clawless::clap::FromArgMatches;
+                        let args = Args::from_arg_matches(&matches).unwrap();
+                        foo(args, context).await
+                    })
+                },
+            }
         };
 
         assert_eq!(actual.to_string(), expected.to_string());

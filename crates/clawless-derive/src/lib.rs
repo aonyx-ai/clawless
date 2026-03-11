@@ -143,7 +143,7 @@ pub fn commands(_input: TokenStream) -> TokenStream {
         struct ClawlessEntryPoint {}
 
         #[clawless::command(require_subcommand, root = true)]
-        async fn clawless(_args: ClawlessEntryPoint, _context: clawless::context::Context) -> clawless::CommandResult {
+        pub async fn clawless(_args: ClawlessEntryPoint, _context: clawless::context::Context) -> clawless::CommandResult {
             Ok(())
         }
     };
@@ -152,9 +152,9 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 
 /// Initialize and run a Clawless application
 ///
-/// This macro generates the `main` function for a Clawless application. It delegates to
-/// [`CommandRunner::run`], which handles the full lifecycle: argument parsing, event channel
-/// creation, context construction, signal handling, and terminal presentation.
+/// This macro generates the `main` function for a Clawless application. It uses two-phase
+/// dispatch: first it parses arguments and resolves the subcommand tree to find the leaf, then
+/// it matches on the [`ResolvedLeaf`] variant to delegate to the appropriate runner.
 ///
 /// # Example
 ///
@@ -165,15 +165,23 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 /// clawless::main!();
 /// ```
 ///
-/// [`CommandRunner::run`]: clawless::runner::CommandRunner::run
+/// [`ResolvedLeaf`]: clawless::resolved_leaf::ResolvedLeaf
 #[proc_macro]
 pub fn main(_input: TokenStream) -> TokenStream {
     let output = quote! {
         fn main() -> Result<(), Box<dyn std::error::Error>> {
-            clawless::runner::CommandRunner::run(
-                commands::clawless_init,
-                commands::clawless_exec,
-            )
+            let app = clawless::output::OutputFlags::augment_command(commands::clawless_init());
+            let matches = app.get_matches();
+            let leaf = commands::clawless_resolve(matches);
+
+            match leaf {
+                clawless::resolved_leaf::ResolvedLeaf::Command { matches, exec } => {
+                    clawless::runner::CommandRunner::run(matches, exec)
+                }
+                clawless::resolved_leaf::ResolvedLeaf::Application { matches, exec } => {
+                    clawless::tui::runner::ApplicationRunner::run(matches, exec)
+                }
+            }
         }
     };
     output.into()
@@ -268,7 +276,7 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
     let submit_command_to_inventory = inventory_generator.submit_command();
 
     let initialization_function_for_command = command_generator.initialization_function();
-    let wrapper_function_for_command = command_generator.wrapper_function();
+    let resolve_function_for_command = command_generator.resolve_function();
 
     let output = quote! {
         #inventory_struct_for_subcommands
@@ -277,7 +285,7 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
 
         #initialization_function_for_command
 
-        #wrapper_function_for_command
+        #resolve_function_for_command
 
         #submit_command_to_inventory
     };
