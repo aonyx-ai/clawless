@@ -29,7 +29,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Just
-        uses: taiki-e/install-action@a7e592b24782184db1613493a5e65d2e12199f80 # 2.69.4
+        uses: taiki-e/install-action@b988c18e3de947a10207d5289ed90fae4e2c51f1 # 2.69.5
         with:
           tool: just
 
