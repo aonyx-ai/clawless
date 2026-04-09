@@ -12,7 +12,7 @@ Building CLIs should be about solving problems, not wiring up boilerplate.
 Clawless takes care of the infrastructure so you can focus on what makes your
 tool unique.
 
-<!-- truncate -->
+{/* truncate */}
 
 ## What is Clawless?
 

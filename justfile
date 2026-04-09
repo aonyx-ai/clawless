@@ -21,8 +21,12 @@ pre-commit:
     just test-rust
 
 # Build the documentation for the crates
-build-docs:
+build-rust-docs:
     cargo doc --all-features --no-deps
+
+# Build the public website
+build-website:
+    just docs build
 
 # Check that clawless builds with the latest dependencies
 check-latest-deps force="false":
