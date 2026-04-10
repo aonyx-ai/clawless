@@ -7,11 +7,10 @@ sidebar_position: 2
 Prevent a command from executing without a subcommand, automatically showing
 help instead.
 
-:::info[Future API Changes]
-The `require_subcommand` attribute and the need for empty command group
-functions are temporary implementation details. A future release will likely
-introduce a dedicated command group macro to make this pattern cleaner and more
-explicit. The current API works but may change.
+:::info[Future API changes]
+A future release may introduce a dedicated command group macro to make this
+pattern more explicit. The current `require_subcommand` attribute works well
+but the API may evolve.
 :::
 
 ## When to use this
