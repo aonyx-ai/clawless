@@ -1,5 +1,5 @@
 ---
-sidebar_position: 4
+sidebar_position: 6
 ---
 
 # Macros
@@ -206,6 +206,9 @@ Here's the flow when your CLI runs:
    - For applications: ApplicationRunner sets up a projection
      instead of a presenter for pull-based rendering
 ```
+
+See [rendering](./rendering) for how the event channel, presenter, and
+projection work together.
 
 ## The inventory system
 

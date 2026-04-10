@@ -153,6 +153,8 @@ Most commands only need `message`. Commands that produce structured data use
 
 ## What's next
 
+- **[Rendering](./rendering)** - How output events reach the terminal through
+  presenters and projections
 - **[Context](./context)** - The Context system that provides output to
   commands
 - **[Cancellation](./cancellation)** - Cooperative shutdown through
