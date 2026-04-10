@@ -59,16 +59,15 @@ full-featured CLI with production-ready infrastructure.
   manual registration
 - **Type-safe arguments** - Full compiler guarantees for your CLI arguments and
   flags
+- **Output system** - `message!`, `detail!`, and `artifact!` macros with
+  automatic `--quiet`, `--verbose`, and `--json` support
 
 **Coming soon:**
 
-- **Output abstraction** - Consistent logging interface with multiple verbosity
-  levels (`--quiet`, `--verbose`)
 - **Structured logging** - Built-in observability and tracing support
 - **Configuration system** - Layered config loading (files + environment
   variables) with zero setup
 - **Shell completions** - Auto-generated completions for bash, zsh, and fish
-- **JSON output** - Structured output mode for scripting and automation
 
 ### Philosophy
 
@@ -96,7 +95,8 @@ Clawless uses conventions and code generation to build your CLI:
    ```rust
    pub async fn migrate(args: MigrateArgs, context: Context) -> CommandResult {
        let cwd = context.current_working_directory();
-       // Future: context.config(), context.output(), etc.
+       let output = context.output();
+       // Future: context.config(), etc.
    }
    ```
 
