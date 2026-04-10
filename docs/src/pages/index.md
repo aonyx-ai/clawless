@@ -53,8 +53,8 @@ full-featured CLI with production-ready infrastructure.
   directory, etc.) automatically
 - **Async runtime** - Tokio runtime managed for you; just write `async fn` and
   it works
-- **Scaffolding tools** - Generate projects and commands with `clawless new` and
-  `clawless generate command`
+- **Scaffolding tools** - Generate projects and commands with
+  `cargo clawless new` and `cargo clawless generate command`
 - **Convention-based structure** - File hierarchy becomes command hierarchy; no
   manual registration
 - **Type-safe arguments** - Full compiler guarantees for your CLI arguments and

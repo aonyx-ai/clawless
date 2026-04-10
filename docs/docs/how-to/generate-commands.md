@@ -4,15 +4,15 @@ sidebar_position: 0
 
 # Generate Commands
 
-Use the Clawless CLI to quickly generate new commands without manually creating
-files and updating module declarations.
+Use the scaffolding tool to quickly generate new commands without manually
+creating files and updating module declarations.
 
 ## Prerequisites
 
-Install the Clawless CLI if you haven't already:
+Install the scaffolding tool if you haven't already:
 
 ```bash
-cargo install clawless-cli
+cargo install cargo-clawless
 ```
 
 ## Generate a top-level command
@@ -20,13 +20,13 @@ cargo install clawless-cli
 To create a new command at the top level of your CLI:
 
 ```bash
-clawless generate command <name>
+cargo clawless generate command <name>
 ```
 
 For example, to add a `version` command:
 
 ```bash
-clawless generate command version
+cargo clawless generate command version
 ```
 
 This creates `src/commands/version.rs` with boilerplate code:
@@ -82,7 +82,7 @@ then the nested command.
 ### Step 1: Create the parent command
 
 ```bash
-clawless generate command db
+cargo clawless generate command db
 ```
 
 This creates `src/commands/db.rs`:
@@ -104,7 +104,7 @@ pub async fn db(args: DbArgs, context: Context) -> CommandResult {
 Now you can create a subcommand using a path with `/`:
 
 ```bash
-clawless generate command db/migrate
+cargo clawless generate command db/migrate
 ```
 
 This creates `src/commands/db/migrate.rs` and updates the parent module.
@@ -160,8 +160,8 @@ cargo run -- db migrate
 Generate additional commands in the same group:
 
 ```bash
-clawless generate command db/seed
-clawless generate command db/reset
+cargo clawless generate command db/seed
+cargo clawless generate command db/reset
 ```
 
 These are automatically added as submodules in `src/commands/db.rs`:
@@ -189,12 +189,12 @@ hierarchy:
 
 ```bash
 # Create parent commands first
-clawless generate command config
-clawless generate command config/auth
+cargo clawless generate command config
+cargo clawless generate command config/auth
 
 # Now create the nested commands
-clawless generate command config/auth/login
-clawless generate command config/auth/logout
+cargo clawless generate command config/auth/login
+cargo clawless generate command config/auth/logout
 ```
 
 This creates:
@@ -221,7 +221,7 @@ The generator follows Rust naming conventions:
 Example:
 
 ```bash
-clawless generate command deploy_staging
+cargo clawless generate command deploy_staging
 ```
 
 Creates `src/commands/deploy_staging.rs` with a `deploy_staging()` function that

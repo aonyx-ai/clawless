@@ -131,7 +131,7 @@ pub async fn db(args: DbArgs, context: Context) -> CommandResult {
 ```
 
 However, `Ok(())` is the conventional approach and matches the generated code
-from `clawless generate command`.
+from `cargo clawless generate command`.
 
 ## See also
 
