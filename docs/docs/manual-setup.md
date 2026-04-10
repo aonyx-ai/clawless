@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Manual Setup
 
-This guide shows how to set up Clawless manually without using the `clawless-cli`
+This guide shows how to set up Clawless manually without using the `cargo-clawless`
 scaffolding tool. This is useful if you want to add Clawless to an existing
 project or prefer to understand the setup process.
 

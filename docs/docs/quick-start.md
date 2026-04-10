@@ -18,7 +18,7 @@ You'll need:
 The Clawless CLI provides scaffolding and code generation for your projects:
 
 ```bash
-cargo install clawless-cli
+cargo install cargo-clawless
 ```
 
 :::tip[Prefer manual setup?]
@@ -31,7 +31,7 @@ yourself, see the [Manual Setup](./manual-setup) guide.
 Generate a new CLI application:
 
 ```bash
-clawless new my-cli
+cargo clawless new my-cli
 cd my-cli
 ```
 
@@ -80,7 +80,7 @@ cargo run -- greet --help
 Generate a new command:
 
 ```bash
-clawless generate command goodbye
+cargo clawless generate command goodbye
 ```
 
 This creates `src/commands/goodbye.rs` and updates the module declarations
@@ -137,8 +137,8 @@ Goodbye, Rust!
 For larger CLIs, organize commands into groups using nested modules:
 
 ```bash
-clawless generate command db/migrate
-clawless generate command db/seed
+cargo clawless generate command db/migrate
+cargo clawless generate command db/seed
 ```
 
 This creates:
