@@ -34,6 +34,12 @@ Framework-controlled command output with verbosity and JSON support. Learn how
 the `Output` type replaces direct `println!` calls, how `--quiet`, `--verbose`,
 and `--json` flags work, and when to use `message`, `detail`, and `artifact`.
 
+### [Rendering](./rendering)
+
+Event-driven rendering for CLI and TUI applications. Learn how commands emit
+events, how the framework renders them through presenters and projections, and
+why the same command code works in both contexts.
+
 ### [Cancellation](./cancellation)
 
 Cooperative shutdown through cancellation tokens. Learn how Clawless handles
@@ -42,9 +48,9 @@ how parent-child tokens enable scoped cancellation.
 
 ### [Macros](./macros)
 
-Clawless uses three macros to wire up your CLI. Understand how `main!`,
-`commands!`, and `#[command]` work together to generate the glue code that makes
-convention-based development possible.
+Clawless uses four macros to wire up your CLI. Understand how `main!`,
+`commands!`, `#[command]`, and `#[application]` work together to generate the
+glue code that makes convention-based development possible.
 
 ### [Project Structure](./project-structure)
 
@@ -95,11 +101,13 @@ If you're new to Clawless:
    understand the basics
 2. Learn about **[Context](./context)** to access framework features
 3. Read **[Output](./output)** to understand framework-controlled command output
-4. Read **[Cancellation](./cancellation)** to understand cooperative shutdown
-5. Explore **[Project Structure](./project-structure)** to understand how to
+4. Read **[Rendering](./rendering)** to understand how output reaches the
+   terminal
+5. Read **[Cancellation](./cancellation)** to understand cooperative shutdown
+6. Explore **[Project Structure](./project-structure)** to understand how to
    organize your CLI
-6. Read **[Macros](./macros)** if you're curious about implementation details
-7. Reference **[Naming Conventions](./naming-conventions)** when you need to
+7. Read **[Macros](./macros)** if you're curious about implementation details
+8. Reference **[Naming Conventions](./naming-conventions)** when you need to
    look up specific rules
 
 For experienced developers, the **[Macros](./macros)** section provides insight

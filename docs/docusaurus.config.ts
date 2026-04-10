@@ -37,7 +37,10 @@ const config: Config = {
 
   markdown: {
     format: "detect",
+    mermaid: true,
   },
+
+  themes: ["@docusaurus/theme-mermaid"],
 
   presets: [
     [
