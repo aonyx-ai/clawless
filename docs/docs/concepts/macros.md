@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # Macros
 
-Clawless uses three procedural macros plus three output macros to wire up your
+Clawless uses four procedural macros plus three output macros to wire up your
 CLI application. Understanding how these macros work together helps you debug
 issues and appreciate the convention-based design.
 
@@ -17,32 +17,15 @@ Called in `src/main.rs` to generate your application entry point.
 **What it does:**
 
 1. Generates the `main()` function
-2. Initializes the `Context`
-3. Initializes a Tokio runtime
-4. Calls the root command initialization and execution
+2. Builds the clap command tree and parses arguments
+3. Resolves the subcommand tree to find the target leaf
+4. Delegates to the appropriate runner (`CommandRunner` for CLI commands,
+   `ApplicationRunner` for TUI applications)
 
-**Generated code:**
-
-```rust
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cancellation = clawless::cancellation::Cancellation::new();
-    let context = clawless::context::Context::builder()
-        .cancellation(cancellation.clone())
-        .build()?;
-
-    let rt = clawless::tokio::runtime::Runtime::new()?;
-    rt.block_on(async {
-        clawless::tokio::spawn(
-            clawless::signal::wait_for_shutdown(cancellation)
-        );
-
-        let app = commands::clawless_init();
-        commands::clawless_exec(app.get_matches(), context).await
-    })?;
-
-    Ok(())
-}
-```
+The macro uses a two-phase dispatch strategy: first it resolves which leaf the
+user invoked, then it hands off to the runner that matches the leaf type. This
+separation keeps the generated code small and lets the runners manage their own
+lifecycles (event channels, presenters, projections, signal handlers).
 
 **Usage:**
 
@@ -59,25 +42,9 @@ Called in `src/commands.rs` to set up the root command.
 
 **What it does:**
 
-1. Creates a root command named "clawless" with `require_subcommand`
+1. Creates a root command using your crate's description from `Cargo.toml`
 2. Provides an entry point for the inventory system to collect subcommands
-3. Generates initialization and execution functions
-
-**Generated code:**
-
-```rust
-use clawless::prelude::*;
-
-#[derive(Debug, clawless::clap::Args)]
-struct ClawlessEntryPoint {}
-
-#[clawless::command(require_subcommand, root = true)]
-async fn clawless(_args: ClawlessEntryPoint, context: clawless::context::Context)
-                  -> clawless::CommandResult
-{
-    Ok(())
-}
-```
+3. Generates initialization and resolve functions for the root level
 
 **Usage:**
 
@@ -97,7 +64,7 @@ Clap and the inventory system.
 **What it does:**
 
 1. Generates a Clap `Command` with help text from doc comments
-2. Generates a wrapper function that parses arguments and calls your function
+2. Generates a resolve function that returns the command as a leaf for dispatch
 3. Registers the command with the inventory system for discovery
 
 **Usage:**
@@ -116,44 +83,58 @@ pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
 }
 ```
 
-For each `#[command]`, the macro generates:
+### `#[application]`
 
-**1. Initialization function** - Creates the Clap command:
+Marks a function as a TUI application leaf. Works like `#[command]` but accepts
+a third parameter for pull-based event consumption and is executed through
+`ApplicationRunner` instead of `CommandRunner`.
+
+**What it does:**
+
+1. Generates a Clap `Command` with help text from doc comments (same as
+   `#[command]`)
+2. Generates a resolve function that returns the application as a leaf for
+   dispatch
+3. Registers the application with the inventory system for discovery
+
+**Usage:**
 
 ```rust
-pub fn greet_init() -> clawless::clap::Command {
-    clawless::clap::Command::new("greet")
-        .about("Greet the user")  // From doc comment
-    // ... argument configuration
+#[derive(Debug, Args)]
+pub struct DashboardArgs {}
+
+/// Interactive dashboard
+#[application]
+pub async fn dashboard(
+    args: DashboardArgs,
+    context: Context,
+    projection: Projection,
+) -> CommandResult {
+    // Use projection to consume events in a pull-based loop
+    Ok(())
 }
 ```
 
-**2. Execution wrapper** - Parses arguments and calls your function:
+Application functions must accept exactly three parameters: arguments, context,
+and projection. The `Projection` provides a queryable view of execution state
+for stateful rendering (e.g., with ratatui).
 
-```rust
-pub async fn greet_exec(
-    matches: &clawless::clap::ArgMatches,
-    context: clawless::context::Context,
-) -> clawless::CommandResult {
-    let args = GreetArgs::from_arg_matches(matches)?;
-    greet(args, context).await
-}
-```
+### Generated function names
 
-**3. Inventory registration** - Makes the command discoverable:
+Each `#[command]` or `#[application]` on a function named `greet` generates two
+companion functions: `greet_init` (builds the clap `Command`) and
+`greet_resolve` (returns a `ResolvedLeaf` for dispatch). You may encounter these
+names in compiler errors, stack traces, or `cargo expand` output.
 
-```rust
-clawless::inventory::submit! {
-    // Registration data structure
-}
-```
+Similarly, `commands!()` generates `clawless_init` and `clawless_resolve` at the
+root level.
 
 ## Output macros
 
 Clawless provides three output macros that offer a convenient shorthand for
 writing to the framework-controlled [output](./output) system. These macros
-access the `context` parameter that every command receives, so they can only be
-used inside `#[command]` functions.
+access the `context` parameter that every command and application receives, so
+they can only be used inside `#[command]` and `#[application]` functions.
 
 ### `message!`
 
@@ -209,27 +190,21 @@ Here's the flow when your CLI runs:
 ```
 1. User runs: myapp greet World
 
-2. main!() macro generates main():
-   - Creates Context
-   - Creates Tokio runtime
-   - Calls commands::clawless_init()
+2. main!() generates main():
+   - Calls clawless_init() to build the full clap command tree
+   - Clap parses arguments
 
-3. commands!() generates root command:
-   - Creates "clawless" root command
-   - Inventory collects all registered commands
+3. Resolution phase:
+   - Calls clawless_resolve(matches) to walk the subcommand tree
+   - Each level checks its inventory-registered children
+   - Finds greet_resolve(), which returns a ResolvedLeaf
 
-4. Each #[command] has registered via inventory:
-   - greet_init() provides Clap Command
-   - greet_exec() handles execution
-
-5. Clap parses arguments:
-   - Matches "greet" subcommand
-   - Routes to greet_exec()
-
-6. greet_exec() wrapper:
-   - Parses ArgMatches into GreetArgs
-   - Calls your greet() function
-   - Returns result
+4. Execution phase:
+   - main() matches on the ResolvedLeaf variant
+   - For commands: CommandRunner sets up the event channel,
+     context, presenter, and signal handler, then runs the command
+   - For applications: ApplicationRunner sets up a projection
+     instead of a presenter for pull-based rendering
 ```
 
 ## The inventory system
@@ -260,7 +235,9 @@ The `main!()` macro accepts no attributes.
 
 The `commands!()` macro accepts no attributes.
 
-### `#[command]` attributes
+### `#[command]` and `#[application]` attributes
+
+Both macros accept the same optional attributes:
 
 - **`alias = "name"`** - Add a command alias
 - **`require_subcommand`** - Prevent execution without a subcommand
@@ -291,11 +268,13 @@ Understanding the macros helps you work within their constraints:
 
 **Function signature requirements:**
 
-- Commands must be `pub async fn`
-- Must accept exactly two parameters: args, then context
-- Must return `CommandResult`
+- Commands and applications must be `pub async fn`
+- Commands must accept exactly two parameters: args, then context
+- Applications must accept exactly three parameters: args, context, then
+  projection
+- Both must return `CommandResult`
 
-These requirements enable the macro to generate correct wrapper code.
+These requirements enable the macros to generate correct wrapper code.
 
 **Module structure requirements:**
 
