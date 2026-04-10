@@ -10,10 +10,10 @@ batteries-included functionality to your commands without requiring manual
 setup.
 
 :::info[Growing incrementally]
-The Context system is evolving. Currently, it provides access to the working
-directory, [cancellation](./cancellation), and [output](./output). Features
-described in the [Future features](#future-features) section (configuration,
-structured logging) are planned but not yet implemented.
+Context currently provides access to the working directory,
+[cancellation](./cancellation), and [output](./output). Additional features
+like configuration and structured logging are planned — see
+[future features](#future-features) below.
 :::
 
 ## What is Context?
