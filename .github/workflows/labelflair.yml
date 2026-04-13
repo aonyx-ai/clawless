@@ -30,7 +30,7 @@ jobs:
           persist-credentials: false
 
       - name: Sync GitHub Issues labels
-        uses: jdno/labelflair@6a399c0d1fe3453fb2d7bdd2da30574cc1ab21b9 # v0.3.0
+        uses: jdno/labelflair@5708f99c820b8b827f31def69a5df857e1faa8d1 # v0.3.1
         with:
           config-file: .github/labelflair.toml
           delete-other-labels: true
