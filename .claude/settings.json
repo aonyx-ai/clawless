@@ -1,0 +1,45 @@
+{
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(git switch:*)",
+      "Bash(just format-rust:*)",
+      "Bash(just lint-rust:*)",
+      "Bash(just pre-commit:*)",
+      "Bash(just test-rust:*)",
+      "WebFetch(domain:clawless.rs)"
+    ]
+  },
+  "extraKnownMarketplaces": {
+    "simple-english": {
+      "source": {
+        "source": "github",
+        "repo": "AminBlg/SimpleEnglish"
+      }
+    }
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "filesystem": {
+      "allowWrite": [
+        ".flox/cache",
+        ".flox/log",
+        ".flox/run",
+        "~/.cache/flox",
+        "~/.cargo",
+        "~/.local/share/flox",
+        "~/.rustup"
+      ]
+    }
+  },
+  "enabledPlugins": {
+    "simple-english@simple-english": true
+  }
+}
