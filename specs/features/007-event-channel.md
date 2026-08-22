@@ -56,7 +56,8 @@ without changing the public API.
 4. The channel is bounded with a reasonable default capacity (e.g., 256).
 5. `EventSender` is `Clone + Send + Sync`.
 6. `EventReceiver` is `Send`.
-7. `SendError` is a struct wrapping the unsent `Event`, returned when the receiver has been dropped.
+7. `SendError` is a struct wrapping the unsent `Event`, returned when the
+   receiver has been dropped.
 8. `SendError` implements `Debug`, `Display`, and `Error`.
 9. When all senders are dropped, `recv()` returns `None` (channel closed).
 10. Types are defined in `crates/clawless/src/event_channel.rs`.

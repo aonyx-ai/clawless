@@ -52,7 +52,7 @@ cargo run -- greet
 
 Output:
 
-```
+```text
 Hello, World!
 ```
 
@@ -64,7 +64,7 @@ cargo run -- greet Rust
 
 Output:
 
-```
+```text
 Hello, Rust!
 ```
 
@@ -128,7 +128,7 @@ cargo run -- goodbye Rust
 
 Output:
 
-```
+```text
 Goodbye, Rust!
 ```
 
@@ -143,7 +143,7 @@ cargo clawless generate command db/seed
 
 This creates:
 
-```
+```text
 src/commands/
 ├── greet.rs
 ├── goodbye.rs

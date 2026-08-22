@@ -99,7 +99,7 @@ cargo run -- --help
 
 Your project should look like this:
 
-```
+```text
 my-cli/
 ├── Cargo.toml
 └── src/

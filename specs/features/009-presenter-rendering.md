@@ -139,7 +139,6 @@ None. All design decisions for this feature have been resolved.
 [architecture]: ../architecture.md
 [event-channel]: 007-event-channel.md
 [event-types]: 006-event-types.md
-[output]: ../../crates/clawless/src/output.rs
 [output-events]: 011-output-events.md
 [presenter]: 008-presenter.md
 [presenter-macros]: 010-presenter-macros.md

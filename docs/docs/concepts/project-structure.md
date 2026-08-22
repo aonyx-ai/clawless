@@ -4,13 +4,15 @@ sidebar_position: 7
 
 # Project Structure
 
-In Clawless, your file structure directly maps to your command structure. This convention makes your CLI's organization immediately clear from the codebase layout.
+In Clawless, your file structure directly maps to your command structure. This
+convention makes your CLI's organization immediately clear from the codebase
+layout.
 
 ## The basic structure
 
 Every Clawless project follows this structure:
 
-```
+```text
 myapp/
 ├── src/
 │   ├── main.rs          # Application entry point
@@ -33,7 +35,7 @@ The convention is simple: **module hierarchy becomes subcommand hierarchy**.
 
 ### Single-level commands
 
-```
+```text
 src/
 ├── main.rs
 ├── commands.rs
@@ -55,7 +57,7 @@ Each file contains one command function marked with `#[command]`.
 
 ### Nested commands (subcommands)
 
-```
+```text
 src/
 ├── main.rs
 ├── commands.rs
@@ -77,11 +79,12 @@ myapp db seed
 myapp db reset
 ```
 
-The `db/` directory becomes a command group. Commands inside it become subcommands of `db`.
+The `db/` directory becomes a command group. Commands inside it become
+subcommands of `db`.
 
 ### Multi-level nesting
 
-```
+```text
 src/
 ├── main.rs
 ├── commands.rs
@@ -115,7 +118,8 @@ Nesting can go as deep as needed, though more than 2-3 levels is rare in practic
 
 ## Command group functions
 
-When you have a nested directory like `db/`, you must create a command function in `db.rs`:
+When you have a nested directory like `db/`, you must create a command function
+in `db.rs`:
 
 ```rust
 // src/commands/db.rs
@@ -136,7 +140,8 @@ pub async fn db(_args: DbArgs, context: Context) -> CommandResult {
 }
 ```
 
-Optionally, add `require_subcommand` to skip executing the function and show help instead:
+Optionally, add `require_subcommand` to skip executing the function and show
+help instead:
 
 ```rust
 /// Database management commands
@@ -147,13 +152,14 @@ pub async fn db(_args: DbArgs, context: Context) -> CommandResult {
 }
 ```
 
-With `require_subcommand`, running `myapp db` shows help for the db subcommands. Without it, the function executes.
+With `require_subcommand`, running `myapp db` shows help for the db subcommands.
+Without it, the function executes.
 
 ## Organizing large CLIs
 
 As your CLI grows, organize related commands into logical groups:
 
-```
+```text
 src/
 ├── main.rs
 ├── commands.rs
@@ -192,7 +198,9 @@ myapp user create
 
 ## Naming
 
-Follow Rust's standard naming conventions (snake_case for files, directories, and functions). Clawless automatically converts snake_case to kebab-case for CLI commands:
+Follow Rust's standard naming conventions (snake_case for files, directories,
+and functions). Clawless automatically converts snake_case to kebab-case for CLI
+commands:
 
 - `deploy_staging.rs` → `myapp deploy-staging`
 - `user_management.rs` → `myapp user-management`
@@ -204,7 +212,7 @@ See [Naming Conventions](./naming-conventions) for details.
 
 ### Simple CLI
 
-```
+```text
 src/
 ├── main.rs
 ├── commands.rs
@@ -218,7 +226,7 @@ Commands: `myapp init`, `myapp build`, `myapp test`
 
 ### Medium CLI with grouping
 
-```
+```text
 src/
 ├── main.rs
 ├── commands.rs
@@ -234,11 +242,12 @@ src/
         └── remove.rs
 ```
 
-Commands: `myapp init`, `myapp config get`, `myapp config set`, `myapp plugin install`, `myapp plugin remove`
+Commands: `myapp init`, `myapp config get`, `myapp config set`, `myapp plugin
+install`, `myapp plugin remove`
 
 ### Large CLI with deep nesting
 
-```
+```text
 src/
 ├── main.rs
 ├── commands.rs
@@ -265,12 +274,14 @@ src/
         └── logout.rs
 ```
 
-Commands: `myapp project create`, `myapp project settings show`, `myapp deployment logs view`, etc.
+Commands: `myapp project create`, `myapp project settings show`, `myapp
+deployment logs view`, etc.
 
 ## What's next
 
 Now that you understand project structure, learn about:
 
-- **[Naming Conventions](./naming-conventions)** - How file and function names become command names
+- **[Naming Conventions](./naming-conventions)** - How file and function names
+  become command names
 - **[Commands](./commands)** - How to write command functions
 - **[Macros](./macros)** - How the structure is wired together

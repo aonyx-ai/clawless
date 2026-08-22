@@ -187,7 +187,7 @@ than a format string.
 
 Here's the flow when your CLI runs:
 
-```
+```text
 1. User runs: myapp greet World
 
 2. main!() generates main():

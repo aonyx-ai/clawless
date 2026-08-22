@@ -294,7 +294,6 @@ so any trycmd fixtures that assert on help output will need updating.
 None. All design decisions for this feature have been resolved.
 
 [application]: ../architecture.md#application
-[architecture]: ../architecture.md
 [cancellation-integration]: 003-command-cancellation.md
 [context]: ../architecture.md#context
 [output-types]: 004-output-types.md

@@ -148,7 +148,7 @@ pub struct DeployArgs {
 
 Running `myapp deploy --help` shows:
 
-```
+```text
 Arguments:
   <ENVIRONMENT>  The environment to deploy to.
 

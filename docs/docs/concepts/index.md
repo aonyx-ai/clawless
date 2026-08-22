@@ -82,9 +82,9 @@ fatigue of choosing and configuring dependencies.
 
 ### Rapid development
 
-Clawless optimizes for speed of development. The scaffolding CLI (
-`cargo clawless new`, `cargo clawless generate command`) gets you from idea to working code
-quickly.
+Clawless optimizes for speed of development. The scaffolding CLI
+(`cargo clawless new`, `cargo clawless generate command`) gets you from idea to
+working code quickly.
 
 ### Progressive disclosure
 
