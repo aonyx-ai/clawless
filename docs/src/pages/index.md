@@ -1,4 +1,8 @@
+<!-- markdownlint-disable MD033 MD041 -->
+
 <img src="/img/logo.svg" alt="Clawless Logo" width="200"/>
+
+<!-- markdownlint-enable MD033 MD041 -->
 
 # Clawless
 
@@ -85,7 +89,7 @@ Clawless uses conventions and code generation to build your CLI:
 1. **File structure = Command structure** - Your module hierarchy maps directly
    to CLI commands:
 
-   ```
+   ```text
    src/commands/db/migrate.rs  →  myapp db migrate
    ```
 

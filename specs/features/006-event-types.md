@@ -97,9 +97,11 @@ is implemented.
 2. `Event::Message` carries a `String` payload.
 3. `Event::Detail` carries a `String` payload.
 4. `Event::Artifact` carries a `Box<dyn Artifact>`.
-5. `Artifact` is a trait combining `Display + erased_serde::Serialize + Debug + Send + Sync`.
+5. `Artifact` is a trait combining `Display + erased_serde::Serialize + Debug +
+Send + Sync`.
 6. A blanket impl covers any `T: Display + Serialize + Debug + Send + Sync + 'static`.
-7. `Event` implements `Debug` (manually, delegating to the `Debug` bound on `Artifact` for the trait object variant).
+7. `Event` implements `Debug` (manually, delegating to the `Debug` bound on
+   `Artifact` for the trait object variant).
 8. `Event` does not implement `Clone`.
 9. `Event` is `Send + Sync`.
 10. Types are defined in `crates/clawless/src/event.rs`.

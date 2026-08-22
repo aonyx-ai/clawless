@@ -130,7 +130,7 @@ pub async fn read_file(args: ReadArgs, context: Context) -> CommandResult {
 
 If the file doesn't exist, users see:
 
-```
+```text
 Error: No such file or directory (os error 2)
 ```
 
@@ -156,7 +156,7 @@ pub async fn read_config(args: ReadArgs, context: Context) -> CommandResult {
 
 Now errors include context:
 
-```
+```text
 Error: Failed to parse TOML configuration
 
 Caused by:

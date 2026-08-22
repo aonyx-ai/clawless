@@ -62,7 +62,7 @@ status.code = 0
 
 `tests/cmd/greet.stdout`:
 
-```
+```text
 Hello, World!
 ```
 
@@ -72,7 +72,7 @@ The test passes if the command's stdout matches the file exactly.
 
 For commands that create or modify files, use `.in/` and `.out/` directories:
 
-```
+```text
 tests/cmd/
 ├── init.toml
 ├── init.in/
@@ -115,7 +115,7 @@ status.code = 2
 
 `tests/cmd/missing-arg.stderr`:
 
-```
+```text
 error: the following required arguments were not provided:
   <ENVIRONMENT>
 ...
@@ -138,7 +138,7 @@ Review the changes before committing.
 
 A typical test setup looks like this:
 
-```
+```text
 my-cli/
 ├── src/
 │   ├── main.rs

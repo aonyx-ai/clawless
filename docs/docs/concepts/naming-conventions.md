@@ -65,7 +65,7 @@ Directory names become subcommand groups:
 
 Example structure:
 
-```
+```text
 src/commands/
 ├── db.rs (contains: pub async fn db(...))
 └── db/
@@ -122,7 +122,7 @@ pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
 
 Running `myapp greet --help` shows:
 
-```
+```text
 Greet the user by name
 
 This command prints a friendly greeting message.

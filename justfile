@@ -137,8 +137,12 @@ lint-github-actions:
     zizmor -p .
 
 # Lint Markdown files
+#
+# The glob is quoted so that markdownlint expands it. The recipe shell is
+# `sh`, which has no globstar, so an unquoted `**/*.md` collapses to
+# `*/*.md` and reaches only the files one directory deep.
 lint-markdown:
-    markdownlint --ignore-path .gitignore **/*.md
+    markdownlint "**/*.md"
 
 # Lint Rust files
 lint-rust:

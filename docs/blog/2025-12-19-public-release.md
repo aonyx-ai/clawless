@@ -52,7 +52,7 @@ command structure**.
 
 Want to add a `db migrate` subcommand? Create this structure:
 
-```
+```text
 src/
 ├── main.rs
 ├── commands.rs

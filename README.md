@@ -1,6 +1,10 @@
+<!-- markdownlint-disable MD033 MD041 -->
+
 <div style="text-align:center">
-    <img src="docs/static/img/logo.svg" height="200" />
+    <img src="docs/static/img/logo.svg" alt="Clawless logo" height="200" />
 </div>
+
+<!-- markdownlint-enable MD033 MD041 -->
 
 # 🦦 Clawless
 

@@ -1,3 +1,12 @@
 ---
+# Long lines inside a code block cannot always wrap: a shell command, a
+# directory tree, or a message meant to be copied verbatim has to stay on one
+# line. Prose still wraps at 80.
 MD013:
+  code_blocks: false
   tables: false
+
+# The same heading may appear under two different parents, e.g. "SIGTERM
+# behavior" under both a design and an alternatives section.
+MD024:
+  siblings_only: true

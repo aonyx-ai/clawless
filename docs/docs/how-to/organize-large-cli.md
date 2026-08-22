@@ -36,7 +36,7 @@ pub async fn deploy(args: DeployArgs, context: Context) -> CommandResult {
 
 Create modules outside `src/commands/` for your actual application logic:
 
-```
+```text
 src/
 ├── main.rs
 ├── commands.rs
@@ -80,7 +80,7 @@ This separation means:
 
 As you add commands, group related ones together using nested modules:
 
-```
+```text
 src/commands/
 ├── build.rs
 ├── test.rs
@@ -119,7 +119,7 @@ pub async fn get(args: GetArgs, context: Context) -> CommandResult {
 
 A deployment tool with multiple domains:
 
-```
+```text
 src/
 ├── main.rs
 ├── commands.rs
@@ -176,7 +176,7 @@ pub async fn create(args: CreateArgs, context: Context) -> CommandResult {
 If you need to share code between commands in the same group, create a
 non-command module:
 
-```
+```text
 src/commands/
 ├── database.rs
 └── database/
