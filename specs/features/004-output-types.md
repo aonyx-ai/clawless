@@ -395,7 +395,7 @@ internal implementation detail that can be evaluated during the F004 PR.
 [cancellation]: ../architecture.md#cancellation
 [command-output]: 005-command-output.md
 [context]: ../architecture.md#context
-[conventions]: ../../CLAUDE.md#enums-over-bools
+[conventions]: ../../AGENTS.md#enums-over-bools
 [diagnostic]: ../architecture.md#diagnostic
 [formatter]: ../architecture.md#presenter-output-port
 [progress]: ../architecture.md#progress

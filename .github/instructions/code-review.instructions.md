@@ -11,7 +11,7 @@ Clawless is a Rust CLI framework built around domain-driven design and hexagonal
 architecture. The authoritative source for domain vocabulary and architectural
 boundaries is [`specs/architecture.md`][architecture].
 
-The full set of coding conventions lives in [`CLAUDE.md`][claude-md]. These
+The full set of coding conventions lives in [`AGENTS.md`][agents-md]. These
 instructions orient you to the project's architecture and spec-driven
 development process; they do not duplicate the coding rules.
 
@@ -104,7 +104,7 @@ specs/
 For the full set of coding conventions — including Rust-specific rules, type
 system guidelines, error handling, testing patterns, documentation standards,
 commit message format, and Markdown conventions — refer to
-[`CLAUDE.md`][claude-md].
+[`AGENTS.md`][agents-md].
 
 Key principles from the project philosophy:
 
@@ -121,5 +121,5 @@ All Markdown in this project uses sentence case headings (not title case), the
 Oxford comma, and reference-style links.
 
 [architecture]: ../../specs/architecture.md
-[claude-md]: ../../CLAUDE.md
+[agents-md]: ../../AGENTS.md
 [specs]: ../../specs/README.md
