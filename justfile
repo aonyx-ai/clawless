@@ -9,11 +9,21 @@ default:
     @just --list
 
 # Run a subset of checks as pre-commit hooks
-pre-commit:
-    #!/usr/bin/env -S parallel --shebang --ungroup --jobs {{ num_cpus() }}
+pre-commit: pre-commit-fix pre-commit-verify
+
+# Every recipe that rewrites the working tree, in sequence: they overlap each
+# other, and nothing may read a file while one of them is writing it.
+[private]
+pre-commit-fix:
     just prettier true
     just format-toml true
     just format-rust true
+
+# Every recipe that only reads, in parallel: the tree has stopped changing, so
+# what each of them sees is what the commit will contain.
+[private]
+pre-commit-verify:
+    #!/usr/bin/env -S flox activate -- parallel --shebang --ungroup --jobs {{ num_cpus() }}
     just lint-github-actions
     just lint-markdown
     just lint-rust
