@@ -6,7 +6,7 @@ excludeAgent: "coding-agent"
 # Rust code review rules
 
 These are the highest-signal Rust conventions for Clawless code review. The
-complete set of rules lives in [`CLAUDE.md`][claude-md].
+complete set of rules lives in [`AGENTS.md`][agents-md].
 
 ## Derive order
 
@@ -75,4 +75,4 @@ Standard traits first, then third-party derives alphabetical by crate:
 - **Line comments** (`///`), not block comments (`/** */`).
 - **Reference-style links**: `[`Type`]` with link definitions, not inline URLs.
 
-[claude-md]: ../../CLAUDE.md
+[agents-md]: ../../AGENTS.md
