@@ -1,4 +1,5 @@
 exclude = [
+  ".claude/worktrees/**",
   ".flox/**",
   "crates/cargo-clawless/tests/commands/new.out/cli/Cargo.toml",
 ]
