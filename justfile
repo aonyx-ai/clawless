@@ -143,6 +143,7 @@ lint-github-actions:
 # `*/*.md` and reaches only the files one directory deep. The `--dot` flag
 # extends the glob into dot-directories such as `.github`, which it skips
 # by default; `.markdownlintignore` excludes the ones we do not lint.
+[doc("Lint Markdown files")]
 lint-markdown:
     markdownlint --dot "**/*.md"
 
@@ -168,5 +169,11 @@ publish:
     cargo publish --all-features --verbose --workspace
 
 # Run the tests
+#
+# nextest does not run doc tests, so a second command covers them. Without it
+# the examples in the documentation never compile, and they drift away from
+# the API they document without anything noticing.
+[doc("Run the tests")]
 test-rust:
     cargo nextest run --all-features --all-targets
+    cargo test --all-features --doc

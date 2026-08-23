@@ -26,11 +26,12 @@
 //!     .expect("should send");
 //! drop(sender);
 //!
-//! // Allow the drain task to process events
-//! tokio::task::yield_now().await;
+//! // Wait for the drain task, which finishes once the dropped sender closes the channel
+//! while !projection.is_complete() {
+//!     tokio::task::yield_now().await;
+//! }
 //!
 //! assert_eq!(projection.entries().len(), 1);
-//! assert!(projection.is_complete());
 //! # }
 //! ```
 //!
@@ -81,7 +82,10 @@ mod state;
 ///     .expect("should send");
 /// drop(sender);
 ///
-/// tokio::task::yield_now().await;
+/// // Wait for the drain task, which finishes once the dropped sender closes the channel
+/// while !projection.is_complete() {
+///     tokio::task::yield_now().await;
+/// }
 ///
 /// let messages = projection.messages();
 /// assert_eq!(messages.len(), 1);
