@@ -8,6 +8,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-08-23
+
+### Added
+
+- Add Output, Verbosity, and OutputMode types
+- Add Presenter trait and TerminalPresenter adapter
+- Add clawless-core crate for domain types and ports
+- Create crate for terminal applications
+- Implement Projection type for pull-based event consumption
+- Add `#[application]` macro for TUI applications
+
+### Changed
+
+- Rename output methods and add output macros
+- Rename `clawless-cli` to `cargo-clawless`
+- Extract CLI layer into `clawless-cli` crate
+- Move `Context` to clawless-core
+
 ## [0.5.0] - 2026-02-13
 
 ### Added
@@ -60,6 +78,7 @@ and this project adheres to
 
 - Initial prototype featuring the `clawless!`, `app!`, and `#[command]` macros
 
+[0.6.0]: https://github.com/aonyx-ai/clawless/releases/tag/v0.6.0
 [0.5.0]: https://github.com/aonyx-ai/clawless/releases/tag/v0.5.0
 [0.4.0]: https://github.com/aonyx-ai/clawless/releases/tag/v0.4.0
 [0.3.0]: https://github.com/aonyx-ai/clawless/releases/tag/v0.3.0
