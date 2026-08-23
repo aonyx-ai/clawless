@@ -18,6 +18,7 @@ pub struct CountArgs {
 /// object (e.g. `{"words":4}`), demonstrating how [`Output::artifact`] adapts to the output mode.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Serialize)]
 struct Count {
+    /// Number of whitespace-separated words in the sentence
     words: usize,
 }
 
@@ -32,6 +33,9 @@ impl fmt::Display for Count {
 /// Demonstrates all three [`Output`] methods: [`Output::detail`] logs the raw input,
 /// [`Output::message`] describes the operation, and [`Output::artifact`] emits the word count.
 #[command]
+// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
+// raw Markdown heading in the terminal rather than documenting an API.
+#[allow(clippy::missing_errors_doc)]
 pub async fn count(args: CountArgs, context: Context) -> CommandResult {
     let count = Count {
         words: args.sentence.split_whitespace().count(),

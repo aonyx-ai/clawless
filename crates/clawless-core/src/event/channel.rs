@@ -45,6 +45,10 @@ pub fn event_channel() -> (EventSender, EventReceiver) {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use super::*;
 
     // r[verify event.transport.drain]

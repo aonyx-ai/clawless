@@ -39,6 +39,9 @@ pub struct GenerateCommandArgs {
 /// cargo clawless generate command db/migrate
 /// ```
 #[command(alias = "c")]
+// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
+// raw Markdown heading in the terminal rather than documenting an API.
+#[allow(clippy::missing_errors_doc)]
 pub async fn command(args: GenerateCommandArgs, context: Context) -> CommandResult {
     // Check is command is running inside a Clawless project
     let project = find_clawless_project(context.current_working_directory())?;
@@ -60,6 +63,16 @@ pub async fn command(args: GenerateCommandArgs, context: Context) -> CommandResu
     Ok(())
 }
 
+/// Returns the root of the Clawless project that contains the given directory
+///
+/// The search examines each parent directory in turn. A user can therefore run the command
+/// from anywhere inside a project.
+///
+/// # Errors
+///
+/// Returns an error if the search finds no `main.rs` file. Returns an error if that file is
+/// not a Clawless entry point. Returns an error if the path has no project directory above
+/// it.
 fn find_clawless_project(current_working_directory: &CurrentWorkingDirectory) -> Result<PathBuf> {
     let main_rs_path = find_main_rs(current_working_directory)
         .ok_or_else(|| anyhow!("failed to find a main.rs file in the current directory or any of its parent directories"))?;
@@ -75,6 +88,10 @@ fn find_clawless_project(current_working_directory: &CurrentWorkingDirectory) ->
     Ok(project_path)
 }
 
+/// Searches the given directory and its parents for a `main.rs` file
+///
+/// The search accepts `src/main.rs` and a bare `main.rs`. It therefore succeeds from the crate
+/// root and from inside `src`. The search returns [`None`] at the root of the file system.
 fn find_main_rs(current_working_directory: &CurrentWorkingDirectory) -> Option<PathBuf> {
     let mut dir = current_working_directory.get().to_path_buf();
 
@@ -95,6 +112,15 @@ fn find_main_rs(current_working_directory: &CurrentWorkingDirectory) -> Option<P
     }
 }
 
+/// Makes sure that the file at `path` is a Clawless entry point
+///
+/// The `clawless::main!` macro is the marker. A `main.rs` file without this macro belongs to
+/// a different kind of binary crate. A command generated there never runs.
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be read. Returns an error if the file does not contain
+/// `clawless::main!`.
 fn check_main_rs(path: &Path) -> Result<()> {
     let content =
         read_to_string(path).context(format!("failed to read main.rs at {}", path.display()))?;
@@ -109,6 +135,11 @@ fn check_main_rs(path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Creates the directories that hold a nested command
+///
+/// # Errors
+///
+/// Returns an error if the directories cannot be created.
 fn create_parent_directory(project: &Path, command_name: &CommandName) -> Result<()> {
     let mut dir_path = project.join("src").join("commands");
 
@@ -124,6 +155,11 @@ fn create_parent_directory(project: &Path, command_name: &CommandName) -> Result
     Ok(())
 }
 
+/// Writes the boilerplate for a new command
+///
+/// # Errors
+///
+/// Returns an error if the command file cannot be written.
 fn create_command_file(project_path: &Path, command_name: &CommandName) -> Result<()> {
     let struct_prefix = command_name.name().to_case(Case::Pascal);
 
@@ -158,6 +194,14 @@ fn create_command_file(project_path: &Path, command_name: &CommandName) -> Resul
     Ok(())
 }
 
+/// Declares the new command in its parent module
+///
+/// The generator puts the statement after the last `mod` or `use` statement. The new code
+/// therefore lands where a person writes it by hand. A second run makes no further change.
+///
+/// # Errors
+///
+/// Returns an error if the parent module cannot be found, read, or written.
 fn insert_mod_statement(project: &Path, command_name: &CommandName) -> Result<()> {
     // Find the parent module file where the mod statement should be inserted
     let parent = find_parent_module(project, command_name)?;
@@ -205,6 +249,15 @@ fn insert_mod_statement(project: &Path, command_name: &CommandName) -> Result<()
     Ok(())
 }
 
+/// Returns the path of the module file that must declare the new command
+///
+/// The search accepts both module layouts, `<name>.rs` and `<name>/mod.rs`. The generator
+/// therefore works in projects that use either convention.
+///
+/// # Errors
+///
+/// Returns an error if the parent module does not exist. The generator does not create it,
+/// because that builds a command tree the user did not ask for.
 fn find_parent_module(project: &Path, command_name: &CommandName) -> Result<PathBuf> {
     let parent_modules = command_name.parent_modules();
 
@@ -242,6 +295,10 @@ fn find_parent_module(project: &Path, command_name: &CommandName) -> Result<Path
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use std::fs::{create_dir, create_dir_all, write};
 
     use tempfile::TempDir;

@@ -241,9 +241,12 @@ git show <commit> --stat
 
 - Use `mod.rs` for modules that contain submodules.
 - One public type per module, use submodules for related types.
-- Prefer `pub` over `pub(crate)`. Visibility should come from module
-  structure, not access modifiers. If a type needs restricted visibility,
-  that is usually a signal to restructure the modules.
+- In library crates, give every item the narrowest visibility that still
+  compiles. `unreachable_pub` enforces this, so a `pub` item is genuinely part
+  of the public API and a `pub(crate)` item is genuinely internal.
+- Binary crates allow `unreachable_pub` at the crate root. Nothing in them is
+  reachable from outside, so the lint would only demand `pub(crate)` everywhere
+  without telling the reader anything.
 - Test helpers in dedicated modules/files.
 - Use fully qualified imports rarely, prefer importing the type most of the
   time, or otherwise a module if it is conventional.

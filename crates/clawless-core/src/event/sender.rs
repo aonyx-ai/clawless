@@ -15,10 +15,17 @@ use super::Event;
 // r[impl event.safety.producer-concurrent]
 #[derive(Clone, Debug)]
 pub struct EventSender {
+    /// The half of the Tokio channel that sends events
     inner: mpsc::Sender<Event>,
 }
 
 impl EventSender {
+    /// Wraps a Tokio sender in an [`EventSender`]
+    ///
+    /// Only [`event_channel`] makes a sender. Clawless creates the matched receiver at the
+    /// same time.
+    ///
+    /// [`event_channel`]: super::event_channel
     pub(super) fn new(inner: mpsc::Sender<Event>) -> Self {
         Self { inner }
     }
@@ -41,6 +48,10 @@ impl EventSender {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use super::*;
 
     #[test]

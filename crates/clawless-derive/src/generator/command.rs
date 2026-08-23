@@ -13,9 +13,12 @@ use super::{Attributes, Generator, parse_attributes};
 /// function, `_resolve` function, clap `Command` construction, and inventory submission) is
 /// inherited from `Generator`'s default methods.
 #[derive(Debug)]
-pub struct CommandGenerator {
+pub(crate) struct CommandGenerator {
+    /// Parsed `#[command(...)]` attributes such as `alias` and `require_subcommand`
     attrs: Attributes,
+    /// The function that the user wrote, which the macro emits again without a change
     input: ItemFn,
+    /// Identifier of the function that the user wrote, which names the generated functions
     ident: Ident,
 }
 
@@ -32,6 +35,9 @@ impl Generator for CommandGenerator {
         &self.input
     }
 
+    // `CommandGenerator::new` rejects any function whose signature does not match, so by the
+    // time this runs the extraction cannot fail.
+    #[allow(clippy::expect_used)]
     fn args_type(&self) -> Box<Type> {
         extract_command_argument_type(&self.input)
             .expect("function arguments must be validated in CommandGenerator::new()")
@@ -66,7 +72,7 @@ impl CommandGenerator {
     ///
     /// Returns a compile error if the function does not accept exactly two parameters (args and
     /// context) or if the macro attributes are invalid.
-    pub fn new(attrs: TokenStream, input: ItemFn) -> Result<Self> {
+    pub(crate) fn new(attrs: TokenStream, input: ItemFn) -> Result<Self> {
         let attrs = parse_attributes(attrs, "command")?;
         let ident = input.sig.ident.clone();
 
@@ -80,6 +86,16 @@ impl CommandGenerator {
     }
 }
 
+/// Returns the type of the first parameter of a command function
+///
+/// A command function must take exactly `(args, context)`. This function makes sure that the
+/// shape is correct at expansion time. [`Generator::args_type`] can therefore treat the later
+/// extraction as infallible.
+///
+/// # Errors
+///
+/// Returns [`Error`] if the function does not take exactly two parameters. The error points
+/// at the wrong parameter, so that the user sees the mistake in place.
 fn extract_command_argument_type(input_fn: &ItemFn) -> Result<Box<Type>> {
     let mut function_arguments = input_fn.sig.inputs.iter().filter_map(|arg| match arg {
         FnArg::Receiver(_) => None,
@@ -132,6 +148,10 @@ fn extract_command_argument_type(input_fn: &ItemFn) -> Result<Box<Type>> {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use quote::ToTokens;
 
     use super::*;

@@ -35,6 +35,7 @@ use crate::presenter::{Presenter, TerminalPresenter};
 /// }
 /// ```
 // r[impl dispatch.exec.command-runner]
+#[derive(Debug)]
 pub struct CommandRunner;
 
 impl CommandRunner {
@@ -105,6 +106,10 @@ impl CommandRunner {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use super::*;
 
     #[test]

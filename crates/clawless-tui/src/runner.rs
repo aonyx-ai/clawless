@@ -38,6 +38,7 @@ use crate::projection::Projection;
 /// [`Context`]: clawless_core::context::Context
 /// [`Projection`]: crate::projection::Projection
 // r[impl dispatch.exec.application-runner]
+#[derive(Debug)]
 pub struct ApplicationRunner;
 
 impl ApplicationRunner {
@@ -100,6 +101,10 @@ impl ApplicationRunner {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use super::*;
 
     #[test]

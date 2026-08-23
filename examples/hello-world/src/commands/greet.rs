@@ -16,6 +16,9 @@ pub struct GreetArgs {
 /// This command prints a greeting message to the console using the provided name. If no name is
 /// given, the greeting default to "Hello, World!".
 #[command]
+// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
+// raw Markdown heading in the terminal rather than documenting an API.
+#[allow(clippy::missing_errors_doc)]
 pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
     message!("Hello, {}!", args.name);
     Ok(())
