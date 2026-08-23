@@ -140,9 +140,11 @@ lint-github-actions:
 #
 # The glob is quoted so that markdownlint expands it. The recipe shell is
 # `sh`, which has no globstar, so an unquoted `**/*.md` collapses to
-# `*/*.md` and reaches only the files one directory deep.
+# `*/*.md` and reaches only the files one directory deep. The `--dot` flag
+# extends the glob into dot-directories such as `.github`, which it skips
+# by default; `.markdownlintignore` excludes the ones we do not lint.
 lint-markdown:
-    markdownlint "**/*.md"
+    markdownlint --dot "**/*.md"
 
 # Lint Rust files
 lint-rust:
