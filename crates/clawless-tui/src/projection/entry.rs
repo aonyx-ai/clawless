@@ -36,6 +36,10 @@ impl fmt::Display for Entry {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use std::sync::Arc;
 
     use serde::Serialize;

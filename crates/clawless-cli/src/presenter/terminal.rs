@@ -55,15 +55,34 @@ use crate::output::Verbosity;
 /// [builder]: TerminalPresenter::builder
 #[derive(Debug, Builder)]
 pub struct TerminalPresenter {
+    /// How much detail to render. The presenter drops events below this level
     #[builder(default)]
     verbosity: Verbosity,
 
+    /// Whether to render events as text or as JSON
     #[builder(default)]
     mode: OutputMode,
 
+    /// Stream of events that the command produces
     receiver: EventReceiver,
 }
 
+/// Renders one event to the terminal for the given verbosity and output mode
+///
+/// In text mode, messages and details go to stdout. They therefore interleave with the
+/// artifacts, in the order that the command produced them.
+///
+/// In JSON mode, messages and details go to stderr instead. Stdout then carries only JSON
+/// artifacts, which a caller can pipe into another tool.
+///
+/// # Panics
+///
+/// Panics if the process cannot write to the output stream. A reader that closes the pipe
+/// causes this panic.
+// Writing to the process output stream fails only when the stream itself is gone, such as a
+// pipe the reader has closed. A presenter whose output stream has vanished has nowhere left
+// to report the failure, so it fails loudly rather than dropping output silently.
+#[allow(clippy::expect_used)]
 fn render_event(event: Event, verbosity: Verbosity, mode: OutputMode) {
     match event {
         Event::Message(msg) => match verbosity {
@@ -123,12 +142,19 @@ impl Presenter for TerminalPresenter {
             render_event(event, verbosity, mode);
         }
 
+        // The join fails only if the command task panicked or was aborted. Resuming the
+        // panic on this thread preserves the original panic message for the user.
+        #[allow(clippy::expect_used)]
         command_handle.await.expect("command task panicked")
     }
 }
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use clawless_core::event::event_channel;
 
     use super::*;

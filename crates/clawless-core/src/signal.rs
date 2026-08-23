@@ -35,6 +35,10 @@ use crate::cancellation::Cancellation;
 /// exhaustion.
 // r[impl cancel.os.first]
 // r[impl cancel.os.second]
+// Registering an OS signal handler fails only when the process has exhausted its resources.
+// The process cannot honor a shutdown request it is unable to observe, so there is nothing to
+// recover to. The `# Panics` section documents this for callers.
+#[allow(clippy::expect_used)]
 pub fn wait_for_shutdown(cancellation: Cancellation) -> impl Future<Output = ()> + Send {
     let first_signal = first_signal_listener();
 
@@ -50,9 +54,22 @@ pub fn wait_for_shutdown(cancellation: Cancellation) -> impl Future<Output = ()>
     }
 }
 
+/// Returns a future that completes when the first SIGINT or SIGTERM arrives
+///
+/// This function registers the handlers before it returns the future. The handlers therefore
+/// catch a signal that arrives before the caller polls the future.
+///
+/// # Panics
+///
+/// Panics if the operating system cannot register the signal handler. This occurs when the
+/// system has no resources left.
 // r[impl cancel.os.unix]
 // r[impl cancel.os.eager]
+// Registering an OS signal handler fails only when the process has exhausted its resources.
+// The process cannot honor a shutdown request it is unable to observe, so there is nothing to
+// recover to. The `# Panics` section documents this for callers.
 #[cfg(unix)]
+#[allow(clippy::expect_used)]
 fn first_signal_listener() -> impl Future<Output = ()> + Send {
     use tokio::signal::unix::SignalKind;
 
@@ -69,7 +86,20 @@ fn first_signal_listener() -> impl Future<Output = ()> + Send {
     }
 }
 
+/// Returns a future that completes when the first Ctrl+C arrives
+///
+/// Platforms other than Unix have no equivalent of SIGTERM. This variant therefore waits for
+/// Ctrl+C alone. It registers the handler when the caller first polls the future.
+///
+/// # Panics
+///
+/// Panics if the operating system cannot register the signal handler. This occurs when the
+/// system has no resources left.
+// Registering an OS signal handler fails only when the process has exhausted its resources.
+// The process cannot honor a shutdown request it is unable to observe, so there is nothing to
+// recover to. The `# Panics` section documents this for callers.
 #[cfg(not(unix))]
+#[allow(clippy::expect_used)]
 fn first_signal_listener() -> impl Future<Output = ()> + Send {
     async {
         tokio::signal::ctrl_c()

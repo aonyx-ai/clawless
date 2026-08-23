@@ -4,6 +4,7 @@ use syn::Ident;
 
 use crate::generator::Generator;
 
+/// Name of the generated type that collects the subcommands of a module
 const INVENTORY_NAME: &str = "ClawlessSubcommands";
 
 /// Generates the `inventory` crate glue that connects subcommands to their parents at compile time
@@ -12,13 +13,14 @@ const INVENTORY_NAME: &str = "ClawlessSubcommands";
 /// `ClawlessSubcommands` struct definition (via `inventory`) and a `submit!` call that registers
 /// the leaf's `_init` and `_resolve` functions with the parent module's collector. This generator
 /// is generic over `Generator` so it works identically for both commands and applications.
-pub struct InventoryGenerator<'a> {
+pub(crate) struct InventoryGenerator<'a> {
+    /// Gives the identifier of the leaf and the names of its generated functions
     generator: &'a dyn Generator,
 }
 
 impl<'a> InventoryGenerator<'a> {
     /// Wraps a `Generator` to produce inventory code from its identity and function names
-    pub fn new(generator: &'a dyn Generator) -> Self {
+    pub(crate) fn new(generator: &'a dyn Generator) -> Self {
         Self { generator }
     }
 
@@ -29,7 +31,7 @@ impl<'a> InventoryGenerator<'a> {
     /// The struct carries three function pointers — `name`, `init`, and `resolve` — forming the
     /// uniform interface that the `_init` and `_resolve` functions iterate over to build the clap
     /// tree and walk subcommands.
-    pub fn inventory(&self) -> TokenStream {
+    pub(crate) fn inventory(&self) -> TokenStream {
         let inventory_name = inventory_name();
 
         quote! {
@@ -47,7 +49,7 @@ impl<'a> InventoryGenerator<'a> {
     /// The submission references `super::ClawlessSubcommands`, connecting this leaf to its parent's
     /// inventory collector. Root commands skip submission because they are the entry point, not a
     /// subcommand of anything.
-    pub fn submit(&self) -> TokenStream {
+    pub(crate) fn submit(&self) -> TokenStream {
         if self.generator.is_root() {
             return quote! {};
         }
@@ -71,6 +73,6 @@ impl<'a> InventoryGenerator<'a> {
 ///
 /// Centralized here so that `InventoryGenerator` and the `Generator` trait's default methods
 /// reference the same name.
-pub fn inventory_name() -> Ident {
+pub(crate) fn inventory_name() -> Ident {
     format_ident!("{}", INVENTORY_NAME)
 }

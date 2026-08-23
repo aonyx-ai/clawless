@@ -5,7 +5,9 @@
 
 use clawless::prelude::*;
 
+/// Commands that generate code in an existing project
 mod generate;
+/// Creates a new Clawless project
 mod new;
 
 /// Arguments for the `cargo clawless` command
@@ -18,6 +20,9 @@ pub struct ClawlessArgs {}
 /// `cargo clawless`, Cargo passes `clawless` as the first argument, which matches this
 /// subcommand.
 #[command(require_subcommand)]
+// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
+// raw Markdown heading in the terminal rather than documenting an API.
+#[allow(clippy::missing_errors_doc)]
 pub async fn clawless(_args: ClawlessArgs, _context: Context) -> CommandResult {
     Ok(())
 }

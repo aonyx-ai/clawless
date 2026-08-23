@@ -32,6 +32,9 @@ pub struct NewArgs {
 /// cargo clawless new my-app
 /// ```
 #[command(alias = "n")]
+// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
+// raw Markdown heading in the terminal rather than documenting an API.
+#[allow(clippy::missing_errors_doc)]
 pub async fn new(args: NewArgs, context: Context) -> CommandResult {
     // Call `cargo new` to create a new binary crate
     let crate_path = create_binary_crate(&context, &args.name)?;
@@ -51,6 +54,14 @@ pub async fn new(args: NewArgs, context: Context) -> CommandResult {
     Ok(())
 }
 
+/// Creates the binary crate with the `cargo new` command
+///
+/// Cargo writes the manifest, not this tool. The new project therefore always matches the
+/// current toolchain.
+///
+/// # Errors
+///
+/// Returns an error if `cargo new` cannot start or returns a non-zero status.
 fn create_binary_crate(context: &Context, crate_name: &CrateName) -> Result<PathBuf, Error> {
     let mut cargo_new_exec = Command::new("cargo");
 
@@ -81,6 +92,11 @@ fn create_binary_crate(context: &Context, crate_name: &CrateName) -> Result<Path
     Ok(crate_path)
 }
 
+/// Adds `clawless` to the dependencies of the new crate with the `cargo add` command
+///
+/// # Errors
+///
+/// Returns an error if `cargo add` cannot start or returns a non-zero status.
 fn add_clawless_dependency(crate_path: &Path) -> Result<(), Error> {
     let mut cargo_add_exec = Command::new("cargo");
 
@@ -105,6 +121,11 @@ fn add_clawless_dependency(crate_path: &Path) -> Result<(), Error> {
     Ok(())
 }
 
+/// Replaces the `main.rs` file from `cargo new` with a Clawless entry point
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be written.
 fn overwrite_main_rs(crate_path: &Path) -> Result<(), Error> {
     let main_rs_path = crate_path.join("src").join("main.rs");
 
@@ -123,6 +144,11 @@ fn overwrite_main_rs(crate_path: &Path) -> Result<(), Error> {
     Ok(())
 }
 
+/// Writes the `commands` module that collects the commands of the project
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be written.
 fn create_commands_rs(crate_path: &Path) -> Result<(), Error> {
     let commands_rs_path = crate_path.join("src").join("commands.rs");
 
@@ -141,6 +167,11 @@ fn create_commands_rs(crate_path: &Path) -> Result<(), Error> {
     Ok(())
 }
 
+/// Writes the first `greet` command, so that a new project runs immediately
+///
+/// # Errors
+///
+/// Returns an error if the commands directory or the command file cannot be created.
 fn create_greeting_command(crate_path: &Path) -> Result<(), Error> {
     let commands_dir_path = crate_path.join("src").join("commands");
     create_dir_all(&commands_dir_path).context("failed to create directory for commands module")?;
@@ -171,6 +202,10 @@ fn create_greeting_command(crate_path: &Path) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use std::fs::{create_dir_all, read_to_string};
 
     use clawless::event::event_channel;

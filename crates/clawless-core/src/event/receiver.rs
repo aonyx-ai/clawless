@@ -12,10 +12,17 @@ use super::Event;
 /// [`tokio::sync::mpsc::Receiver`].
 #[derive(Debug)]
 pub struct EventReceiver {
+    /// The half of the Tokio channel that reads events
     inner: mpsc::Receiver<Event>,
 }
 
 impl EventReceiver {
+    /// Wraps a Tokio receiver in an [`EventReceiver`]
+    ///
+    /// Only [`event_channel`] makes a receiver. Each channel therefore has exactly one
+    /// receiver.
+    ///
+    /// [`event_channel`]: super::event_channel
     pub(super) fn new(inner: mpsc::Receiver<Event>) -> Self {
         Self { inner }
     }
@@ -32,6 +39,10 @@ impl EventReceiver {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use super::*;
 
     #[test]

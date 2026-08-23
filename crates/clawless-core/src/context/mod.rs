@@ -15,7 +15,9 @@ pub use self::error::ContextError;
 use crate::cancellation::Cancellation;
 use crate::output::Output;
 
+/// Newtype for the directory that a command runs in
 mod current_working_directory;
+/// Errors that occur when Clawless builds a [`Context`]
 mod error;
 
 /// Context for Clawless commands
@@ -111,6 +113,10 @@ impl Context {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use std::path::Path;
 
     use super::*;

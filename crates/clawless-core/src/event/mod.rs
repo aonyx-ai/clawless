@@ -18,8 +18,11 @@ pub use self::channel::{SendError, event_channel};
 pub use self::receiver::EventReceiver;
 pub use self::sender::EventSender;
 
+/// Bounded channel that carries events from a command to its presenter
 mod channel;
+/// The half of the event channel that reads events
 mod receiver;
+/// The half of the event channel that sends events
 mod sender;
 
 /// Trait for artifact values that can be rendered as text or JSON
@@ -94,6 +97,10 @@ pub enum Event {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use std::fmt;
 
     use serde::Serialize;

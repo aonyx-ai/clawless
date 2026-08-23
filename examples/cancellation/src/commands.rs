@@ -1,3 +1,0 @@
-mod wait;
-
-clawless::commands!();

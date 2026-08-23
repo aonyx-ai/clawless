@@ -15,7 +15,9 @@ use clap::{Arg, ArgAction, ArgMatches};
 pub use self::output_mode::OutputMode;
 pub use self::verbosity::Verbosity;
 
+/// Whether events render as human-readable text or as JSON
 mod output_mode;
+/// How much detail the presenter renders
 mod verbosity;
 
 /// CLI flag configuration for output behavior
@@ -44,7 +46,9 @@ mod verbosity;
 /// [`TerminalPresenter`]: crate::presenter::TerminalPresenter
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct OutputFlags {
+    /// How much detail the presenter renders, from the `--quiet` and `--verbose` flags
     verbosity: Verbosity,
+    /// Whether the presenter renders text or JSON, from the `--json` flag
     mode: OutputMode,
 }
 
@@ -184,6 +188,10 @@ impl Default for OutputFlags {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use super::*;
 
     fn test_command() -> clap::Command {

@@ -1,0 +1,11 @@
+# Run some specific lints on private items as well. For more details, see
+# https://doc.rust-lang.org/clippy/lint_configuration.html#check-private-items
+check-private-items = true
+
+# A test may panic and may print, because a panic is how a test reports a
+# failure and the harness captures the output. These options limit the lints
+# that ban both to non-test code, which the lint configuration itself cannot
+# express.
+allow-expect-in-tests = true
+allow-print-in-tests = true
+allow-unwrap-in-tests = true

@@ -55,6 +55,7 @@ pub type ApplicationExec = fn(
 // r[impl dispatch.safety.send]
 // r[impl dispatch.safety.sync]
 // r[impl dispatch.safety.unpin]
+#[derive(Debug)]
 pub enum ResolvedLeaf {
     // r[impl dispatch.leaf.command]
     // r[impl dispatch.leaf.matches]
@@ -92,6 +93,10 @@ pub enum ResolvedLeaf {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use super::*;
 
     // r[verify dispatch.safety.send]

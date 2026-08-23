@@ -1,5 +1,4 @@
 #![cfg_attr(not(doctest),doc = include_str!("../README.md"))]
-#![warn(missing_docs)]
 
 /// A prelude module to easily import Clawless essentials
 ///

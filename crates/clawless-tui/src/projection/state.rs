@@ -7,36 +7,38 @@ use super::Entry;
 ///
 /// [`Projection`]: super::Projection
 #[derive(Debug, Default)]
-pub struct ProjectionState {
+pub(super) struct ProjectionState {
+    /// The entries so far, in the order that the drain task received them
     entries: Vec<Entry>,
+    /// True after the event channel closes and the drain task processes every event
     complete: bool,
 }
 
 impl ProjectionState {
     /// Appends an entry to the end of the entry list
-    pub fn push(&mut self, entry: Entry) {
+    pub(super) fn push(&mut self, entry: Entry) {
         self.entries.push(entry);
     }
 
     /// Marks the projection as complete
     ///
     /// Called by the drain task when the event channel closes.
-    pub fn set_complete(&mut self) {
+    pub(super) fn set_complete(&mut self) {
         self.complete = true;
     }
 
     /// Returns whether the event stream has closed and all events have been drained
-    pub fn is_complete(&self) -> bool {
+    pub(super) fn is_complete(&self) -> bool {
         self.complete
     }
 
     /// Returns a clone of all accumulated entries in receive order
-    pub fn entries(&self) -> Vec<Entry> {
+    pub(super) fn entries(&self) -> Vec<Entry> {
         self.entries.clone()
     }
 
     /// Returns cloned message entries only
-    pub fn messages(&self) -> Vec<Entry> {
+    pub(super) fn messages(&self) -> Vec<Entry> {
         self.entries
             .iter()
             .filter(|entry| match entry {
@@ -49,7 +51,7 @@ impl ProjectionState {
     }
 
     /// Returns cloned detail entries only
-    pub fn details(&self) -> Vec<Entry> {
+    pub(super) fn details(&self) -> Vec<Entry> {
         self.entries
             .iter()
             .filter(|entry| match entry {
@@ -62,7 +64,7 @@ impl ProjectionState {
     }
 
     /// Returns cloned artifact entries only
-    pub fn artifacts(&self) -> Vec<Entry> {
+    pub(super) fn artifacts(&self) -> Vec<Entry> {
         self.entries
             .iter()
             .filter(|entry| match entry {
@@ -77,6 +79,10 @@ impl ProjectionState {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use std::fmt;
     use std::sync::Arc;
 

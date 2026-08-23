@@ -1,8 +1,10 @@
-pub mod application;
-pub mod command;
+/// Generator for `#[application]` functions
+pub(crate) mod application;
+/// Generator for `#[command]` functions
+pub(crate) mod command;
 
-pub use application::ApplicationGenerator;
-pub use command::CommandGenerator;
+pub(crate) use application::ApplicationGenerator;
+pub(crate) use command::CommandGenerator;
 use darling::FromMeta;
 use darling::ast::NestedMeta;
 use proc_macro2::TokenStream;
@@ -20,7 +22,7 @@ use crate::inventory::inventory_name;
 ///
 /// Required methods supply the generator-specific parts. Default methods wire them together into the
 /// common code generation patterns.
-pub trait Generator {
+pub(crate) trait Generator {
     /// Returns the function identifier (e.g., `greet`, `dashboard`)
     fn ident(&self) -> Ident;
 
@@ -113,11 +115,14 @@ pub trait Generator {
 /// `.arg_required_else_help(true)`, and `root` switches the about text to
 /// `clap::crate_description!()`.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, FromMeta)]
-pub struct Attributes {
+pub(crate) struct Attributes {
+    /// Shows help instead of the command body when the user gives no subcommand
     #[darling(default)]
     require_subcommand: bool,
+    /// Marks the entry point, which takes its about text from the crate description
     #[darling(default)]
     root: bool,
+    /// Alternative names that clap accepts for this command
     #[darling(default, multiple)]
     alias: Vec<String>,
 }
@@ -125,19 +130,19 @@ pub struct Attributes {
 impl Attributes {
     /// When true, `build_command` adds `.arg_required_else_help(true)` so clap shows help instead
     /// of running the command body when no subcommand is provided
-    pub fn require_subcommand(&self) -> bool {
+    pub(crate) fn require_subcommand(&self) -> bool {
         self.require_subcommand
     }
 
     /// When true, `build_command` uses `clap::crate_description!()` for the about text instead of
     /// the function's doc comment, and `InventoryGenerator::submit` skips registration since the
     /// root is the entry point, not a subcommand
-    pub fn root(&self) -> bool {
+    pub(crate) fn root(&self) -> bool {
         self.root
     }
 
     /// Aliases that `build_command` passes to `.visible_aliases(...)` on the clap `Command`
-    pub fn alias(&self) -> &[String] {
+    pub(crate) fn alias(&self) -> &[String] {
         &self.alias
     }
 }
@@ -149,19 +154,21 @@ impl Attributes {
 /// both to the generated clap `Command` so that `--help` shows the full comment while the
 /// subcommand list shows only the first line.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub struct Documentation {
+pub(crate) struct Documentation {
+    /// First line of the doc comment, which clap uses for `.about()`
     short: String,
+    /// All lines with newlines between them, which clap uses for `.long_about()`
     long: String,
 }
 
 impl Documentation {
     /// First line of the doc comment, used as clap's `.about()` text in subcommand listings
-    pub fn short(&self) -> &str {
+    pub(crate) fn short(&self) -> &str {
         &self.short
     }
 
     /// All lines joined by newlines, used as clap's `.long_about()` text in `--help` output
-    pub fn long(&self) -> &str {
+    pub(crate) fn long(&self) -> &str {
         &self.long
     }
 }
@@ -174,7 +181,7 @@ impl Documentation {
 /// # Errors
 ///
 /// Returns a compile error if the attribute syntax is invalid or contains unsupported keys.
-pub fn parse_attributes(attrs: TokenStream, macro_name: &str) -> Result<Attributes> {
+pub(crate) fn parse_attributes(attrs: TokenStream, macro_name: &str) -> Result<Attributes> {
     let argument_list = NestedMeta::parse_meta_list(attrs.clone()).map_err(|e| {
         Error::new_spanned(
             attrs.clone(),
@@ -206,7 +213,7 @@ pub fn parse_attributes(attrs: TokenStream, macro_name: &str) -> Result<Attribut
 /// Walks the function's `#[doc = "..."]` attributes (which is how the compiler represents `///`
 /// comments) and collects them into a `Documentation` with separate short and long forms for
 /// clap's `.about()` and `.long_about()`.
-pub fn extract_function_documentation(input_fn: &ItemFn) -> Option<Documentation> {
+pub(crate) fn extract_function_documentation(input_fn: &ItemFn) -> Option<Documentation> {
     let mut docs = Vec::new();
 
     for attr in input_fn.attrs.iter() {
@@ -233,6 +240,13 @@ pub fn extract_function_documentation(input_fn: &ItemFn) -> Option<Documentation
     }
 }
 
+/// Builds the clap `Command` constructor expression for a leaf
+///
+/// The expression begins with `augment_args` on the argument type, which gives clap the flags
+/// of the leaf. It then adds the name, the help text, and the attribute settings.
+///
+/// Both generators use this function. Commands and applications therefore have an identical
+/// surface in clap.
 fn build_command(
     ident: &Ident,
     args_type: &Type,
@@ -276,6 +290,10 @@ fn build_command(
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use indoc::indoc;
 
     use super::*;

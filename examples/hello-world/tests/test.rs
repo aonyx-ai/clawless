@@ -1,3 +1,12 @@
+//! Integration tests for the hello-world example
+//!
+//! The tests run the binary and examine its output. They cover the default greeting and an
+//! explicit name argument.
+
+// An assertion in a test panics by design. A `# Panics` section on every test
+// would repeat that and give the reader no information.
+#![allow(clippy::missing_panics_doc)]
+
 use assert_cmd::cargo::*;
 use predicates::prelude::*;
 

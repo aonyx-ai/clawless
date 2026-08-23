@@ -16,6 +16,9 @@ pub struct WaitArgs {}
 /// cancellation wait
 /// ```
 #[command]
+// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
+// raw Markdown heading in the terminal rather than documenting an API.
+#[allow(clippy::missing_errors_doc)]
 pub async fn wait(_args: WaitArgs, context: Context) -> CommandResult {
     message!("waiting");
     context.cancellation().cancelled().await;

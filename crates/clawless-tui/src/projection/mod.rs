@@ -46,7 +46,9 @@ use tokio::task::JoinHandle;
 pub use self::entry::Entry;
 use self::state::ProjectionState;
 
+/// The form of an [`Event`] that a TUI application reads
 mod entry;
+/// The state that the projection lock protects
 mod state;
 
 /// Pull-based, queryable view of the event stream
@@ -95,7 +97,9 @@ mod state;
 // r[impl projection.safety.unpin]
 #[derive(Debug)]
 pub struct Projection {
+    /// The entries so far, which the projection shares with the drain task
     state: Arc<RwLock<ProjectionState>>,
+    /// Handle to the drain task, which stops when Clawless drops the projection
     _drain_handle: JoinHandle<()>,
 }
 
@@ -148,6 +152,8 @@ impl Projection {
     ///
     /// Panics if the internal lock is poisoned.
     // r[impl projection.query.entries]
+    // Panics only on a poisoned lock, as documented above.
+    #[allow(clippy::expect_used)]
     pub fn entries(&self) -> Vec<Entry> {
         self.state.read().expect("lock poisoned").entries()
     }
@@ -162,6 +168,8 @@ impl Projection {
     ///
     /// [`entries`]: Projection::entries
     // r[impl projection.query.messages]
+    // Panics only on a poisoned lock, as documented above.
+    #[allow(clippy::expect_used)]
     pub fn messages(&self) -> Vec<Entry> {
         self.state.read().expect("lock poisoned").messages()
     }
@@ -176,6 +184,8 @@ impl Projection {
     ///
     /// [`entries`]: Projection::entries
     // r[impl projection.query.details]
+    // Panics only on a poisoned lock, as documented above.
+    #[allow(clippy::expect_used)]
     pub fn details(&self) -> Vec<Entry> {
         self.state.read().expect("lock poisoned").details()
     }
@@ -190,6 +200,8 @@ impl Projection {
     ///
     /// [`entries`]: Projection::entries
     // r[impl projection.query.artifacts]
+    // Panics only on a poisoned lock, as documented above.
+    #[allow(clippy::expect_used)]
     pub fn artifacts(&self) -> Vec<Entry> {
         self.state.read().expect("lock poisoned").artifacts()
     }
@@ -205,6 +217,8 @@ impl Projection {
     ///
     /// [`EventSender`]: clawless_core::event::EventSender
     // r[impl projection.lifecycle.complete]
+    // Panics only on a poisoned lock, as documented above.
+    #[allow(clippy::expect_used)]
     pub fn is_complete(&self) -> bool {
         self.state.read().expect("lock poisoned").is_complete()
     }
@@ -215,6 +229,13 @@ impl Projection {
 /// Runs until `receiver.recv()` returns `None` (all senders dropped, channel empty). Each event
 /// is translated into an [`Entry`] and appended to the state. When the loop exits, the state is
 /// marked as complete.
+///
+/// # Panics
+///
+/// Panics if the internal lock is poisoned.
+// The lock is poisoned only if another thread panicked while holding it. The drain task has
+// no way to publish events into a state it cannot lock, so it fails loudly instead.
+#[allow(clippy::expect_used)]
 async fn drain(mut receiver: EventReceiver, state: Arc<RwLock<ProjectionState>>) {
     while let Some(event) = receiver.recv().await {
         let entry = match event {
@@ -229,6 +250,10 @@ async fn drain(mut receiver: EventReceiver, state: Arc<RwLock<ProjectionState>>)
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use std::fmt;
 
     use clawless_core::event::event_channel;

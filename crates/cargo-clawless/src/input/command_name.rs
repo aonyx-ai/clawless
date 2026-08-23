@@ -5,6 +5,7 @@ use bon::Builder;
 use convert_case::{Case, Casing};
 use getset::Getters;
 
+/// Separator that divides a nested command name into its module path and leaf name
 const COMMAND_SEPARATOR: &str = "/";
 
 /// Represents a parsed command name with optional parent modules

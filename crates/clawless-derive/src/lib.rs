@@ -1,5 +1,4 @@
 #![cfg_attr(not(doctest),doc = include_str!("../README.md"))]
-#![warn(missing_docs)]
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -8,7 +7,9 @@ use syn::{ItemFn, parse_macro_input};
 use crate::generator::{ApplicationGenerator, CommandGenerator, Generator};
 use crate::inventory::InventoryGenerator;
 
+/// Code generators shared by the `#[command]` and `#[application]` macros
 mod generator;
+/// Compile-time code that links a subcommand to its parent module
 mod inventory;
 
 /// Writes an informational message via the `Output` on `Context`
@@ -92,6 +93,15 @@ pub fn artifact(input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// Expands one of the output macros into a call on the local `context`
+///
+/// The `message!`, `detail!`, and `artifact!` macros differ only in the `Output` method that
+/// they call. They therefore share one expansion.
+///
+/// This function builds the `context` identifier with [`Span::call_site`]. The identifier then
+/// resolves to the local variable of the caller, not to a hygienic name.
+///
+/// [`Span::call_site`]: proc_macro2::Span::call_site
 fn output_format_macro(input: TokenStream, method: &str) -> TokenStream {
     let input = proc_macro2::TokenStream::from(input);
     let context = proc_macro2::Ident::new("context", proc_macro2::Span::call_site());

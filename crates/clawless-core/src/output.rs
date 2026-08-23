@@ -47,6 +47,7 @@ use crate::event::{Event, EventSender, SendError};
 // r[impl output.safety.concurrent]
 #[derive(Clone, Debug)]
 pub struct Output {
+    /// Channel that carries the emitted events
     sender: EventSender,
 }
 
@@ -180,6 +181,10 @@ impl Output {
 
 #[cfg(test)]
 mod tests {
+    // An assertion in a test panics by design. A `# Panics` section on every test
+    // would repeat that and give the reader no information.
+    #![allow(clippy::missing_panics_doc)]
+
     use std::fmt;
 
     use serde::Serialize;

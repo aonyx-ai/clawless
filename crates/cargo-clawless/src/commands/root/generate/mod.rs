@@ -2,6 +2,7 @@
 
 use clawless::prelude::*;
 
+/// Generates a single command file and registers it with its parent module
 mod command;
 
 /// Arguments for the `generate` command group
@@ -19,6 +20,9 @@ pub struct GenerateArgs {}
 /// cargo clawless generate command my-command
 /// ```
 #[command(require_subcommand, alias = "g")]
+// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
+// raw Markdown heading in the terminal rather than documenting an API.
+#[allow(clippy::missing_errors_doc)]
 pub async fn generate(_args: GenerateArgs, _context: Context) -> CommandResult {
     Ok(())
 }
