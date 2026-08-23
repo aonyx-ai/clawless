@@ -24,7 +24,7 @@ pub use tokio_util::sync::WaitForCancellationFuture;
 /// # Examples
 ///
 /// ```
-/// use clawless::prelude::*;
+/// use clawless_core::cancellation::Cancellation;
 ///
 /// let root = Cancellation::new();
 /// let child = root.child();
@@ -57,7 +57,7 @@ impl Cancellation {
     /// # Examples
     ///
     /// ```
-    /// use clawless::prelude::*;
+    /// use clawless_core::cancellation::Cancellation;
     ///
     /// let cancellation = Cancellation::new();
     /// assert!(!cancellation.is_cancelled());
@@ -75,7 +75,7 @@ impl Cancellation {
     /// # Examples
     ///
     /// ```
-    /// use clawless::prelude::*;
+    /// use clawless_core::cancellation::Cancellation;
     ///
     /// let parent = Cancellation::new();
     /// let child = parent.child();
@@ -101,7 +101,7 @@ impl Cancellation {
     /// # Examples
     ///
     /// ```
-    /// use clawless::prelude::*;
+    /// use clawless_core::cancellation::Cancellation;
     ///
     /// let cancellation = Cancellation::new();
     /// cancellation.cancel();
@@ -124,7 +124,7 @@ impl Cancellation {
     /// # Examples
     ///
     /// ```
-    /// use clawless::prelude::*;
+    /// use clawless_core::cancellation::Cancellation;
     ///
     /// let cancellation = Cancellation::new();
     /// assert!(!cancellation.is_cancelled());
@@ -146,7 +146,7 @@ impl Cancellation {
     /// # Examples
     ///
     /// ```
-    /// use clawless::prelude::*;
+    /// use clawless_core::cancellation::Cancellation;
     ///
     /// # #[tokio::main]
     /// # async fn main() {
