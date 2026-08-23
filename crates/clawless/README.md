@@ -1,22 +1,27 @@
 # 🦦 Clawless
 
-`clawless` is a framework for building command-line applications with Rust. Its
-goal is to provide high-level building blocks and well-designed conventions so
-that users can focus on their applications.
+`clawless` is an opinionated, batteries-included framework for building
+command-line applications with Rust. It features low-level building blocks and
+high-level abstractions that can be used to build stateless CLIs or stateful
+TUI applications.
 
-The library exports a few macros that create a command-line application, parse
-arguments, and then call user-defined functions.
-
-## Project Status
-
-Clawless is in a very early prototyping phase and not considered ready for
-production use. Follow the project and check out the open issues to understand
-the crate's current limitations.
+This crate is the facade of the framework. It re-exports [`clawless-core`],
+[`clawless-cli`], and [`clawless-tui`], along with the macros from
+[`clawless-derive`], so that applications need only a single dependency. The
+full documentation and guides are available at [clawless.rs].
 
 ## Usage
 
-First of all, generate a new binary crate using `cargo new --bin <name>`. Inside
-the crate, open `src/main.rs` and replace the generated contents with the
+The quickest way to create a new project is the scaffolding tool:
+
+```shell
+cargo install cargo-clawless
+cargo clawless new my-cli
+```
+
+To set up a project manually instead, create a new binary crate with
+`cargo new --bin <name>`. Then add `clawless` as a dependency. Inside the
+crate, open `src/main.rs` and replace the generated contents with the
 following snippet:
 
 ```rust,ignore
@@ -25,8 +30,7 @@ mod commands;
 clawless::main!();
 ```
 
-Next, create `src/commands.rs` (or `src/commands/mod.rs`) to set up your
-commands module:
+Next, create `src/commands.rs` to set up your commands module:
 
 ```rust,ignore
 clawless::commands!();
@@ -47,7 +51,7 @@ pub struct GreetArgs {
 
 #[command]
 pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
-    println!("Hello, {}!", args.name);
+    message!("Hello, {}!", args.name);
     Ok(())
 }
 ```
@@ -74,11 +78,11 @@ module hierarchy naturally maps to subcommand groups:
 ```text
 src/
 ├── main.rs
+├── commands.rs
 └── commands/
-    ├── mod.rs
     ├── greet.rs
+    ├── db.rs
     └── db/
-        ├── mod.rs
         ├── migrate.rs
         └── seed.rs
 ```
@@ -88,6 +92,9 @@ With this structure:
 - `cargo run -- greet` runs the `greet` command
 - `cargo run -- db migrate` runs the `db::migrate` command
 - `cargo run -- db seed` runs the `db::seed` command
+
+Parent modules declare their children, so `src/commands/db.rs` contains
+`mod migrate;` and `mod seed;`.
 
 ## License
 
@@ -103,3 +110,9 @@ at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
+
+[clawless.rs]: https://clawless.rs
+[`clawless-cli`]: https://docs.rs/clawless-cli
+[`clawless-core`]: https://docs.rs/clawless-core
+[`clawless-derive`]: https://docs.rs/clawless-derive
+[`clawless-tui`]: https://docs.rs/clawless-tui
