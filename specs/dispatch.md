@@ -43,6 +43,16 @@ the subcommand name and calling the child's resolve function.
 
 ## Execution
 
+Execution sets up the lifecycle that a leaf needs and then calls the leaf. The
+`#[command]` and `#[application]` macros generate a function for that call, but
+a caller that builds its command tree at run time has no function to name: the
+leaf it resolved is a value that it owns. A runner therefore states what it
+calls, not how that callable came to exist.
+
+r[dispatch.exec.callable]
+A runner MUST accept any callable that executes the leaf, and MUST NOT require
+a function pointer.
+
 r[dispatch.exec.command-runner]
 When the resolved leaf is a command, the execution phase MUST delegate to a
 runner that creates the event channel, context, presenter, and async runtime.
