@@ -1,0 +1,13 @@
+bin.name = "process"
+args = ["--verbose", "run", "sh", "-c", "echo out; echo err 1>&2"]
+status.code = 0
+stdout = """
+running sh -c "echo out; echo err 1>&2"
+$ sh -c "echo out; echo err 1>&2"
+out
+sh -c "echo out; echo err 1>&2" exited with code 0
+4 bytes on standard output, 4 bytes on standard error
+"""
+stderr = """
+err
+"""

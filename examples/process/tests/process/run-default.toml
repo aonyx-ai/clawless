@@ -1,0 +1,7 @@
+bin.name = "process"
+args = ["run", "echo", "hello"]
+status.code = 0
+stdout = """
+running echo hello
+6 bytes on standard output, 0 bytes on standard error
+"""

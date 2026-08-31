@@ -46,6 +46,12 @@ Cooperative shutdown through cancellation tokens. Learn how Clawless handles
 Ctrl+C signals, how commands observe cancellation to shut down gracefully, and
 how parent-child tokens enable scoped cancellation.
 
+### [External Programs](./external-programs)
+
+Running other programs from your commands. Learn how Clawless streams the
+output of a program through the event system while it runs, how cancellation
+kills it, and how to read what it produced afterwards.
+
 ### [Macros](./macros)
 
 Clawless uses four macros to wire up your CLI. Understand how `main!`,
@@ -104,10 +110,12 @@ If you're new to Clawless:
 4. Read **[Rendering](./rendering)** to understand how output reaches the
    terminal
 5. Read **[Cancellation](./cancellation)** to understand cooperative shutdown
-6. Explore **[Project Structure](./project-structure)** to understand how to
+6. Read **[External Programs](./external-programs)** when your CLI needs to run
+   other programs
+7. Explore **[Project Structure](./project-structure)** to understand how to
    organize your CLI
-7. Read **[Macros](./macros)** if you're curious about implementation details
-8. Reference **[Naming Conventions](./naming-conventions)** when you need to
+8. Read **[Macros](./macros)** if you're curious about implementation details
+9. Reference **[Naming Conventions](./naming-conventions)** when you need to
    look up specific rules
 
 For experienced developers, the **[Macros](./macros)** section provides insight

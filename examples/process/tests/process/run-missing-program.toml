@@ -1,0 +1,13 @@
+bin.name = "process"
+args = ["run", "clawless-no-such-program"]
+status.code = 1
+stdout = """
+running clawless-no-such-program
+"""
+stderr = """
+Error: run the program
+
+Caused by:
+    0: failed to start the command `clawless-no-such-program`
+    1: [..]
+"""
