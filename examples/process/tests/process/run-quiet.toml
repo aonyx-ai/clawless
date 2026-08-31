@@ -1,0 +1,6 @@
+bin.name = "process"
+args = ["--quiet", "run", "echo", "hello"]
+status.code = 0
+stdout = """
+6 bytes on standard output, 0 bytes on standard error
+"""

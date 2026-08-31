@@ -1,0 +1,12 @@
+bin.name = "process"
+args = ["run", "false"]
+status.code = 1
+stdout = """
+running false
+"""
+stderr = """
+Error: check what the program reported
+
+Caused by:
+    the command `false` ended with [..], and it wrote nothing to its standard error
+"""

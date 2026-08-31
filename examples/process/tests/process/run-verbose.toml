@@ -1,0 +1,10 @@
+bin.name = "process"
+args = ["--verbose", "run", "echo", "hello"]
+status.code = 0
+stdout = """
+running echo hello
+$ echo hello
+hello
+echo hello exited with code 0
+6 bytes on standard output, 0 bytes on standard error
+"""

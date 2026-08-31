@@ -1,0 +1,9 @@
+bin.name = "process"
+args = ["--json", "run", "echo", "hello"]
+status.code = 0
+stdout = """
+{"stdout":6,"stderr":0}
+"""
+stderr = """
+running echo hello
+"""

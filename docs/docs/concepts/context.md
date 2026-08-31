@@ -134,6 +134,32 @@ full explanation.
 
 [output-type]: https://docs.rs/clawless/latest/clawless/output/struct.Output.html
 
+### External programs
+
+Run another program and stream its output through the event system:
+
+```rust
+use clawless::prelude::*;
+
+#[command]
+pub async fn build(args: BuildArgs, context: Context) -> CommandResult {
+    context
+        .process()
+        .run(Invocation::new("cargo").arg("build"))
+        .await?
+        .require_success()?;
+
+    Ok(())
+}
+```
+
+The `process()` method returns a [`Process`][process-type] wired to the output
+and the cancellation token of this context. Every line the program writes
+becomes an event while it runs, and Ctrl+C kills the program. See
+[External Programs](./external-programs) for the full explanation.
+
+[process-type]: https://docs.rs/clawless/latest/clawless/process/struct.Process.html
+
 ## Future features
 
 The Context system is designed to be the central access point for all framework
@@ -240,6 +266,8 @@ Now that you understand Context, learn about:
   and JSON support
 - **[Cancellation](./cancellation)** - How cooperative shutdown works through
   the cancellation token
+- **[External Programs](./external-programs)** - Running other programs from
+  your commands
 - **[Commands](./commands)** - How Context integrates with command functions
 - **[Arguments](./arguments)** - The other parameter commands receive
 - **[Project Structure](./project-structure)** - Organizing commands in your

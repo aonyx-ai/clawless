@@ -776,6 +776,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "process"
+version = "0.6.1"
+dependencies = [
+ "clawless",
+ "serde",
+ "trycmd",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"

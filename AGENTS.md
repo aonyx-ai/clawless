@@ -112,7 +112,9 @@ crates/
   └── clawless-tui/          # TUI presentation layer (pull-based)
 examples/
   ├── cancellation/          # Cooperative cancellation example
-  └── hello-world/           # Reference example project
+  ├── hello-world/           # Reference example project
+  ├── output/                # Messages, details, and artifacts
+  └── process/               # Running external programs
 docs/                        # Docusaurus documentation site
 specs/                       # Design specifications
 ```
@@ -517,6 +519,9 @@ fn helper() {}
 - Name tests descriptively: `function_name_<condition>_<result>`, e.g.
   `greet_with_name_returns_greeting`.
 - Each test should have exactly one assertion.
+- A `// r[verify <rule>]` comment belongs to the test directly below it.
+  Alphabetical ordering means a new test often lands between an existing
+  annotation and its test, so check what sits above the insertion point.
 
 Testing tools:
 
