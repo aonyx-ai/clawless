@@ -6,7 +6,7 @@ from the rendering strategy.
 
 ## Sending events
 
-Commands produce three kinds of output through Output. Each method sends an
+Commands produce four kinds of output through Output. Each method sends an
 event into the channel for the presenter to consume.
 
 r[output.send.message]
@@ -17,6 +17,10 @@ Output MUST be able to send supplementary text as an event.
 
 r[output.send.artifact]
 Output MUST be able to send structured data as an event.
+
+r[output.send.process]
+Output MUST be able to send one step in the run of an external program as an
+event.
 
 r[output.send.async]
 Sending output MUST be an asynchronous operation.
