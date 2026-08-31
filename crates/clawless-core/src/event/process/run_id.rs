@@ -6,8 +6,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// The source of the identities that [`RunId::next`] hands out
 ///
 /// The counter is a single static, so every identity is unique within the
-/// process regardless of which handle hands it out. A counter per handle would
-/// repeat itself as soon as a command cloned its context.
+/// process regardless of which [`Process`] handed it out. A counter per handle
+/// would repeat itself as soon as a command cloned its context.
+///
+/// [`Process`]: crate::process::Process
 static NEXT_RUN_ID: AtomicU64 = AtomicU64::new(0);
 
 /// The identity of one run of an external program
@@ -45,9 +47,9 @@ pub struct RunId(u64);
 impl RunId {
     /// Returns an identity that no earlier call returned
     ///
-    /// A run calls this once, so a command that runs a program does not need
-    /// it. A test that stands in for a run builds its events with identities
-    /// from here.
+    /// [`Process::run`] calls this once per run, so a command that runs a
+    /// program does not need it. A test that stands in for a run builds its
+    /// events with identities from here.
     ///
     /// The counter wraps after `2^64` runs. An application that started a
     /// program every nanosecond would reach that point after more than five
@@ -62,6 +64,8 @@ impl RunId {
     ///
     /// assert_eq!(id, id);
     /// ```
+    ///
+    /// [`Process::run`]: crate::process::Process::run
     // r[impl process.event.correlation.unique]
     pub fn next() -> Self {
         Self(NEXT_RUN_ID.fetch_add(1, Ordering::Relaxed))

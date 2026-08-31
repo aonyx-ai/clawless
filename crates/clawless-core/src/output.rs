@@ -5,8 +5,10 @@
 //! rendering strategy. Commands call [`message`], [`detail`], or [`artifact`] to emit events into
 //! the channel; the Presenter consumes them and decides how to render.
 //!
-//! [`process_event`] carries the steps of an external program that a command runs.
+//! [`process_event`] carries the steps of an external program that a command runs. Commands do not
+//! usually call it, because [`Process`] reports a run through it.
 //!
+//! [`Process`]: crate::process::Process
 //! [`artifact`]: Output::artifact
 //! [`detail`]: Output::detail
 //! [`message`]: Output::message
@@ -184,8 +186,9 @@ impl Output {
 
     /// Sends one step in the run of an external program
     ///
-    /// An application that drives an external program, and wants its output to reach the presenter
-    /// as the program writes it, reports each step of the run through this method.
+    /// [`Process`] calls this for every step of a run, so a command that runs a program through
+    /// Clawless does not call it. An application that drives a program itself, and wants its
+    /// output to reach the presenter in the same shape, reports the run through this method.
     ///
     /// # Errors
     ///
@@ -216,6 +219,7 @@ impl Output {
     /// ```
     ///
     /// [`EventReceiver`]: crate::event::EventReceiver
+    /// [`Process`]: crate::process::Process
     // r[impl output.send.process]
     pub async fn process_event(&self, event: ProcessEvent) -> Result<(), SendError> {
         self.sender.send(Event::Process(Box::new(event))).await

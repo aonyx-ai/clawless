@@ -18,5 +18,5 @@ pub mod signal;
 pub mod prelude {
     pub use super::cancellation::Cancellation;
     pub use super::context::{Context, ContextError, CurrentWorkingDirectory};
-    pub use super::process::{Execution, Invocation};
+    pub use super::process::{Execution, Invocation, Process};
 }

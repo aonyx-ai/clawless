@@ -14,6 +14,7 @@ pub use self::current_working_directory::CurrentWorkingDirectory;
 pub use self::error::ContextError;
 use crate::cancellation::Cancellation;
 use crate::output::Output;
+use crate::process::Process;
 
 /// Newtype for the directory that a command runs in
 mod current_working_directory;
@@ -111,6 +112,43 @@ impl Context {
     }
 }
 
+impl Context {
+    /// Returns the interface that runs external programs
+    ///
+    /// The returned [`Process`] reports every run through the output of this context and stops a
+    /// run when the cancellation token of this context is cancelled. A command therefore gets live
+    /// output and cooperative shutdown without wiring either of them itself.
+    ///
+    /// Each call builds a handle over the same channel and the same token, so a command can call
+    /// this method wherever it runs a program instead of holding the handle.
+    ///
+    /// The handle takes the default grace period, which is the time a program gets to end itself
+    /// before Clawless kills it. A command that drives a program needing longer builds its own
+    /// handle with [`Process::builder`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// #[command]
+    /// pub async fn build(args: BuildArgs, context: Context) -> CommandResult {
+    ///     context
+    ///         .process()
+    ///         .run(Invocation::new("cargo").arg("build"))
+    ///         .await?
+    ///         .require_success()?;
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
+    // r[impl context.process]
+    pub fn process(&self) -> Process {
+        Process::builder()
+            .output(self.output.clone())
+            .cancellation(self.cancellation.clone())
+            .build()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     // An assertion in a test panics by design. A `# Panics` section on every test
@@ -120,7 +158,9 @@ mod tests {
     use std::path::Path;
 
     use super::*;
+    use crate::event::Event;
     use crate::event::event_channel;
+    use crate::process::Invocation;
 
     fn test_output() -> Output {
         let (sender, _receiver) = event_channel();
@@ -181,6 +221,34 @@ mod tests {
             .expect("should create context");
 
         assert!(!context.cancellation().is_cancelled());
+    }
+
+    // r[verify context.process]
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn process_reports_through_the_output_of_the_context() {
+        let (sender, mut receiver) = event_channel();
+        let context = Context::builder()
+            .output(Output::new(sender))
+            .build()
+            .expect("should build");
+        let invocation = Invocation::new("sh").arg("-c").arg("exit 0");
+
+        context
+            .process()
+            .run(invocation.clone())
+            .await
+            .expect("should run");
+
+        assert_eq!(
+            receiver.recv().await.map(|event| match event {
+                Event::Process(event) => event.to_string(),
+                Event::Message(text) => text,
+                Event::Detail(text) => text,
+                Event::Artifact(artifact) => artifact.to_string(),
+            }),
+            Some(format!("$ {invocation}"))
+        );
     }
 
     // r[verify context.safety.send]
