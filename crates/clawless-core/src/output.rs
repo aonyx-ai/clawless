@@ -5,14 +5,18 @@
 //! rendering strategy. Commands call [`message`], [`detail`], or [`artifact`] to emit events into
 //! the channel; the Presenter consumes them and decides how to render.
 //!
+//! [`process_event`] carries the steps of an external program that a command runs.
+//!
 //! [`artifact`]: Output::artifact
 //! [`detail`]: Output::detail
 //! [`message`]: Output::message
+//! [`process_event`]: Output::process_event
 
 use std::fmt::{Debug, Display};
 
 use serde::Serialize;
 
+use crate::event::process::ProcessEvent;
 use crate::event::{Event, EventSender, SendError};
 
 /// Command output interface that wraps an event channel sender
@@ -177,6 +181,45 @@ impl Output {
     {
         self.sender.send(Event::Artifact(Box::new(value))).await
     }
+
+    /// Sends one step in the run of an external program
+    ///
+    /// An application that drives an external program, and wants its output to reach the presenter
+    /// as the program writes it, reports each step of the run through this method.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SendError`] if the [`EventReceiver`] has been dropped.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::event_channel;
+    /// use clawless_core::event::process::{ProcessEvent, RunId};
+    /// use clawless_core::output::Output;
+    /// use clawless_core::process::Invocation;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// let (sender, _receiver) = event_channel();
+    /// let output = Output::new(sender);
+    ///
+    /// output
+    ///     .process_event(ProcessEvent::Started {
+    ///         id: RunId::next(),
+    ///         invocation: Invocation::new("git").arg("status"),
+    ///         process_id: None,
+    ///     })
+    ///     .await
+    ///     .expect("should send");
+    /// # }
+    /// ```
+    ///
+    /// [`EventReceiver`]: crate::event::EventReceiver
+    // r[impl output.send.process]
+    pub async fn process_event(&self, event: ProcessEvent) -> Result<(), SendError> {
+        self.sender.send(Event::Process(Box::new(event))).await
+    }
 }
 
 #[cfg(test)]
@@ -191,6 +234,8 @@ mod tests {
 
     use super::*;
     use crate::event::event_channel;
+    use crate::event::process::RunId;
+    use crate::process::Invocation;
 
     #[derive(Clone, Debug, Serialize)]
     struct TestArtifact {
@@ -252,6 +297,33 @@ mod tests {
 
         assert!(matches!(first, Event::Message(ref s) if s == "from original"));
         assert!(matches!(second, Event::Message(ref s) if s == "from clone"));
+    }
+
+    // r[verify output.send.process]
+    #[tokio::test]
+    async fn process_event_sends_process_event() {
+        let (sender, mut receiver) = event_channel();
+        let output = Output::new(sender);
+        let invocation = Invocation::new("git").arg("status");
+
+        output
+            .process_event(ProcessEvent::Started {
+                id: RunId::next(),
+                invocation: invocation.clone(),
+                process_id: None,
+            })
+            .await
+            .expect("should send");
+
+        assert_eq!(
+            receiver.recv().await.map(|event| match event {
+                Event::Process(event) => event.to_string(),
+                Event::Message(text) => text,
+                Event::Detail(text) => text,
+                Event::Artifact(artifact) => artifact.to_string(),
+            }),
+            Some(format!("$ {invocation}"))
+        );
     }
 
     // r[verify output.send.detail]

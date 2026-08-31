@@ -21,7 +21,9 @@ use std::pin::Pin;
 
 use async_trait::async_trait;
 use bon::Builder;
+use clawless_core::event::process::ProcessEvent;
 use clawless_core::event::{Event, EventReceiver};
+use clawless_core::process::Stream;
 
 use super::Presenter;
 use crate::error::CommandResult;
@@ -67,6 +69,27 @@ pub struct TerminalPresenter {
     receiver: EventReceiver,
 }
 
+/// Reports whether an event of a run belongs on the error stream
+///
+/// A program separates its result from its diagnostics, and the presenter keeps that separation:
+/// what a program wrote to its standard error is written to the standard error of the
+/// application. A reader that redirects one of the two streams therefore sees the same split that
+/// running the program by hand would give.
+///
+/// The start and the end of a run are not output of the program. They belong with the result,
+/// which is where a transcript reads in the order that a person expects.
+// r[impl process.render.streams]
+fn is_diagnostic(event: &ProcessEvent) -> bool {
+    match event {
+        ProcessEvent::Started { .. } => false,
+        ProcessEvent::Finished { .. } => false,
+        ProcessEvent::Line { line, .. } => match line.stream() {
+            Stream::StandardError => true,
+            Stream::StandardOutput => false,
+        },
+    }
+}
+
 /// Renders one event to the terminal for the given verbosity and output mode
 ///
 /// In text mode, messages and details go to stdout. They therefore interleave with the
@@ -75,6 +98,10 @@ pub struct TerminalPresenter {
 /// In JSON mode, messages and details go to stderr instead. Stdout then carries only JSON
 /// artifacts, which a caller can pipe into another tool.
 ///
+/// The output of an external program is supplementary, so it follows the same rule as a detail
+/// and appears only when the user asks for verbose output. A command that wants a program to be
+/// visible at the default verbosity says so itself with a message.
+///
 /// # Panics
 ///
 /// Panics if the process cannot write to the output stream. A reader that closes the pipe
@@ -82,6 +109,7 @@ pub struct TerminalPresenter {
 // Writing to the process output stream fails only when the stream itself is gone, such as a
 // pipe the reader has closed. A presenter whose output stream has vanished has nowhere left
 // to report the failure, so it fails loudly rather than dropping output silently.
+// r[impl process.render.verbosity]
 #[allow(clippy::expect_used)]
 fn render_event(event: Event, verbosity: Verbosity, mode: OutputMode) {
     match event {
@@ -121,6 +149,23 @@ fn render_event(event: Event, verbosity: Verbosity, mode: OutputMode) {
             let mut handle = std::io::stdout().lock();
             writeln!(handle, "{line}").expect("should write artifact");
         }
+        Event::Process(event) => match verbosity {
+            Verbosity::Quiet | Verbosity::Default => {}
+            Verbosity::Verbose => {
+                let to_stderr = match mode {
+                    OutputMode::Json => true,
+                    OutputMode::Text => is_diagnostic(&event),
+                };
+
+                if to_stderr {
+                    let mut handle = std::io::stderr().lock();
+                    writeln!(handle, "{event}").expect("should write process event");
+                } else {
+                    let mut handle = std::io::stdout().lock();
+                    writeln!(handle, "{event}").expect("should write process event");
+                }
+            }
+        },
     }
 }
 
@@ -155,7 +200,12 @@ mod tests {
     // would repeat that and give the reader no information.
     #![allow(clippy::missing_panics_doc)]
 
+    use std::time::Duration;
+
     use clawless_core::event::event_channel;
+    use clawless_core::event::process::{Outcome, RunId};
+    use clawless_core::process::Invocation;
+    use clawless_core::process::Line;
 
     use super::*;
 
@@ -191,6 +241,58 @@ mod tests {
             .build();
 
         assert_eq!(presenter.verbosity, Verbosity::Verbose);
+    }
+
+    #[test]
+    fn is_diagnostic_with_a_finished_run_returns_false() {
+        let event = ProcessEvent::Finished {
+            id: RunId::next(),
+            invocation: Invocation::new("git"),
+            outcome: Outcome::Incomplete,
+            duration: Duration::ZERO,
+        };
+
+        let diagnostic = is_diagnostic(&event);
+
+        assert!(!diagnostic);
+    }
+
+    // r[verify process.render.streams]
+    #[test]
+    fn is_diagnostic_with_a_standard_error_line_returns_true() {
+        let event = ProcessEvent::Line {
+            id: RunId::next(),
+            line: Line::new(Stream::StandardError, "no such file"),
+        };
+
+        let diagnostic = is_diagnostic(&event);
+
+        assert!(diagnostic);
+    }
+
+    #[test]
+    fn is_diagnostic_with_a_standard_output_line_returns_false() {
+        let event = ProcessEvent::Line {
+            id: RunId::next(),
+            line: Line::new(Stream::StandardOutput, "hello"),
+        };
+
+        let diagnostic = is_diagnostic(&event);
+
+        assert!(!diagnostic);
+    }
+
+    #[test]
+    fn is_diagnostic_with_a_started_run_returns_false() {
+        let event = ProcessEvent::Started {
+            id: RunId::next(),
+            invocation: Invocation::new("git"),
+            process_id: None,
+        };
+
+        let diagnostic = is_diagnostic(&event);
+
+        assert!(!diagnostic);
     }
 
     #[tokio::test]

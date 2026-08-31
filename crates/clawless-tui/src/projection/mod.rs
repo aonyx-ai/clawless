@@ -210,6 +210,24 @@ impl Projection {
         self.state.read().expect("lock poisoned").artifacts()
     }
 
+    /// Returns accumulated entries for the runs of external programs only
+    ///
+    /// The entries arrive while a program runs, so a view that shows the last few lines of a
+    /// build reads them from here and takes the tail it has room for. Every entry carries the
+    /// [`ProcessId`] of its run, which is what separates two programs that run at the same time.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal lock is poisoned.
+    ///
+    /// [`ProcessId`]: clawless_core::event::process::RunId
+    // r[impl projection.query.processes]
+    // Panics only on a poisoned lock, as documented above.
+    #[allow(clippy::expect_used)]
+    pub fn processes(&self) -> Vec<Entry> {
+        self.state.read().expect("lock poisoned").processes()
+    }
+
     /// Reports whether the event stream has closed and all buffered events have been drained
     ///
     /// Returns `true` once all [`EventSender`]s have been dropped and the drain task has
@@ -246,6 +264,7 @@ async fn drain(mut receiver: EventReceiver, state: Arc<RwLock<ProjectionState>>)
             Event::Message(text) => Entry::Message(text),
             Event::Detail(text) => Entry::Detail(text),
             Event::Artifact(artifact) => Entry::Artifact(Arc::from(artifact)),
+            Event::Process(event) => Entry::Process(Arc::from(event)),
         };
         state.write().expect("lock poisoned").push(entry);
     }
@@ -261,6 +280,8 @@ mod tests {
     use std::fmt;
 
     use clawless_core::event::event_channel;
+    use clawless_core::event::process::{ProcessEvent, RunId};
+    use clawless_core::process::{Line, Stream};
     use serde::Serialize;
 
     use super::*;
@@ -533,6 +554,34 @@ mod tests {
         tokio::task::yield_now().await;
 
         assert!(projection.is_complete());
+    }
+
+    // r[verify projection.query.processes]
+    #[tokio::test]
+    async fn processes_returns_process_entries_only() {
+        let (sender, receiver) = event_channel();
+        let projection = Projection::new(receiver);
+
+        sender
+            .send(Event::Message("msg".to_string()))
+            .await
+            .expect("should send");
+        sender
+            .send(Event::Process(Box::new(ProcessEvent::Line {
+                id: RunId::next(),
+                line: Line::new(Stream::StandardOutput, "compiling"),
+            })))
+            .await
+            .expect("should send");
+        drop(sender);
+        tokio::task::yield_now().await;
+
+        let processes = projection.processes();
+
+        assert_eq!(
+            processes.iter().map(Entry::to_string).collect::<Vec<_>>(),
+            vec!["compiling".to_string()]
+        );
     }
 
     // r[verify projection.safety.send]
