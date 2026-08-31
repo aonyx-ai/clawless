@@ -31,6 +31,11 @@ A projection MUST store detail events as entries carrying the detail text.
 r[projection.entry.artifact]
 A projection MUST store artifact events as entries carrying the artifact value.
 
+r[projection.entry.process]
+A projection MUST store the events of an external program as entries carrying
+those events. An entry MUST be cheap to clone, because a run produces one entry
+per line of output and a render frame clones the entries it reads.
+
 r[projection.entry.order]
 Entries MUST be stored in the order they were received from the event channel.
 
@@ -50,6 +55,10 @@ A projection MUST provide filtered access to detail entries only.
 
 r[projection.query.artifacts]
 A projection MUST provide filtered access to artifact entries only.
+
+r[projection.query.processes]
+A projection MUST provide filtered access to the entries of external programs
+only, so that a view can show the last lines that a program wrote.
 
 ## Lifecycle
 

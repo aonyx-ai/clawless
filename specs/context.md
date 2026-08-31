@@ -2,8 +2,8 @@
 
 A context is the runtime environment passed to commands and applications. It
 provides access to shared resources: the output channel for emitting events,
-a cancellation token for cooperative shutdown, and the current working
-directory.
+a cancellation token for cooperative shutdown, the current working directory,
+and the interface that runs external programs.
 
 ## Construction
 
@@ -28,6 +28,13 @@ A context MUST provide access to a `Cancellation` token.
 See also [cancel.context.field], [cancel.context.default], and
 [cancel.context.injectable] in the [cancellation spec][cancellation].
 
+## Capabilities
+
+r[context.process]
+A context MUST provide an interface that runs external programs, wired to the
+output and the cancellation token of that context. The [process
+specification][process] defines what such a run does.
+
 ## Thread safety
 
 A context is shared across async tasks. It must be safe to clone and send
@@ -46,3 +53,4 @@ r[context.safety.unpin]
 [cancel.context.field]: cancellation.md#context-integration
 [cancel.context.default]: cancellation.md#context-integration
 [cancel.context.injectable]: cancellation.md#context-integration
+[process]: process.md

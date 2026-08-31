@@ -7,7 +7,7 @@ displayed.
 
 ## Output
 
-Commands produce three kinds of output, each with different semantics. The
+Commands produce four kinds of output, each with different semantics. The
 presenter uses these semantics to decide what to show based on verbosity and
 output mode.
 
@@ -22,6 +22,10 @@ default verbosity.
 r[event.output.artifact]
 Commands MUST be able to produce structured data as their primary output.
 Artifacts are the main deliverable of a command — the data the user asked for.
+
+r[event.output.process]
+Commands MUST be able to produce the steps of an external program as events. The
+[process specification][process] defines what those steps are.
 
 ## Artifact
 
@@ -87,3 +91,5 @@ Producers MUST be cheaply clonable to share the channel across tasks.
 
 r[event.safety.producer-concurrent]
 Producers MUST be safe for concurrent use from multiple threads.
+
+[process]: process.md
