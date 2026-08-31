@@ -26,6 +26,7 @@ typed-fields = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+tokio = { workspace = true }
 trycmd = { workspace = true }
 
 [lints]

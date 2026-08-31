@@ -1,6 +1,5 @@
 use std::fs::{create_dir_all, write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 
 use clawless::prelude::*;
 use indoc::indoc;
@@ -37,10 +36,10 @@ pub struct NewArgs {
 #[allow(clippy::missing_errors_doc)]
 pub async fn new(args: NewArgs, context: Context) -> CommandResult {
     // Call `cargo new` to create a new binary crate
-    let crate_path = create_binary_crate(&context, &args.name)?;
+    let crate_path = create_binary_crate(&context, &args.name).await?;
 
     // Call `cargo add` to add Clawless as a dependency to the new crate
-    add_clawless_dependency(&crate_path)?;
+    add_clawless_dependency(&context, &crate_path).await?;
 
     // Update the main.rs file to use clawless
     overwrite_main_rs(&crate_path)?;
@@ -61,28 +60,23 @@ pub async fn new(args: NewArgs, context: Context) -> CommandResult {
 ///
 /// # Errors
 ///
-/// Returns an error if `cargo new` cannot start or returns a non-zero status.
-fn create_binary_crate(context: &Context, crate_name: &CrateName) -> Result<PathBuf, Error> {
-    let mut cargo_new_exec = Command::new("cargo");
-
-    // Add the arguments to create a new binary crate
-    cargo_new_exec
-        .current_dir(context.current_working_directory().get())
-        .arg("new")
-        .arg("--bin")
-        .arg(crate_name.get());
-
-    // TODO: If the command fails, we should capture the output and return it as part of the error
-    cargo_new_exec.stdout(Stdio::null()).stderr(Stdio::null());
-
-    // Run `cargo new` and check that it succeeded
-    if !cargo_new_exec
-        .status()
-        .context("failed to run `cargo new`")?
-        .success()
-    {
-        anyhow::bail!("failed to create new crate with `cargo new`");
-    }
+/// Returns an error if `cargo new` cannot start, if it is cancelled, or if it ends without
+/// success. The error of a status that is not a success names the command and repeats what Cargo
+/// wrote to its standard error, which is where Cargo states why it refused.
+async fn create_binary_crate(context: &Context, crate_name: &CrateName) -> Result<PathBuf, Error> {
+    context
+        .process()
+        .run(
+            Invocation::new("cargo")
+                .arg("new")
+                .arg("--bin")
+                .arg(crate_name.get())
+                .in_directory(context.current_working_directory().get()),
+        )
+        .await
+        .context("run `cargo new`")?
+        .require_success()
+        .context("create the new crate with `cargo new`")?;
 
     let crate_path = context
         .current_working_directory()
@@ -96,27 +90,23 @@ fn create_binary_crate(context: &Context, crate_name: &CrateName) -> Result<Path
 ///
 /// # Errors
 ///
-/// Returns an error if `cargo add` cannot start or returns a non-zero status.
-fn add_clawless_dependency(crate_path: &Path) -> Result<(), Error> {
-    let mut cargo_add_exec = Command::new("cargo");
-
-    // Add the arguments to add a new dependency
-    cargo_add_exec
-        .current_dir(crate_path)
-        .arg("add")
-        .arg("clawless");
-
-    // TODO: If the command fails, we should capture the output and return it as part of the error
-    cargo_add_exec.stdout(Stdio::null()).stderr(Stdio::null());
-
-    // Run `cargo add` and check that it succeeded
-    if !cargo_add_exec
-        .status()
-        .context("failed to run `cargo add`")?
-        .success()
-    {
-        anyhow::bail!("failed to add clawless as a dependency with `cargo add`");
-    }
+/// Returns an error if `cargo add` cannot start, if it is cancelled, or if it ends without
+/// success. The error of a status that is not a success names the command and repeats what Cargo
+/// wrote to its standard error, which is where Cargo reports an unreachable registry or a crate
+/// that it cannot resolve.
+async fn add_clawless_dependency(context: &Context, crate_path: &Path) -> Result<(), Error> {
+    context
+        .process()
+        .run(
+            Invocation::new("cargo")
+                .arg("add")
+                .arg("clawless")
+                .in_directory(crate_path),
+        )
+        .await
+        .context("run `cargo add`")?
+        .require_success()
+        .context("add clawless as a dependency with `cargo add`")?;
 
     Ok(())
 }
@@ -214,13 +204,22 @@ mod tests {
 
     use super::*;
 
+    /// Returns an output whose events a task reads and discards
+    ///
+    /// A run reports every line that Cargo writes, and it fails once nobody
+    /// listens. No test here reads those events, so the reader stands in for
+    /// the presenter that a real application has: it keeps the channel open,
+    /// and it empties the buffer that a talkative Cargo would otherwise fill.
     fn test_output() -> Output {
-        let (sender, _receiver) = event_channel();
+        let (sender, mut receiver) = event_channel();
+
+        tokio::spawn(async move { while receiver.recv().await.is_some() {} });
+
         Output::new(sender)
     }
 
-    #[test]
-    fn create_binary_crate_creates_directory() {
+    #[tokio::test]
+    async fn create_binary_crate_creates_directory() {
         let cwd = TempDir::new().unwrap();
 
         let context = Context::builder()
@@ -231,13 +230,13 @@ mod tests {
 
         let crate_name = CrateName::new("my_crate");
 
-        let crate_path = create_binary_crate(&context, &crate_name).unwrap();
+        let crate_path = create_binary_crate(&context, &crate_name).await.unwrap();
 
         assert!(crate_path.exists());
     }
 
-    #[test]
-    fn create_binary_crate_fails_if_crate_already_exists() {
+    #[tokio::test]
+    async fn create_binary_crate_fails_if_crate_already_exists() {
         let cwd = TempDir::new().unwrap();
 
         let context = Context::builder()
@@ -251,11 +250,11 @@ mod tests {
 
         let crate_name = CrateName::new("crate-that-already-exists");
 
-        assert!(create_binary_crate(&context, &crate_name).is_err());
+        assert!(create_binary_crate(&context, &crate_name).await.is_err());
     }
 
-    #[test]
-    fn add_clawless_dependency_adds_dependency() {
+    #[tokio::test]
+    async fn create_binary_crate_reports_what_cargo_wrote() {
         let cwd = TempDir::new().unwrap();
 
         let context = Context::builder()
@@ -264,9 +263,35 @@ mod tests {
             .build()
             .expect("failed to create context");
 
-        let crate_path = create_binary_crate(&context, &CrateName::new("my_crate")).unwrap();
+        // Pre-create the directory to simulate an existing crate
+        create_dir_all(cwd.path().join("crate-that-already-exists")).unwrap();
 
-        add_clawless_dependency(&crate_path).unwrap();
+        let crate_name = CrateName::new("crate-that-already-exists");
+
+        let error = create_binary_crate(&context, &crate_name)
+            .await
+            .unwrap_err();
+
+        assert!(format!("{error:#}").contains("already exists"));
+    }
+
+    #[tokio::test]
+    async fn add_clawless_dependency_adds_dependency() {
+        let cwd = TempDir::new().unwrap();
+
+        let context = Context::builder()
+            .current_working_directory(cwd.path())
+            .output(test_output())
+            .build()
+            .expect("failed to create context");
+
+        let crate_path = create_binary_crate(&context, &CrateName::new("my_crate"))
+            .await
+            .unwrap();
+
+        add_clawless_dependency(&context, &crate_path)
+            .await
+            .unwrap();
 
         let cargo_toml_contents = read_to_string(crate_path.join("Cargo.toml")).unwrap();
 
