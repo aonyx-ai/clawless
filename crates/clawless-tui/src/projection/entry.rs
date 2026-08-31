@@ -2,6 +2,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use clawless_core::event::Artifact;
+use clawless_core::event::process::ProcessEvent;
 
 /// User-facing representation of a single event
 ///
@@ -14,6 +15,7 @@ use clawless_core::event::Artifact;
 // r[impl projection.entry.message]
 // r[impl projection.entry.detail]
 // r[impl projection.entry.artifact]
+// r[impl projection.entry.process]
 #[derive(Clone, Debug)]
 pub enum Entry {
     /// Informational message
@@ -22,6 +24,11 @@ pub enum Entry {
     Detail(String),
     /// Primary command output
     Artifact(Arc<dyn Artifact>),
+    /// One step in the run of an external program
+    ///
+    /// The event is behind an [`Arc`] because a run produces one entry per line of output, and a
+    /// TUI clones the whole entry list on every frame it draws.
+    Process(Arc<ProcessEvent>),
 }
 
 impl fmt::Display for Entry {
@@ -30,6 +37,7 @@ impl fmt::Display for Entry {
             Entry::Message(text) => f.write_str(text),
             Entry::Detail(text) => f.write_str(text),
             Entry::Artifact(artifact) => fmt::Display::fmt(artifact, f),
+            Entry::Process(event) => fmt::Display::fmt(event, f),
         }
     }
 }
@@ -42,6 +50,8 @@ mod tests {
 
     use std::sync::Arc;
 
+    use clawless_core::event::process::RunId;
+    use clawless_core::process::{Line, Stream};
     use serde::Serialize;
 
     use super::*;
@@ -112,6 +122,19 @@ mod tests {
         let text = entry.to_string();
 
         assert_eq!(text, "hello");
+    }
+
+    // r[verify projection.entry.process]
+    #[test]
+    fn display_process_renders_the_event() {
+        let entry = Entry::Process(Arc::new(ProcessEvent::Line {
+            id: RunId::next(),
+            line: Line::new(Stream::StandardOutput, "compiling"),
+        }));
+
+        let text = entry.to_string();
+
+        assert_eq!(text, "compiling");
     }
 
     #[test]

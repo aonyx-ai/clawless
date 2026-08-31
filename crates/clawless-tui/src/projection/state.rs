@@ -45,6 +45,7 @@ impl ProjectionState {
                 Entry::Message(_) => true,
                 Entry::Detail(_) => false,
                 Entry::Artifact(_) => false,
+                Entry::Process(_) => false,
             })
             .cloned()
             .collect()
@@ -58,6 +59,7 @@ impl ProjectionState {
                 Entry::Message(_) => false,
                 Entry::Detail(_) => true,
                 Entry::Artifact(_) => false,
+                Entry::Process(_) => false,
             })
             .cloned()
             .collect()
@@ -71,6 +73,21 @@ impl ProjectionState {
                 Entry::Message(_) => false,
                 Entry::Detail(_) => false,
                 Entry::Artifact(_) => true,
+                Entry::Process(_) => false,
+            })
+            .cloned()
+            .collect()
+    }
+
+    /// Returns cloned process entries only
+    pub(super) fn processes(&self) -> Vec<Entry> {
+        self.entries
+            .iter()
+            .filter(|entry| match entry {
+                Entry::Message(_) => false,
+                Entry::Detail(_) => false,
+                Entry::Artifact(_) => false,
+                Entry::Process(_) => true,
             })
             .cloned()
             .collect()

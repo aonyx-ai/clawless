@@ -15,6 +15,7 @@ keywords = ["cli", "framework"]
 bon = { workspace = true }
 erased-serde = { workspace = true }
 getset = { workspace = true }
+kawauso-process = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
@@ -23,6 +24,8 @@ typed-fields = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
 
 [lints]
 workspace = true

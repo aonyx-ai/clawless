@@ -9,14 +9,23 @@
 //! supports both text rendering ([`Display`]) and JSON serialization ([`Serialize`]). A blanket
 //! implementation covers any type satisfying the required bounds, so command authors derive the
 //! usual traits and pass values to Output without manual trait implementation.
+//!
+//! The [`Event::Process`] variant carries the [`ProcessEvent`] of an external program that a
+//! command runs. Those events arrive while the program runs, which lets a presenter show progress
+//! instead of waiting for the program to end.
+//!
+//! [`ProcessEvent`]: process::ProcessEvent
 
 use std::fmt::{Debug, Display};
 
 use serde::Serialize;
 
 pub use self::channel::{SendError, event_channel};
+use self::process::ProcessEvent;
 pub use self::receiver::EventReceiver;
 pub use self::sender::EventSender;
+
+pub mod process;
 
 /// Bounded channel that carries events from a command to its presenter
 mod channel;
@@ -70,12 +79,13 @@ erased_serde::serialize_trait_object!(Artifact);
 /// An `Event` represents a single piece of output that a command has produced. Events travel from
 /// the producer through an async channel to the Presenter, decoupling production from rendering.
 ///
-/// Three variants:
+/// Four variants:
 ///
 /// - [`Message`] — informational text (shown at default verbosity and above).
 /// - [`Detail`] — supplementary text (shown only at verbose verbosity).
 /// - [`Event::Artifact`] — the primary data a command produces, carried as a trait object that the
 ///   Presenter can render via [`Display`] or [`Serialize`].
+/// - [`Event::Process`] — one step in the run of an external program that the command started.
 ///
 /// The Presenter decides which events to render based on its verbosity setting.
 ///
@@ -93,6 +103,13 @@ pub enum Event {
     /// Primary command output
     // r[impl event.output.artifact]
     Artifact(Box<dyn Artifact>),
+    /// One step in the run of an external program
+    ///
+    /// The event is boxed so that the size of an `Event` stays that of its text variants. A run
+    /// names its command in the events that start and end it, and an unboxed variant would make
+    /// every message in the channel as large as that name.
+    // r[impl event.output.process]
+    Process(Box<ProcessEvent>),
 }
 
 #[cfg(test)]
@@ -106,6 +123,8 @@ mod tests {
     use serde::Serialize;
 
     use super::*;
+    use crate::event::process::RunId;
+    use crate::process::Invocation;
 
     #[derive(Clone, Debug, Serialize)]
     struct TestArtifact {
@@ -171,6 +190,28 @@ mod tests {
         let debug = format!("{event:?}");
 
         assert!(debug.contains("Message"));
+    }
+
+    // r[verify event.output.process]
+    #[test]
+    fn process_carries_the_event_of_a_run() {
+        let id = RunId::next();
+
+        let event = Event::Process(Box::new(ProcessEvent::Started {
+            id,
+            invocation: Invocation::new("git"),
+            process_id: None,
+        }));
+
+        assert_eq!(
+            match event {
+                Event::Process(event) => Some(event.id()),
+                Event::Message(_) => None,
+                Event::Detail(_) => None,
+                Event::Artifact(_) => None,
+            },
+            Some(id)
+        );
     }
 
     // r[verify event.safety.event-send]

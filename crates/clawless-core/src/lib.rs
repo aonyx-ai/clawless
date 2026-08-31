@@ -4,6 +4,7 @@ pub mod cancellation;
 pub mod context;
 pub mod event;
 pub mod output;
+pub mod process;
 
 // Signal-to-cancellation adapter used by the `main!()` macro expansion
 #[doc(hidden)]
@@ -17,4 +18,5 @@ pub mod signal;
 pub mod prelude {
     pub use super::cancellation::Cancellation;
     pub use super::context::{Context, ContextError, CurrentWorkingDirectory};
+    pub use super::process::{Execution, Invocation};
 }
