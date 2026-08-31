@@ -200,6 +200,7 @@ dependencies = [
  "getset",
  "indoc",
  "tempfile",
+ "tokio",
  "trycmd",
  "typed-fields",
 ]
