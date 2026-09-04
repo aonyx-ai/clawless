@@ -10,6 +10,11 @@
 //! state. The read lock is held only while cloning the snapshot, keeping contention with the
 //! drain task's write lock brief.
 //!
+//! A projection is eventually consistent with the event channel. Sending an event puts it in the
+//! channel; a separate task then folds it into the projection. A query that runs between those two
+//! moments does not show the event. See [`Projection`] for what this means for a render loop and
+//! for the last frame that an application draws.
+//!
 //! # Examples
 //!
 //! ```
@@ -26,10 +31,7 @@
 //!     .expect("should send");
 //! drop(sender);
 //!
-//! // Wait for the drain task, which finishes once the dropped sender closes the channel
-//! while !projection.is_complete() {
-//!     tokio::task::yield_now().await;
-//! }
+//! projection.wait_until_complete().await;
 //!
 //! assert_eq!(projection.entries().len(), 1);
 //! # }
@@ -42,6 +44,7 @@
 use std::sync::{Arc, RwLock};
 
 use clawless_core::event::{Event, EventReceiver};
+use tokio::sync::watch;
 use tokio::task::JoinHandle;
 
 pub use self::entry::Entry;
@@ -66,6 +69,25 @@ mod state;
 /// task and query callers synchronize through a [`RwLock`], allowing concurrent reads from
 /// multiple render frames without blocking on each other.
 ///
+/// # Visibility
+///
+/// A projection is eventually consistent with the event channel. Emitting an event puts it in the
+/// channel and returns; the drain task folds it into the projection afterwards. A query that runs
+/// in between therefore does not show the event, and awaiting the send does not change that. An
+/// application that emits an event and queries immediately should expect the entry on a later
+/// frame, not on the current one.
+///
+/// A render loop absorbs this, because the next frame shows what the previous frame missed. The
+/// last frame has no next frame, so an application that wants its closing state on screen drops
+/// its [`Context`] to close the channel, awaits [`wait_until_complete`], and draws once more:
+///
+/// ```rust,ignore
+/// message!("shutting down");
+/// drop(context);
+/// projection.wait_until_complete().await;
+/// render(&projection.entries());
+/// ```
+///
 /// # Examples
 ///
 /// ```
@@ -82,18 +104,17 @@ mod state;
 ///     .expect("should send");
 /// drop(sender);
 ///
-/// // Wait for the drain task, which finishes once the dropped sender closes the channel
-/// while !projection.is_complete() {
-///     tokio::task::yield_now().await;
-/// }
+/// projection.wait_until_complete().await;
 ///
 /// let messages = projection.messages();
 /// assert_eq!(messages.len(), 1);
 /// # }
 /// ```
 ///
+/// [`Context`]: clawless_core::context::Context
 /// [`EventReceiver`]: clawless_core::event::EventReceiver
 /// [`RwLock`]: std::sync::RwLock
+/// [`wait_until_complete`]: Projection::wait_until_complete
 // r[impl projection.new]
 // r[impl projection.new.drain]
 // r[impl projection.safety.send]
@@ -103,8 +124,13 @@ mod state;
 pub struct Projection {
     /// The entries so far, which the projection shares with the drain task
     state: Arc<RwLock<ProjectionState>>,
-    /// Handle to the drain task, which stops when Clawless drops the projection
-    _drain_handle: JoinHandle<()>,
+    /// Carries the completion of the drain, so that a waiter does not poll for it
+    completion: watch::Receiver<bool>,
+    /// Handle to the drain task, which the runner takes so that it can await the drain
+    ///
+    /// Dropping a [`JoinHandle`] detaches its task rather than stopping it, so the drain outlives
+    /// the projection and ends when the event channel closes or the runtime shuts down.
+    drain: Option<JoinHandle<()>>,
 }
 
 impl Projection {
@@ -138,13 +164,25 @@ impl Projection {
     pub fn new(receiver: EventReceiver) -> Self {
         let state = Arc::new(RwLock::new(ProjectionState::default()));
         let drain_state = Arc::clone(&state);
+        let (completed, completion) = watch::channel(false);
 
-        let handle = tokio::spawn(drain(receiver, drain_state));
+        let handle = tokio::spawn(drain(receiver, drain_state, completed));
 
         Self {
             state,
-            _drain_handle: handle,
+            completion,
+            drain: Some(handle),
         }
+    }
+
+    /// Takes the handle of the drain task out of the projection
+    ///
+    /// The runner calls this before it moves the projection into the application, so that it
+    /// still has something to await once the application returns. The drain task itself is
+    /// unaffected: it keeps running, because dropping a [`JoinHandle`] detaches a task instead of
+    /// stopping it. A second call returns [`None`].
+    pub(crate) fn take_drain(&mut self) -> Option<JoinHandle<()>> {
+        self.drain.take()
     }
 
     /// Returns all accumulated entries in receive order
@@ -244,21 +282,85 @@ impl Projection {
     pub fn is_complete(&self) -> bool {
         self.state.read().expect("lock poisoned").is_complete()
     }
+
+    /// Waits until the event stream has closed and every buffered event has been drained
+    ///
+    /// Returns as soon as [`is_complete`] would report `true`, and returns straight away if that
+    /// is already the case. An application awaits this before it draws its closing frame, so that
+    /// the frame shows the events it emitted last. Because completion needs the channel to close,
+    /// the application drops its [`Context`] first; otherwise its own [`EventSender`] holds the
+    /// channel open and this never returns.
+    ///
+    /// This is not a way to read back a single event during a run. It reports the end of the
+    /// stream, not the arrival of one entry.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::{Event, event_channel};
+    /// use clawless_tui::projection::Projection;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// let (sender, receiver) = event_channel();
+    /// let projection = Projection::new(receiver);
+    ///
+    /// sender.send(Event::Message("last word".to_string()))
+    ///     .await
+    ///     .expect("should send");
+    /// drop(sender);
+    ///
+    /// projection.wait_until_complete().await;
+    ///
+    /// assert_eq!(projection.entries().len(), 1);
+    /// # }
+    /// ```
+    ///
+    /// [`Context`]: clawless_core::context::Context
+    /// [`EventSender`]: clawless_core::event::EventSender
+    /// [`is_complete`]: Projection::is_complete
+    // r[impl projection.lifecycle.wait]
+    pub async fn wait_until_complete(&self) {
+        let mut completion = self.completion.clone();
+
+        loop {
+            let complete = *completion.borrow_and_update();
+            if complete {
+                return;
+            }
+
+            // A failure here means the sender is gone. The sender lives in the drain task and the
+            // drain announces completion before it ends, so its absence without an announcement
+            // takes a panic. Waiting for word that can no longer come would never return.
+            if completion.changed().await.is_err() {
+                return;
+            }
+        }
+    }
 }
 
 /// Drains events from the receiver into the shared state
 ///
 /// Runs until `receiver.recv()` returns `None` (all senders dropped, channel empty). Each event
 /// is translated into an [`Entry`] and appended to the state. When the loop exits, the state is
-/// marked as complete.
+/// marked as complete and `completed` announces it to any waiter.
+///
+/// The state is marked before the announcement, and never the other way round. A waiter that the
+/// announcement wakes therefore finds every entry already in place, rather than a projection that
+/// calls itself complete while the last entry is still missing.
 ///
 /// # Panics
 ///
 /// Panics if the internal lock is poisoned.
 // The lock is poisoned only if another thread panicked while holding it. The drain task has
 // no way to publish events into a state it cannot lock, so it fails loudly instead.
+// r[impl projection.lifecycle.order]
 #[allow(clippy::expect_used)]
-async fn drain(mut receiver: EventReceiver, state: Arc<RwLock<ProjectionState>>) {
+async fn drain(
+    mut receiver: EventReceiver,
+    state: Arc<RwLock<ProjectionState>>,
+    completed: watch::Sender<bool>,
+) {
     while let Some(event) = receiver.recv().await {
         let entry = match event {
             Event::Message(text) => Entry::Message(text),
@@ -269,6 +371,11 @@ async fn drain(mut receiver: EventReceiver, state: Arc<RwLock<ProjectionState>>)
         state.write().expect("lock poisoned").push(entry);
     }
     state.write().expect("lock poisoned").set_complete();
+
+    // `send_replace` rather than `send`, because a drain that ends after its projection was
+    // dropped has no receiver left and `send` would call that an error. There is nothing to
+    // recover: the announcement has no audience, and the previous value is of no interest.
+    completed.send_replace(true);
 }
 
 #[cfg(test)]
@@ -314,7 +421,7 @@ mod tests {
             .await
             .expect("should send");
         drop(sender);
-        tokio::task::yield_now().await;
+        projection.wait_until_complete().await;
 
         let artifacts = projection.artifacts();
 
@@ -344,7 +451,7 @@ mod tests {
             .await
             .expect("should send");
         drop(sender);
-        tokio::task::yield_now().await;
+        projection.wait_until_complete().await;
 
         let details = projection.details();
 
@@ -370,7 +477,7 @@ mod tests {
         drop(sender);
 
         let projection = Projection::new(receiver);
-        tokio::task::yield_now().await;
+        projection.wait_until_complete().await;
 
         assert!(projection.is_complete());
         let entries = projection.entries();
@@ -394,7 +501,7 @@ mod tests {
             .await
             .expect("should send");
         drop(sender);
-        tokio::task::yield_now().await;
+        projection.wait_until_complete().await;
 
         let entries = projection.entries();
 
@@ -416,7 +523,7 @@ mod tests {
             .await
             .expect("should send");
         drop(sender);
-        tokio::task::yield_now().await;
+        projection.wait_until_complete().await;
 
         let entries = projection.entries();
 
@@ -439,7 +546,7 @@ mod tests {
             .await
             .expect("should send");
         drop(sender);
-        tokio::task::yield_now().await;
+        projection.wait_until_complete().await;
 
         let entries = projection.entries();
 
@@ -469,7 +576,7 @@ mod tests {
             .await
             .expect("should send");
         drop(sender);
-        tokio::task::yield_now().await;
+        projection.wait_until_complete().await;
 
         let entries = projection.entries();
 
@@ -517,7 +624,7 @@ mod tests {
             .await
             .expect("should send");
         drop(sender);
-        tokio::task::yield_now().await;
+        projection.wait_until_complete().await;
 
         let messages = projection.messages();
 
@@ -551,7 +658,7 @@ mod tests {
         let projection = Projection::new(receiver);
 
         drop(sender);
-        tokio::task::yield_now().await;
+        projection.wait_until_complete().await;
 
         assert!(projection.is_complete());
     }
@@ -574,7 +681,7 @@ mod tests {
             .await
             .expect("should send");
         drop(sender);
-        tokio::task::yield_now().await;
+        projection.wait_until_complete().await;
 
         let processes = projection.processes();
 
@@ -582,6 +689,17 @@ mod tests {
             processes.iter().map(Entry::to_string).collect::<Vec<_>>(),
             vec!["compiling".to_string()]
         );
+    }
+
+    #[tokio::test]
+    async fn take_drain_with_a_second_call_returns_none() {
+        let (_sender, receiver) = event_channel();
+        let mut projection = Projection::new(receiver);
+        drop(projection.take_drain());
+
+        let handle = projection.take_drain();
+
+        assert!(handle.is_none());
     }
 
     // r[verify projection.safety.send]
@@ -603,5 +721,74 @@ mod tests {
     fn trait_unpin() {
         fn assert_unpin<T: Unpin>() {}
         assert_unpin::<Projection>();
+    }
+
+    // r[verify projection.lifecycle.wait]
+    #[tokio::test]
+    async fn wait_until_complete_after_the_drain_finished_returns_immediately() {
+        let (sender, receiver) = event_channel();
+        let projection = Projection::new(receiver);
+        drop(sender);
+        projection.wait_until_complete().await;
+
+        projection.wait_until_complete().await;
+
+        assert!(projection.is_complete());
+    }
+
+    // The announcement of completion is what wakes the waiter, so this is where an announcement
+    // that ran ahead of the state would show: the waiter would return and find a projection that
+    // still calls itself incomplete. The multi-threaded flavor is what gives the check teeth,
+    // because the drain runs on another worker and the two writes can be observed apart. A
+    // current-thread runtime hides the difference.
+    // r[verify projection.lifecycle.order]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn wait_until_complete_reports_completion_when_it_returns() {
+        let mut torn = 0;
+
+        for _ in 0..1000 {
+            let (sender, receiver) = event_channel();
+            let projection = Projection::new(receiver);
+            sender
+                .send(Event::Message("last word".to_string()))
+                .await
+                .expect("should send");
+            drop(sender);
+
+            projection.wait_until_complete().await;
+
+            if !projection.is_complete() {
+                torn += 1;
+            }
+        }
+
+        assert_eq!(torn, 0);
+    }
+
+    // Awaiting the send only puts an event in the channel, so a projection read straight after it
+    // is almost always still empty. This is the await that closes that gap, and the count is what
+    // a closing frame depends on.
+    // r[verify projection.lifecycle.wait]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn wait_until_complete_shows_the_event_that_preceded_it() {
+        let mut incomplete = 0;
+
+        for _ in 0..1000 {
+            let (sender, receiver) = event_channel();
+            let projection = Projection::new(receiver);
+            sender
+                .send(Event::Message("last word".to_string()))
+                .await
+                .expect("should send");
+            drop(sender);
+
+            projection.wait_until_complete().await;
+
+            if projection.entries().len() != 1 {
+                incomplete += 1;
+            }
+        }
+
+        assert_eq!(incomplete, 0);
     }
 }

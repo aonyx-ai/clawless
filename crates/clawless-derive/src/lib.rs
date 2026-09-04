@@ -296,6 +296,17 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
 /// 2. A `context` parameter: the `Context` for emitting events and cooperative shutdown
 /// 3. A `projection` parameter: the `Projection` for querying accumulated state
 ///
+/// # Projection Visibility
+///
+/// A projection trails the events that an application emits. Emitting puts an event in the
+/// channel and returns; the projection picks it up afterwards, so a query that follows an emit
+/// straight away does not yet show it. A render loop absorbs the lag, because the next frame
+/// shows what the previous frame missed.
+///
+/// The closing frame has no next frame. An application that wants its last events on screen drops
+/// its `Context` to close the channel, awaits `Projection::wait_until_complete`, and renders once
+/// more. See the documentation of `Projection` for the whole picture.
+///
 /// # Attributes
 ///
 /// - `alias = "name"` - Add a visible alias for the application. Can be repeated.

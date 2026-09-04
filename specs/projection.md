@@ -60,11 +60,32 @@ r[projection.query.processes]
 A projection MUST provide filtered access to the entries of external programs
 only, so that a view can show the last lines that a program wrote.
 
+## Visibility
+
+A projection is eventually consistent with the event channel. Emitting an event
+puts it in the channel and returns; the drain folds it into the projection
+afterwards. A query between those two moments does not show the event, and
+awaiting the send does not change that.
+
+A render loop absorbs the lag, because the next frame shows what the previous
+frame missed. The last frame has no next frame, so an application that wants
+its closing state on screen needs a way to wait for the drain.
+
 ## Lifecycle
 
 r[projection.lifecycle.complete]
 A projection MUST report whether the event stream has closed and all buffered
 events have been drained.
+
+r[projection.lifecycle.wait]
+A projection MUST provide an await that returns once the event stream has
+closed and all buffered events have been drained, and MUST return immediately
+when that is already the case. A caller MUST NOT need to poll for it.
+
+r[projection.lifecycle.order]
+The drain MUST record the last entry before it reports completion. A caller
+that the report wakes therefore reads a projection that holds every event,
+rather than one that calls itself complete while an entry is still missing.
 
 ## Thread safety
 

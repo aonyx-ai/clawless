@@ -62,6 +62,12 @@ When the resolved leaf is an application, the execution phase MUST delegate to
 a runner that creates the event channel, context, projection, and async
 runtime.
 
+r[dispatch.exec.application-drain]
+After the application returns, the runner MUST await the drain of the
+projection before it drops the async runtime. Dropping the runtime stops the
+drain wherever it stands, which would leave the events of the final moments
+out of the projection.
+
 ## Thread safety
 
 A resolved leaf is passed from the synchronous resolution phase to the
