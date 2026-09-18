@@ -37,7 +37,7 @@ jobs:
         run: rm -f flox.x86_64-linux.deb
 
       - name: Build the documentation
-        uses: flox/activate-action@b1009911305dd59074b15f55300b18321d2ea6a8 # v1.2.0
+        uses: flox/activate-action@6abc249840d01f0c59473f21ba74821564d320b7 # v2.0.0
         with:
           command: just docs build
 
