@@ -231,6 +231,18 @@ becomes the `deploy-staging` CLI command:
 cargo run -- deploy-staging
 ```
 
+You can also give the name as it looks on the command line. The generator reads
+`deploy-staging` and `deploy_staging` as the same name, and writes the Rust form
+into the file:
+
+```bash
+cargo clawless generate command deploy-staging
+```
+
+The generator rejects a name for which it cannot write a Rust function. A name
+must start with a letter, must end with a letter or a digit, and must have one
+hyphen between two words.
+
 ## What gets generated
 
 For each command, the generator creates:

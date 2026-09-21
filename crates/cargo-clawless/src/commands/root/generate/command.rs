@@ -144,7 +144,7 @@ fn create_parent_directory(project: &Path, command_name: &CommandName) -> Result
     let mut dir_path = project.join("src").join("commands");
 
     for module in command_name.parent_modules() {
-        dir_path = dir_path.join(module.to_case(Case::Snake));
+        dir_path = dir_path.join(module);
     }
 
     create_dir_all(&dir_path).context(format!(
@@ -271,15 +271,15 @@ fn find_parent_module(project: &Path, command_name: &CommandName) -> Result<Path
     // Navigate down to the parent's directory, excluding the parent itself
     if parent_modules.len() > 1 {
         for module in &parent_modules[..parent_modules.len() - 1] {
-            base = base.join(module.to_case(Case::Snake));
+            base = base.join(module);
         }
     } else if parent_modules.is_empty() {
         // Parent is src/commands itself
         base = project.join("src");
     }
 
-    let candidate_file = base.join(format!("{}.rs", parent_name.to_case(Case::Snake)));
-    let candidate_dir_mod = base.join(parent_name.to_case(Case::Snake)).join("mod.rs");
+    let candidate_file = base.join(format!("{parent_name}.rs"));
+    let candidate_dir_mod = base.join(parent_name).join("mod.rs");
 
     if candidate_file.exists() {
         Ok(candidate_file)
@@ -379,10 +379,8 @@ mod tests {
         let cwd = TempDir::new().unwrap();
         create_dir_all(cwd.path().join("src").join("commands").join("parent")).unwrap();
 
-        let command_name = CommandName::builder()
-            .name("command".to_string())
-            .parent_modules(vec!["parent".into()])
-            .build();
+        let command_name =
+            CommandName::try_from(&"parent/command".to_string()).expect("should succeed");
 
         create_command_file(cwd.path(), &command_name).unwrap();
 
@@ -401,10 +399,7 @@ mod tests {
         let commands_rs_path = cwd.path().join("src").join("commands.rs");
         write(&commands_rs_path, "").unwrap();
 
-        let command_name = CommandName::builder()
-            .name("test".to_string())
-            .parent_modules(vec![])
-            .build();
+        let command_name = CommandName::try_from(&"test".to_string()).expect("should succeed");
 
         let parent_module_path = find_parent_module(cwd.path(), &command_name).unwrap();
 
@@ -419,10 +414,7 @@ mod tests {
         let commands_mod_rs_path = cwd.path().join("src").join("commands").join("mod.rs");
         write(&commands_mod_rs_path, "").unwrap();
 
-        let command_name = CommandName::builder()
-            .name("test".to_string())
-            .parent_modules(vec![])
-            .build();
+        let command_name = CommandName::try_from(&"test".to_string()).expect("should succeed");
 
         let parent_module_path = find_parent_module(cwd.path(), &command_name).unwrap();
 
@@ -442,10 +434,7 @@ mod tests {
         )
         .unwrap();
 
-        let command_name = CommandName::builder()
-            .name("mycmd".to_string())
-            .parent_modules(vec![])
-            .build();
+        let command_name = CommandName::try_from(&"mycmd".to_string()).expect("should succeed");
 
         insert_mod_statement(cwd.path(), &command_name).unwrap();
 
@@ -467,10 +456,7 @@ mod tests {
         let commands_rs_path = cwd.path().join("src").join("commands.rs");
         write(&commands_rs_path, "mod existing;\nmod mycmd;\n").unwrap();
 
-        let command_name = CommandName::builder()
-            .name("mycmd".to_string())
-            .parent_modules(vec![])
-            .build();
+        let command_name = CommandName::try_from(&"mycmd".to_string()).expect("should succeed");
 
         // Should be a no-op and not produce a second `mod mycmd;`
         insert_mod_statement(cwd.path(), &command_name).unwrap();
@@ -494,10 +480,8 @@ mod tests {
         )
         .unwrap();
 
-        let command_name = CommandName::builder()
-            .name("command".to_string())
-            .parent_modules(vec!["parent".into()])
-            .build();
+        let command_name =
+            CommandName::try_from(&"parent/command".to_string()).expect("should succeed");
 
         insert_mod_statement(cwd.path(), &command_name).unwrap();
 

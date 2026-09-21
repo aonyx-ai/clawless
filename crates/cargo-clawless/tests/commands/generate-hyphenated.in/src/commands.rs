@@ -1,0 +1,3 @@
+mod greet;
+
+clawless::commands!();
