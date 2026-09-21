@@ -1,0 +1,7 @@
+bin.name = "prompt"
+args = ["select"]
+status.code = 0
+stdout = """
+Nobody can select a kind, because no terminal is present.
+"""
+stderr = ""

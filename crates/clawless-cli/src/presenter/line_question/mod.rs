@@ -5,6 +5,8 @@
 //!
 //! [`LineQuestion`] gives the text of a question and parses the line that the user typed. [`ask`]
 //! asks one question until the user answers it.
+//!
+//! A selection lists its options with a number each, and the user types the number.
 
 use std::io::{self, Write};
 
@@ -14,6 +16,7 @@ use clawless_core::prompt::AnswerPromptError;
 use super::line_reader::LineReader;
 
 mod confirm;
+mod select;
 mod text;
 
 /// A question that a user answers with one line of text
@@ -21,11 +24,21 @@ mod text;
 /// The terminal presenter shows [`prompt`], reads a line, and passes the line to [`parse`]. If
 /// the line is no answer, [`parse`] returns a hint. The presenter shows the hint and asks again.
 ///
+/// The presenter shows the [`introduction`] of a question once, before the first attempt.
+///
+/// [`introduction`]: LineQuestion::introduction
 /// [`parse`]: LineQuestion::parse
 /// [`prompt`]: LineQuestion::prompt
 pub(super) trait LineQuestion {
     /// The answer that the question asks for
     type Answer;
+
+    /// Returns the lines that the presenter shows once, before the first attempt
+    ///
+    /// The text ends with a line break. The default is no introduction.
+    fn introduction(&self) -> Option<String> {
+        None
+    }
 
     /// Returns the text that precedes the answer of the user
     ///
@@ -40,6 +53,17 @@ pub(super) trait LineQuestion {
     ///
     /// Returns a hint for the user if the line is no answer. The hint is a full sentence.
     fn parse(&self, line: &str) -> Result<Self::Answer, String>;
+}
+
+/// Returns the text of a question with a colon at its end
+///
+/// A text that ends with a colon or with a question mark stays as it is.
+fn label(question: &str) -> String {
+    if question.ends_with([':', '?']) {
+        question.to_owned()
+    } else {
+        format!("{question}:")
+    }
 }
 
 /// Asks the user one question and sends the outcome to the command that asked
@@ -84,6 +108,10 @@ async fn converse<Q: LineQuestion>(
     input: &mut LineReader,
     display: &mut impl Write,
 ) -> Result<Option<Q::Answer>, AnswerPromptError> {
+    if let Some(introduction) = question.introduction() {
+        write!(display, "{introduction}").map_err(unusable)?;
+    }
+
     loop {
         write!(display, "{}", question.prompt()).map_err(unusable)?;
         display.flush().map_err(unusable)?;
@@ -125,7 +153,7 @@ mod tests {
     use std::sync::mpsc;
 
     use clawless_core::event::prompt::{PendingAnswer, PromptRequest};
-    use clawless_core::prompt::{Confirm, Confirmation};
+    use clawless_core::prompt::{Confirm, Confirmation, Select};
 
     use super::*;
 
@@ -136,7 +164,9 @@ mod tests {
 
         match request {
             PromptRequest::Confirm { reply, .. } => (question, reply, pending),
-            PromptRequest::Text { .. } => unreachable!("the request is a confirmation"),
+            PromptRequest::Select { .. } | PromptRequest::Text { .. } => {
+                unreachable!("the request is a confirmation")
+            }
         }
     }
 
@@ -191,6 +221,27 @@ mod tests {
         assert_eq!(
             String::from_utf8_lossy(&display),
             "Release? [y/n] Please answer \"y\" or \"n\".\nRelease? [y/n] "
+        );
+    }
+
+    #[tokio::test]
+    async fn ask_with_a_selection_shows_the_options_once() {
+        let (request, _pending) =
+            PromptRequest::select(Select::new("Kind of change", ["Added", "Fixed"]));
+        let mut display = Vec::new();
+
+        match request {
+            PromptRequest::Select { question, reply } => {
+                ask(&question, reply, &mut typed(&["9\n", "2\n"]), &mut display).await;
+            }
+            PromptRequest::Confirm { .. } | PromptRequest::Text { .. } => {}
+        }
+
+        assert_eq!(
+            String::from_utf8_lossy(&display),
+            "Kind of change:\n  1) Added\n  2) Fixed\n\
+             Enter a number [1-2]: Please enter a number from 1 to 2.\n\
+             Enter a number [1-2]: "
         );
     }
 

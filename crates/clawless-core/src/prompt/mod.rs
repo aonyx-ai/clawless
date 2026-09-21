@@ -2,7 +2,8 @@
 //!
 //! [`Prompt`] is the interface that asks. [`Confirm`] is a question that the user answers with
 //! yes or no, and [`Confirmation`] is the answer. [`Text`] is a question that the user answers
-//! with one line of text. [`PromptUserError`] is the reason why a command received no answer.
+//! with one line of text, and [`Select`] is one that the user answers with one of several
+//! options. [`PromptUserError`] is the reason why a command received no answer.
 //!
 //! A question reaches the presenter as a [`PromptRequest`], and the presenter answers it.
 //! [`AnswerPromptError`] is the reason that the presenter reports when it has no answer.
@@ -26,6 +27,8 @@
 //! # }
 //! ```
 
+use std::fmt::Display;
+
 use bon::Builder;
 use getset::CopyGetters;
 
@@ -35,6 +38,7 @@ pub use self::confirmation::Confirmation;
 pub use self::prompt_user_error::PromptUserError;
 pub use self::scripted_answer::ScriptedAnswer;
 pub use self::scripted_user::ScriptedUser;
+pub use self::select::Select;
 pub use self::text::Text;
 use crate::cancellation::Cancellation;
 use crate::context::Interactivity;
@@ -53,6 +57,8 @@ mod prompt_user_error;
 mod scripted_answer;
 /// A user for tests, who answers every prompt from a script
 mod scripted_user;
+/// A question that a user answers with one of several options
+mod select;
 /// A question that a user answers with one line of text
 mod text;
 
@@ -138,6 +144,58 @@ impl Prompt {
         let (request, pending) = PromptRequest::confirm(question);
 
         self.ask(text, request, pending).await
+    }
+
+    /// Asks the user to select one of several options
+    ///
+    /// The user sees the `Display` text of each option, in the order given. The call returns the
+    /// option that the user selected.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PromptUserError::MissingOptions`] if there is no option to select from, whether
+    /// or not a user is present. Returns [`PromptUserError::AbsentUser`] if no user is present,
+    /// and [`PromptUserError::CancelledPrompt`] if cancellation stopped the wait. Returns
+    /// [`PromptUserError::UndeliverablePrompt`] if the presenter stopped listening, and
+    /// [`PromptUserError::UnansweredPrompt`] if the prompt came back without an answer. Returns
+    /// [`PromptUserError::UnknownOption`] if the answer names an option that does not exist.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use clawless_core::prompt::Prompt;
+    ///
+    /// # async fn example(prompt: Prompt) -> Result<(), Box<dyn std::error::Error>> {
+    /// let port = prompt.select("Port to listen on", [80, 443, 8080]).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn select<T: Display>(
+        &self,
+        question: impl Into<String>,
+        options: impl IntoIterator<Item = T>,
+    ) -> Result<T, PromptUserError> {
+        let question = question.into();
+        let mut options = options.into_iter().collect::<Vec<_>>();
+        let count = options.len();
+
+        if options.is_empty() {
+            return Err(PromptUserError::MissingOptions { question });
+        }
+
+        let select = Select::new(question.clone(), options.iter().map(ToString::to_string));
+        let (request, pending) = PromptRequest::select(select);
+        let index = self.ask(question.clone(), request, pending).await?;
+
+        if index < count {
+            Ok(options.swap_remove(index))
+        } else {
+            Err(PromptUserError::UnknownOption {
+                question,
+                index,
+                count,
+            })
+        }
     }
 
     /// Asks the user for one line of text
@@ -260,6 +318,8 @@ mod tests {
             PromptUserError::CancelledPrompt { .. } => false,
             PromptUserError::UnansweredPrompt { .. } => false,
             PromptUserError::UndeliverablePrompt { .. } => false,
+            PromptUserError::MissingOptions { .. } => false,
+            PromptUserError::UnknownOption { .. } => false,
         }
     }
 
@@ -270,6 +330,8 @@ mod tests {
             PromptUserError::AbsentUser { .. } => false,
             PromptUserError::UnansweredPrompt { .. } => false,
             PromptUserError::UndeliverablePrompt { .. } => false,
+            PromptUserError::MissingOptions { .. } => false,
+            PromptUserError::UnknownOption { .. } => false,
         }
     }
 
@@ -285,6 +347,8 @@ mod tests {
             PromptUserError::AbsentUser { .. } => false,
             PromptUserError::CancelledPrompt { .. } => false,
             PromptUserError::UndeliverablePrompt { .. } => false,
+            PromptUserError::MissingOptions { .. } => false,
+            PromptUserError::UnknownOption { .. } => false,
         }
     }
 
@@ -295,6 +359,8 @@ mod tests {
             PromptUserError::AbsentUser { .. } => false,
             PromptUserError::CancelledPrompt { .. } => false,
             PromptUserError::UnansweredPrompt { .. } => false,
+            PromptUserError::MissingOptions { .. } => false,
+            PromptUserError::UnknownOption { .. } => false,
         }
     }
 
@@ -311,7 +377,7 @@ mod tests {
         assert_eq!(
             request.and_then(|request| match request {
                 PromptRequest::Confirm { question, .. } => Some(question),
-                PromptRequest::Text { .. } => None,
+                PromptRequest::Select { .. } | PromptRequest::Text { .. } => None,
             }),
             Some(question)
         );
@@ -377,7 +443,7 @@ mod tests {
         let presenter = tokio::spawn(async move {
             match next_request(&mut receiver).await {
                 Some(PromptRequest::Confirm { reply, .. }) => reply.answer(Confirmation::Yes),
-                Some(PromptRequest::Text { .. }) | None => {}
+                Some(PromptRequest::Select { .. } | PromptRequest::Text { .. }) | None => {}
             }
         });
 
@@ -405,6 +471,7 @@ mod tests {
         assert_eq!(
             request.map(|request| match request {
                 PromptRequest::Confirm { reply, .. } => reply.is_abandoned(),
+                PromptRequest::Select { reply, .. } => reply.is_abandoned(),
                 PromptRequest::Text { reply, .. } => reply.is_abandoned(),
             }),
             Some(true)
@@ -463,12 +530,98 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn select_sends_the_options_as_their_display_text() {
+        let (prompt, mut receiver) = interactive();
+        let command = tokio::spawn(async move { prompt.select("Port", [80, 443]).await });
+
+        let request = next_request(&mut receiver).await;
+        command.abort();
+
+        assert_eq!(
+            request.and_then(|request| match request {
+                PromptRequest::Select { question, .. } => Some(question),
+                PromptRequest::Confirm { .. } | PromptRequest::Text { .. } => None,
+            }),
+            Some(Select::new("Port", ["80", "443"]))
+        );
+    }
+
+    #[tokio::test]
+    async fn select_with_an_answer_returns_the_option_at_that_index() {
+        let (prompt, mut receiver) = interactive();
+        let presenter = tokio::spawn(async move {
+            match next_request(&mut receiver).await {
+                Some(PromptRequest::Select { reply, .. }) => reply.answer(1),
+                Some(PromptRequest::Confirm { .. } | PromptRequest::Text { .. }) | None => {}
+            }
+        });
+
+        let answer = prompt
+            .select("Port", [80, 443])
+            .await
+            .expect("should answer");
+        presenter.await.expect("should join");
+
+        assert_eq!(answer, 443);
+    }
+
+    #[tokio::test]
+    async fn select_with_an_index_beyond_the_options_returns_an_error() {
+        let (prompt, mut receiver) = interactive();
+        let presenter = tokio::spawn(async move {
+            match next_request(&mut receiver).await {
+                Some(PromptRequest::Select { reply, .. }) => reply.answer(2),
+                Some(PromptRequest::Confirm { .. } | PromptRequest::Text { .. }) | None => {}
+            }
+        });
+
+        let error = prompt
+            .select("Port", [80, 443])
+            .await
+            .expect_err("should fail");
+        presenter.await.expect("should join");
+
+        assert_eq!(
+            error.to_string(),
+            "the answer to the prompt `Port` names option 2, and the prompt has 2 options"
+        );
+    }
+
+    #[tokio::test]
+    async fn select_without_a_user_returns_an_error() {
+        let (sender, _receiver) = event_channel();
+        let prompt = Prompt::builder().output(Output::new(sender)).build();
+
+        let error = prompt
+            .select("Port", [80, 443])
+            .await
+            .expect_err("should fail");
+
+        assert!(is_absent_user(&error));
+    }
+
+    #[tokio::test]
+    async fn select_without_options_returns_an_error() {
+        let (prompt, _receiver) = interactive();
+
+        let error = prompt
+            .select("Port", Vec::<u16>::new())
+            .await
+            .expect_err("should fail");
+
+        assert_eq!(
+            error.to_string(),
+            "the prompt `Port` has no options to select from"
+        );
+    }
+
+    #[tokio::test]
     async fn text_with_an_answer_returns_it() {
         let (prompt, mut receiver) = interactive();
         let presenter = tokio::spawn(async move {
             match next_request(&mut receiver).await {
                 Some(PromptRequest::Text { reply, .. }) => reply.answer("Fix the race".to_owned()),
-                Some(PromptRequest::Confirm { .. }) | None => {}
+                Some(PromptRequest::Confirm { .. } | PromptRequest::Select { .. }) | None => {}
             }
         });
 
