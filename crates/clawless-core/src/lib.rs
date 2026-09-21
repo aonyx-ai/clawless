@@ -17,6 +17,6 @@ pub mod signal;
 /// define and run commands without needing to import each item individually.
 pub mod prelude {
     pub use super::cancellation::Cancellation;
-    pub use super::context::{Context, ContextError, CurrentWorkingDirectory};
+    pub use super::context::{Context, ContextError, CurrentWorkingDirectory, Interactivity};
     pub use super::process::{Execution, Invocation, Process};
 }

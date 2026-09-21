@@ -8,10 +8,11 @@
 //! [`Context`] struct as well as the types defined in this module.
 
 use bon::bon;
-use getset::Getters;
+use getset::{CopyGetters, Getters};
 
 pub use self::current_working_directory::CurrentWorkingDirectory;
 pub use self::error::ContextError;
+pub use self::interactivity::Interactivity;
 use crate::cancellation::Cancellation;
 use crate::output::Output;
 use crate::process::Process;
@@ -20,6 +21,8 @@ use crate::process::Process;
 mod current_working_directory;
 /// Errors that occur when Clawless builds a [`Context`]
 mod error;
+/// Whether a user is present who can answer the application
+mod interactivity;
 
 /// Context for Clawless commands
 ///
@@ -44,7 +47,7 @@ mod error;
 // r[impl context.safety.send]
 // r[impl context.safety.sync]
 // r[impl context.safety.unpin]
-#[derive(Clone, Debug, Getters)]
+#[derive(Clone, Debug, CopyGetters, Getters)]
 pub struct Context {
     /// The working directory in which a command was called
     // r[impl context.field.cwd]
@@ -56,6 +59,10 @@ pub struct Context {
     // r[impl context.field.cancellation]
     #[getset(get = "pub")]
     cancellation: Cancellation,
+
+    /// Whether a user is present who can answer the application
+    #[getset(get_copy = "pub")]
+    interactivity: Interactivity,
 
     /// The output handler for sending events to the presenter
     // r[impl context.field.output]
@@ -69,6 +76,8 @@ impl Context {
     ///
     /// When `current_working_directory` is omitted, it is auto-detected from the environment.
     /// When provided explicitly (e.g., in tests), the given value is used directly.
+    ///
+    /// When `interactivity` is omitted, the context reports [`Interactivity::NonInteractive`].
     ///
     /// # Errors
     ///
@@ -97,6 +106,7 @@ impl Context {
     pub fn new(
         #[builder(into)] current_working_directory: Option<CurrentWorkingDirectory>,
         #[builder(default)] cancellation: Cancellation,
+        #[builder(default)] interactivity: Interactivity,
         output: Output,
     ) -> Result<Self, ContextError> {
         let current_working_directory = match current_working_directory {
@@ -107,6 +117,7 @@ impl Context {
         Ok(Self {
             current_working_directory,
             cancellation,
+            interactivity,
             output,
         })
     }
@@ -221,6 +232,29 @@ mod tests {
             .expect("should create context");
 
         assert!(!context.cancellation().is_cancelled());
+    }
+
+    #[test]
+    fn new_with_defaults_is_non_interactive() {
+        let context = Context::builder()
+            .current_working_directory(Path::new("/tmp"))
+            .output(test_output())
+            .build()
+            .expect("should create context");
+
+        assert_eq!(context.interactivity(), Interactivity::NonInteractive);
+    }
+
+    #[test]
+    fn new_with_interactivity_uses_provided_value() {
+        let context = Context::builder()
+            .current_working_directory(Path::new("/tmp"))
+            .interactivity(Interactivity::Interactive)
+            .output(test_output())
+            .build()
+            .expect("should create context");
+
+        assert_eq!(context.interactivity(), Interactivity::Interactive);
     }
 
     // r[verify context.process]
