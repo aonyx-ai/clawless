@@ -160,6 +160,30 @@ becomes an event while it runs, and Ctrl+C kills the program. See
 
 [process-type]: https://docs.rs/clawless/latest/clawless/process/struct.Process.html
 
+### Prompts
+
+Ask the user a question:
+
+```rust
+use clawless::prelude::*;
+
+#[command]
+pub async fn publish(args: PublishArgs, context: Context) -> CommandResult {
+    match context.prompt().confirm("Publish the release?").await? {
+        Confirmation::Yes => message!("Published."),
+        Confirmation::No => message!("Nothing was published."),
+    }
+
+    Ok(())
+}
+```
+
+The `prompt()` method returns a [`Prompt`][prompt-type]. Without a terminal, a
+prompt returns an error immediately. The `interactivity()` method reports
+whether a user is present. See [Prompts](./prompts) for the full explanation.
+
+[prompt-type]: https://docs.rs/clawless/latest/clawless/prompt/struct.Prompt.html
+
 ## Future features
 
 The Context system is designed to be the central access point for all framework
@@ -268,6 +292,7 @@ Now that you understand Context, learn about:
   the cancellation token
 - **[External Programs](./external-programs)** - Running other programs from
   your commands
+- **[Prompts](./prompts)** - Asking the user a question from your commands
 - **[Commands](./commands)** - How Context integrates with command functions
 - **[Arguments](./arguments)** - The other parameter commands receive
 - **[Project Structure](./project-structure)** - Organizing commands in your

@@ -52,6 +52,11 @@ Running other programs from your commands. Learn how Clawless streams the
 output of a program through the event system while it runs, how cancellation
 kills it, and how to read what it produced afterwards.
 
+### [Prompts](./prompts)
+
+Asking the user a question from your commands. Learn the three kinds of prompt,
+what a prompt returns without a user, and how a test answers a prompt.
+
 ### [Macros](./macros)
 
 Clawless uses four macros to wire up your CLI. Understand how `main!`,
@@ -112,11 +117,12 @@ If you're new to Clawless:
 5. Read **[Cancellation](./cancellation)** to understand cooperative shutdown
 6. Read **[External Programs](./external-programs)** when your CLI needs to run
    other programs
-7. Explore **[Project Structure](./project-structure)** to understand how to
+7. Read **[Prompts](./prompts)** when your CLI needs an answer from its user
+8. Explore **[Project Structure](./project-structure)** to understand how to
    organize your CLI
-8. Read **[Macros](./macros)** if you're curious about implementation details
-9. Reference **[Naming Conventions](./naming-conventions)** when you need to
-   look up specific rules
+9. Read **[Macros](./macros)** if you're curious about implementation details
+10. Reference **[Naming Conventions](./naming-conventions)** when you need to
+    look up specific rules
 
 For experienced developers, the **[Macros](./macros)** section provides insight
 into how Clawless generates code, which can help with debugging and
