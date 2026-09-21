@@ -19,6 +19,8 @@ use async_trait::async_trait;
 pub use self::terminal::TerminalPresenter;
 use crate::error::CommandResult;
 
+mod line_question;
+mod line_reader;
 mod terminal;
 
 /// Output port for rendering command output

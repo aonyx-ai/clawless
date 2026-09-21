@@ -21,11 +21,15 @@ use std::pin::Pin;
 
 use async_trait::async_trait;
 use bon::Builder;
+use clawless_core::context::Interactivity;
 use clawless_core::event::process::ProcessEvent;
+use clawless_core::event::prompt::PromptRequest;
 use clawless_core::event::{Event, EventReceiver};
 use clawless_core::process::Stream;
 
 use super::Presenter;
+use super::line_question;
+use super::line_reader::LineReader;
 use crate::error::CommandResult;
 use crate::output::OutputMode;
 use crate::output::Verbosity;
@@ -35,6 +39,11 @@ use crate::output::Verbosity;
 /// Renders command output to the terminal. In text mode, all output goes to stdout. In JSON
 /// mode, messages go to stderr and artifacts are serialized as JSON to stdout. This follows the
 /// convention used by `gh`, `kubectl`, and `jq`.
+///
+/// The presenter also asks the user the questions of the command. It writes a question to
+/// stderr in both modes, and the user answers with one line on stdin. Verbosity and output mode
+/// do not suppress a question. A presenter that is not built as interactive drops every
+/// question.
 ///
 /// `TerminalPresenter` is constructed once via its [builder], consumed by a single call to
 /// [`present`], and dropped when the command completes. The presenter holds the [`EventReceiver`]
@@ -64,6 +73,10 @@ pub struct TerminalPresenter {
     /// Whether to render events as text or as JSON
     #[builder(default)]
     mode: OutputMode,
+
+    /// Whether a user is present who can answer a prompt
+    #[builder(default)]
+    interactivity: Interactivity,
 
     /// Stream of events that the command produces
     receiver: EventReceiver,
@@ -105,8 +118,8 @@ fn is_diagnostic(event: &ProcessEvent) -> bool {
 /// and appears only when the user asks for verbose output. A command that wants a program to be
 /// visible at the default verbosity says so itself with a message.
 ///
-/// This presenter cannot ask the user yet, so it drops a prompt. The command then receives an
-/// error and does not wait.
+/// The presenter handles a prompt before it renders an event. This function drops a prompt that
+/// reaches it.
 ///
 /// # Panics
 ///
@@ -167,14 +180,32 @@ fn render_event(
     }
 }
 
+/// Asks the user the question of a request, on the display and from the input
+///
+/// The display is the standard error in every output mode, so the standard output carries only
+/// the result of the command.
+async fn ask_user(request: PromptRequest, input: &mut LineReader, display: &mut impl Write) {
+    match request {
+        PromptRequest::Confirm { question, reply } => {
+            line_question::ask(&question, reply, input, display).await;
+        }
+    }
+}
+
 impl TerminalPresenter {
     /// Presents the output of a command on the given streams
     ///
     /// [`Presenter::present`] passes the standard output and the standard error of the
-    /// application. A test passes buffers.
+    /// application, and the standard input if a user is present. A test passes buffers and
+    /// scripted input.
     ///
     /// Each write locks its stream for one line only, so the presenter does not block other
     /// writers for the whole presentation.
+    ///
+    /// The presenter handles one event at a time. A question therefore appears after the
+    /// output that the command sent before it, and later output appears after the answer.
+    /// Verbosity does not apply to a question. Without an input, the presenter drops every
+    /// prompt.
     ///
     /// # Errors
     ///
@@ -188,17 +219,27 @@ impl TerminalPresenter {
         command: Pin<Box<dyn Future<Output = CommandResult> + Send>>,
         stdout: &mut impl Write,
         stderr: &mut impl Write,
+        mut input: Option<LineReader>,
     ) -> CommandResult {
         let Self {
             verbosity,
             mode,
+            interactivity: _,
             mut receiver,
         } = self;
 
         let command_handle = tokio::spawn(command);
 
         while let Some(event) = receiver.recv().await {
-            render_event(event, verbosity, mode, stdout, stderr);
+            match event {
+                Event::Prompt(request) => match &mut input {
+                    Some(input) => ask_user(*request, input, stderr).await,
+                    None => drop(request),
+                },
+                Event::Message(_) | Event::Detail(_) | Event::Artifact(_) | Event::Process(_) => {
+                    render_event(event, verbosity, mode, stdout, stderr);
+                }
+            }
         }
 
         // The join fails only if the command task panicked or was aborted. Resuming the
@@ -214,8 +255,18 @@ impl Presenter for TerminalPresenter {
         self,
         command: Pin<Box<dyn Future<Output = CommandResult> + Send>>,
     ) -> CommandResult {
-        self.present_on(command, &mut std::io::stdout(), &mut std::io::stderr())
-            .await
+        let input = match self.interactivity {
+            Interactivity::Interactive => Some(LineReader::stdin()),
+            Interactivity::NonInteractive => None,
+        };
+
+        self.present_on(
+            command,
+            &mut std::io::stdout(),
+            &mut std::io::stderr(),
+            input,
+        )
+        .await
     }
 }
 
@@ -225,16 +276,82 @@ mod tests {
     // would repeat that and give the reader no information.
     #![allow(clippy::missing_panics_doc)]
 
+    use std::collections::VecDeque;
+    use std::sync::{Arc, Mutex};
     use std::time::Duration;
 
-    use clawless_core::event::event_channel;
+    use clawless_core::context::Interactivity;
     use clawless_core::event::process::{Outcome, RunId};
     use clawless_core::event::prompt::PromptRequest;
+    use clawless_core::event::{EventSender, event_channel};
+    use clawless_core::output::Output;
     use clawless_core::process::Invocation;
     use clawless_core::process::Line;
-    use clawless_core::prompt::Confirm;
+    use clawless_core::prompt::{Confirm, Confirmation, Prompt};
 
     use super::*;
+
+    /// Collects what a presenter writes to both of its streams, in the order of the writes
+    #[derive(Clone, Debug, Default)]
+    struct Transcript {
+        /// The bytes of every write so far
+        bytes: Arc<Mutex<Vec<u8>>>,
+    }
+
+    impl Transcript {
+        /// Returns everything that was written so far
+        fn text(&self) -> String {
+            String::from_utf8_lossy(&self.bytes.lock().expect("should lock")).into_owned()
+        }
+    }
+
+    impl Write for Transcript {
+        fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
+            self.bytes
+                .lock()
+                .expect("should lock")
+                .extend_from_slice(buffer);
+
+            Ok(buffer.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    /// Returns a command that says what it is about to do, asks, and reports the answer
+    fn confirming(sender: EventSender) -> Pin<Box<dyn Future<Output = CommandResult> + Send>> {
+        Box::pin(async move {
+            let output = Output::new(sender);
+            let prompt = Prompt::builder()
+                .output(output.clone())
+                .interactivity(Interactivity::Interactive)
+                .build();
+
+            output.message("About to release 1.4.0.").await?;
+            let answer = prompt
+                .confirm(Confirm::new("Release?").with_default(Confirmation::No))
+                .await?;
+            output.message(format!("The user said {answer:?}.")).await?;
+
+            Ok(())
+        })
+    }
+
+    /// Returns an input over the lines that a user types
+    fn typed(lines: &[&str]) -> LineReader {
+        let mut lines = lines
+            .iter()
+            .map(|line| (*line).to_owned())
+            .collect::<VecDeque<_>>();
+
+        LineReader::new(move |buffer| {
+            let line = lines.pop_front().unwrap_or_default();
+            buffer.push_str(&line);
+            Ok(line.len())
+        })
+    }
 
     #[test]
     fn builder_with_defaults_uses_default_verbosity_and_mode() {
@@ -340,6 +457,108 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn present_on_with_a_prompt_asks_after_the_earlier_output() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+        let transcript = Transcript::default();
+
+        presenter
+            .present_on(
+                confirming(sender),
+                &mut transcript.clone(),
+                &mut transcript.clone(),
+                Some(typed(&["y\n"])),
+            )
+            .await
+            .expect("should succeed");
+
+        assert_eq!(
+            transcript.text(),
+            "About to release 1.4.0.\nRelease? [y/N] The user said Yes.\n"
+        );
+    }
+
+    #[tokio::test]
+    async fn present_on_with_a_prompt_at_quiet_verbosity_still_asks() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder()
+            .receiver(receiver)
+            .verbosity(Verbosity::Quiet)
+            .build();
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        presenter
+            .present_on(
+                confirming(sender),
+                &mut stdout,
+                &mut stderr,
+                Some(typed(&["y\n"])),
+            )
+            .await
+            .expect("should succeed");
+
+        assert_eq!(String::from_utf8_lossy(&stderr), "Release? [y/N] ");
+    }
+
+    #[tokio::test]
+    async fn present_on_with_a_prompt_in_json_mode_keeps_the_question_off_stdout() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder()
+            .receiver(receiver)
+            .mode(OutputMode::Json)
+            .build();
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        presenter
+            .present_on(
+                confirming(sender),
+                &mut stdout,
+                &mut stderr,
+                Some(typed(&["y\n"])),
+            )
+            .await
+            .expect("should succeed");
+
+        assert_eq!(String::from_utf8_lossy(&stdout), "");
+    }
+
+    #[tokio::test]
+    async fn present_on_with_a_prompt_in_text_mode_asks_on_stderr() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        presenter
+            .present_on(
+                confirming(sender),
+                &mut stdout,
+                &mut stderr,
+                Some(typed(&["y\n"])),
+            )
+            .await
+            .expect("should succeed");
+
+        assert_eq!(String::from_utf8_lossy(&stderr), "Release? [y/N] ");
+    }
+
+    #[tokio::test]
+    async fn present_on_without_an_input_drops_the_prompt() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        let error = presenter
+            .present_on(confirming(sender), &mut stdout, &mut stderr, None)
+            .await
+            .expect_err("should fail");
+
+        assert_eq!(
+            error.root_cause().to_string(),
+            "the prompt was dropped without an answer"
+        );
+    }
+
+    #[tokio::test]
     async fn present_on_writes_the_events_of_the_command_to_the_streams() {
         let (sender, receiver) = event_channel();
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
@@ -356,6 +575,7 @@ mod tests {
                 }),
                 &mut stdout,
                 &mut stderr,
+                None,
             )
             .await
             .expect("should succeed");
