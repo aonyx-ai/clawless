@@ -3,6 +3,7 @@ use quote::quote;
 use syn::{Error, FnArg, Ident, ItemFn, PatType, Result, Type};
 
 use super::{Attributes, Generator, parse_attributes};
+use crate::command_name::CommandName;
 
 /// Code generator for `#[command]` functions
 ///
@@ -20,11 +21,18 @@ pub(crate) struct CommandGenerator {
     input: ItemFn,
     /// Identifier of the function that the user wrote, which names the generated functions
     ident: Ident,
+    /// Name that this leaf has on the command line, which the constructor derives from
+    /// `ident`
+    command_name: CommandName,
 }
 
 impl Generator for CommandGenerator {
     fn ident(&self) -> Ident {
         self.ident.clone()
+    }
+
+    fn command_name(&self) -> &CommandName {
+        &self.command_name
     }
 
     fn attrs(&self) -> &Attributes {
@@ -71,17 +79,21 @@ impl CommandGenerator {
     /// # Errors
     ///
     /// Returns a compile error if the function does not accept exactly two parameters (args and
-    /// context) or if the macro attributes are invalid.
+    /// context), if the macro attributes are invalid, or if the name of the function does not
+    /// translate into a command name.
     pub(crate) fn new(attrs: TokenStream, input: ItemFn) -> Result<Self> {
         let attrs = parse_attributes(attrs, "command")?;
         let ident = input.sig.ident.clone();
 
         extract_command_argument_type(&input)?;
 
+        let command_name = CommandName::try_from(&ident)?;
+
         Ok(Self {
             attrs,
             input,
             ident,
+            command_name,
         })
     }
 }

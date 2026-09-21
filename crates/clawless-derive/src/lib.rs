@@ -7,6 +7,8 @@ use syn::{ItemFn, parse_macro_input};
 use crate::generator::{ApplicationGenerator, CommandGenerator, Generator};
 use crate::inventory::InventoryGenerator;
 
+/// Translation from the name of a function to the name of a command
+mod command_name;
 /// Code generators shared by the `#[command]` and `#[application]` macros
 mod generator;
 /// Compile-time code that links a subcommand to its parent module

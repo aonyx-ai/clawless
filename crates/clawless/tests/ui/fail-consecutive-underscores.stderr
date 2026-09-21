@@ -1,0 +1,7 @@
+error: command name must not contain two underscores in a row
+
+       = help: Clawless writes each underscore of the function name as a hyphen, and one hyphen separates two words of a command name. Rename the function with one underscore between two words.
+ --> tests/ui/fail-consecutive-underscores.rs:7:14
+  |
+7 | pub async fn deploy__staging(_args: DeployStagingArgs, _context: Context) -> CommandResult {
+  |              ^^^^^^^^^^^^^^^

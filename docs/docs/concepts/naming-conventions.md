@@ -35,6 +35,28 @@ Results in: `myapp deploy-staging`
 
 The conversion is automatic - always write functions in snake_case.
 
+**Names that Clawless rejects:**
+
+A leading underscore, a trailing underscore, and two underscores in a row have
+no readable translation, because each one would put a hyphen where a command
+name must not have one. The macro reports a compile error for `_deploy`,
+`deploy_`, and `deploy__staging`. Rename the function so that it starts and ends
+with a letter, and so that one underscore separates two words.
+
+**Reserved words:**
+
+A command that shares its name with a Rust keyword needs a raw identifier. The
+`r#` prefix belongs to Rust and not to the command line, so Clawless removes it:
+
+```rust
+#[command]
+pub async fn r#type(args: TypeArgs, context: Context) -> CommandResult {
+    // ...
+}
+```
+
+Results in: `myapp type`
+
 ## File names → Command names
 
 File names follow the same pattern:

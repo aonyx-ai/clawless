@@ -11,6 +11,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{Error, Expr, Ident, ItemFn, Lit, Meta, Result, Type};
 
+use crate::command_name::CommandName;
 use crate::inventory::inventory_name;
 
 /// Shared behavior for command and application code generators
@@ -25,6 +26,13 @@ use crate::inventory::inventory_name;
 pub(crate) trait Generator {
     /// Returns the function identifier (e.g., `greet`, `dashboard`)
     fn ident(&self) -> Ident;
+
+    /// Returns the name under which this leaf appears on the command line
+    ///
+    /// The generated code uses this name twice, once for the clap `Command` and once for the
+    /// inventory entry that the dispatch code looks up. Both uses read it here, so that a
+    /// command cannot reach the help under one name and the dispatch under another.
+    fn command_name(&self) -> &CommandName;
 
     /// Returns the parsed macro attributes
     fn attrs(&self) -> &Attributes;
@@ -59,7 +67,7 @@ pub(crate) trait Generator {
     /// Generates the clap `Command` constructor expression
     fn command_new(&self) -> TokenStream {
         build_command(
-            &self.ident(),
+            self.command_name(),
             &self.args_type(),
             extract_function_documentation(self.input()).as_ref(),
             self.attrs(),
@@ -248,12 +256,12 @@ pub(crate) fn extract_function_documentation(input_fn: &ItemFn) -> Option<Docume
 /// Both generators use this function. Commands and applications therefore have an identical
 /// surface in clap.
 fn build_command(
-    ident: &Ident,
+    name: &CommandName,
     args_type: &Type,
     docs: Option<&Documentation>,
     attrs: &Attributes,
 ) -> TokenStream {
-    let command_name = ident.to_string();
+    let command_name = name.as_str();
 
     let mut command = quote! {
         #args_type::augment_args(clawless::clap::Command::new(#command_name))
