@@ -20,4 +20,5 @@ pub mod prelude {
     pub use super::cancellation::Cancellation;
     pub use super::context::{Context, ContextError, CurrentWorkingDirectory, Interactivity};
     pub use super::process::{Execution, Invocation, Process};
+    pub use super::prompt::{Confirmation, Prompt};
 }

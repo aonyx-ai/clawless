@@ -16,6 +16,7 @@ pub use self::interactivity::Interactivity;
 use crate::cancellation::Cancellation;
 use crate::output::Output;
 use crate::process::Process;
+use crate::prompt::Prompt;
 
 /// Newtype for the directory that a command runs in
 mod current_working_directory;
@@ -158,6 +159,33 @@ impl Context {
             .cancellation(self.cancellation.clone())
             .build()
     }
+
+    /// Returns the interface that asks the user a question
+    ///
+    /// The returned [`Prompt`] uses the output, the cancellation token, and the
+    /// [`Interactivity`] of this context. Each call builds a handle over the same channel and the
+    /// same token, so a command does not need to keep the handle.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// #[command]
+    /// pub async fn publish(args: PublishArgs, context: Context) -> CommandResult {
+    ///     match context.prompt().confirm("Publish the release?").await? {
+    ///         Confirmation::Yes => message!("Publishing"),
+    ///         Confirmation::No => message!("Nothing published"),
+    ///     }
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn prompt(&self) -> Prompt {
+        Prompt::builder()
+            .output(self.output.clone())
+            .cancellation(self.cancellation.clone())
+            .interactivity(self.interactivity)
+            .build()
+    }
 }
 
 #[cfg(test)]
@@ -171,6 +199,7 @@ mod tests {
     use super::*;
     use crate::event::Event;
     use crate::event::event_channel;
+    use crate::event::prompt::PromptRequest;
     use crate::process::Invocation;
 
     fn test_output() -> Output {
@@ -283,6 +312,74 @@ mod tests {
                 Event::Prompt(request) => format!("{request:?}"),
             }),
             Some(format!("$ {invocation}"))
+        );
+    }
+
+    #[test]
+    fn prompt_carries_the_interactivity_of_the_context() {
+        let context = Context::builder()
+            .current_working_directory(Path::new("/tmp"))
+            .interactivity(Interactivity::Interactive)
+            .output(test_output())
+            .build()
+            .expect("should create context");
+
+        let prompt = context.prompt();
+
+        assert_eq!(prompt.interactivity(), Interactivity::Interactive);
+    }
+
+    #[tokio::test]
+    async fn prompt_observes_the_cancellation_of_the_context() {
+        let cancellation = Cancellation::new();
+        let (sender, _receiver) = event_channel();
+        let context = Context::builder()
+            .current_working_directory(Path::new("/tmp"))
+            .cancellation(cancellation.clone())
+            .interactivity(Interactivity::Interactive)
+            .output(Output::new(sender))
+            .build()
+            .expect("should create context");
+        cancellation.cancel();
+
+        let error = context
+            .prompt()
+            .confirm("Release?")
+            .await
+            .expect_err("should fail");
+
+        assert_eq!(
+            error.to_string(),
+            "the prompt `Release?` was cancelled before the user answered"
+        );
+    }
+
+    #[tokio::test]
+    async fn prompt_sends_through_the_output_of_the_context() {
+        let (sender, mut receiver) = event_channel();
+        let context = Context::builder()
+            .current_working_directory(Path::new("/tmp"))
+            .interactivity(Interactivity::Interactive)
+            .output(Output::new(sender))
+            .build()
+            .expect("should create context");
+        let prompt = context.prompt();
+        let command = tokio::spawn(async move { prompt.confirm("Release?").await });
+
+        let event = receiver.recv().await;
+        command.abort();
+
+        assert_eq!(
+            event.map(|event| match event {
+                Event::Prompt(request) => match *request {
+                    PromptRequest::Confirm { question, .. } => question.question().clone(),
+                },
+                Event::Process(event) => event.to_string(),
+                Event::Message(text) => text,
+                Event::Detail(text) => text,
+                Event::Artifact(artifact) => artifact.to_string(),
+            }),
+            Some("Release?".to_owned())
         );
     }
 
