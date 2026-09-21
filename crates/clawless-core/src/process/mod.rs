@@ -442,6 +442,23 @@ mod tests {
     use super::*;
     use crate::event::{Event, EventReceiver, event_channel};
 
+    /// The command that keeps a shell alive until a signal ends it
+    ///
+    /// A test that cancels a run needs a shell that answers `SIGTERM` as soon
+    /// as the signal arrives. A shell that waits for a background program does
+    /// not, because the signal can reach it while it enters that wait. The
+    /// shell then either records the signal and runs the trap when the wait
+    /// ends, which is long after the grace period, or it stops with a
+    /// segmentation fault, because it runs the trap in the handler of the
+    /// signal.
+    ///
+    /// A loop of builtins has no such moment. The shell runs a recorded trap
+    /// on every turn of the loop, and it runs it outside the handler of the
+    /// signal. An answer therefore costs one builtin, wherever the signal
+    /// found the shell.
+    #[cfg(unix)]
+    const SPIN_UNTIL_SIGNALED: &str = "while :; do :; done";
+
     /// Returns the events of every run that the channel holds
     ///
     /// The channel closes when the test drops the handle that sent the events,
@@ -698,7 +715,7 @@ mod tests {
         let invocation = shell(&[
             &format!("trap 'touch \"{}\"; exit 0' TERM", marker.display()),
             "echo ready",
-            "sleep 20 & wait",
+            SPIN_UNTIL_SIGNALED,
         ]);
 
         let handle = tokio::spawn(async move { process.run(invocation).await });
@@ -847,7 +864,7 @@ mod tests {
         let invocation = shell(&[
             &format!("trap 'touch \"{}\"; exit 0' TERM", marker.display()),
             "exec 1>&- 2>&-",
-            "sleep 20 & wait",
+            SPIN_UNTIL_SIGNALED,
         ]);
 
         let handle = tokio::spawn(async move { process.run(invocation).await });
