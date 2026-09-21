@@ -1,0 +1,8 @@
+bin.name = "prompt"
+args = ["confirm"]
+status.code = 0
+stdout = """
+About to release version 1.4.0.
+Nobody can confirm the release, because no terminal is present.
+"""
+stderr = ""

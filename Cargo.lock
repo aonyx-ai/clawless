@@ -786,6 +786,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "prompt"
+version = "0.6.1"
+dependencies = [
+ "assert_cmd",
+ "clawless",
+ "tokio",
+ "trycmd",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"

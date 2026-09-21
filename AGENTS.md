@@ -114,7 +114,8 @@ examples/
   ├── cancellation/          # Cooperative cancellation example
   ├── hello-world/           # Reference example project
   ├── output/                # Messages, details, and artifacts
-  └── process/               # Running external programs
+  ├── process/               # Running external programs
+  └── prompt/                # Asking the user a question
 docs/                        # Docusaurus documentation site
 specs/                       # Design specifications
 ```
