@@ -33,6 +33,16 @@ pub enum PromptUserError {
         question: String,
     },
 
+    /// The command asked the user to select from no options
+    ///
+    /// The prompt sends no request.
+    #[error("the prompt `{question}` has no options to select from")]
+    #[non_exhaustive]
+    MissingOptions {
+        /// The text of the question
+        question: String,
+    },
+
     /// The presenter returned no answer
     ///
     /// The source is the reason.
@@ -44,6 +54,25 @@ pub enum PromptUserError {
 
         /// The cause of the failure
         source: AnswerPromptError,
+    },
+
+    /// The answer names an option that the prompt does not have
+    ///
+    /// The presenter sent a position beyond the options. The cause is a fault in the presenter,
+    /// or a script of a test that does not match the question.
+    #[error(
+        "the answer to the prompt `{question}` names option {index}, and the prompt has {count} options"
+    )]
+    #[non_exhaustive]
+    UnknownOption {
+        /// The text of the question
+        question: String,
+
+        /// The position that the answer names, where the first option has the position zero
+        index: usize,
+
+        /// The count of the options that the prompt has
+        count: usize,
     },
 
     /// The prompt could not be sent to the presenter

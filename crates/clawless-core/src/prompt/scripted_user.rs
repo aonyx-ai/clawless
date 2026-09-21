@@ -95,15 +95,24 @@ impl ScriptedUser {
             (PromptRequest::Confirm { reply, .. }, Some(ScriptedAnswer::Confirm(answer))) => {
                 reply.answer(answer);
             }
+            (PromptRequest::Select { reply, .. }, Some(ScriptedAnswer::Select(answer))) => {
+                reply.answer(answer);
+            }
             (PromptRequest::Text { reply, .. }, Some(ScriptedAnswer::Text(answer))) => {
                 reply.answer(answer);
             }
-            (request @ PromptRequest::Confirm { .. }, Some(ScriptedAnswer::Text(_)) | None) => {
-                request.fail(AnswerPromptError::UnscriptedPrompt);
-            }
-            (request @ PromptRequest::Text { .. }, Some(ScriptedAnswer::Confirm(_)) | None) => {
-                request.fail(AnswerPromptError::UnscriptedPrompt);
-            }
+            (
+                request @ PromptRequest::Confirm { .. },
+                Some(ScriptedAnswer::Select(_) | ScriptedAnswer::Text(_)) | None,
+            ) => request.fail(AnswerPromptError::UnscriptedPrompt),
+            (
+                request @ PromptRequest::Select { .. },
+                Some(ScriptedAnswer::Confirm(_) | ScriptedAnswer::Text(_)) | None,
+            ) => request.fail(AnswerPromptError::UnscriptedPrompt),
+            (
+                request @ PromptRequest::Text { .. },
+                Some(ScriptedAnswer::Confirm(_) | ScriptedAnswer::Select(_)) | None,
+            ) => request.fail(AnswerPromptError::UnscriptedPrompt),
         }
     }
 }
@@ -132,6 +141,8 @@ mod tests {
             PromptUserError::AbsentUser { .. } => false,
             PromptUserError::CancelledPrompt { .. } => false,
             PromptUserError::UndeliverablePrompt { .. } => false,
+            PromptUserError::MissingOptions { .. } => false,
+            PromptUserError::UnknownOption { .. } => false,
         }
     }
 
@@ -169,6 +180,18 @@ mod tests {
         let answer = prompt.confirm("Publish?").await.expect("should answer");
 
         assert_eq!(answer, Confirmation::No);
+    }
+
+    #[tokio::test]
+    async fn attend_answers_a_selection_from_the_script() {
+        let (prompt, _user) = scripted([ScriptedAnswer::Select(1)]);
+
+        let answer = prompt
+            .select("Port", [80, 443])
+            .await
+            .expect("should answer");
+
+        assert_eq!(answer, 443);
     }
 
     #[tokio::test]

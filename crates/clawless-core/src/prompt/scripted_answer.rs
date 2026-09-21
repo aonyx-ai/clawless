@@ -10,6 +10,12 @@ pub enum ScriptedAnswer {
     /// The answer to a confirmation
     Confirm(Confirmation),
 
+    /// The answer to a selection
+    ///
+    /// The value is the position of the chosen option, where the first option has the position
+    /// zero.
+    Select(usize),
+
     /// The answer to a question for one line of text
     Text(String),
 }

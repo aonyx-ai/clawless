@@ -2,7 +2,7 @@
 
 use clawless_core::prompt::Text;
 
-use super::LineQuestion;
+use super::{LineQuestion, label};
 
 /// Asks for a line of text after the question
 ///
@@ -15,13 +15,7 @@ impl LineQuestion for Text {
     type Answer = String;
 
     fn prompt(&self) -> String {
-        let question = self.question();
-
-        if question.ends_with([':', '?']) {
-            format!("{question} ")
-        } else {
-            format!("{question}: ")
-        }
+        format!("{} ", label(self.question()))
     }
 
     fn parse(&self, line: &str) -> Result<Self::Answer, String> {

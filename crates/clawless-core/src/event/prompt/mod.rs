@@ -9,7 +9,7 @@
 
 pub use self::pending_answer::PendingAnswer;
 pub use self::reply::Reply;
-use crate::prompt::{AnswerPromptError, Confirm, Confirmation, Text};
+use crate::prompt::{AnswerPromptError, Confirm, Confirmation, Select, Text};
 
 /// The answer to one prompt, which has not arrived yet
 mod pending_answer;
@@ -38,6 +38,7 @@ mod reply;
 ///
 /// match request {
 ///     PromptRequest::Confirm { reply, .. } => reply.answer(Confirmation::No),
+///     PromptRequest::Select { reply, .. } => reply.answer(0),
 ///     PromptRequest::Text { reply, .. } => reply.answer(String::new()),
 /// }
 ///
@@ -55,6 +56,18 @@ pub enum PromptRequest {
 
         /// The reply that returns the answer to the command
         reply: Reply<Confirmation>,
+    },
+
+    /// A question that the user answers with one of several options
+    Select {
+        /// The question to ask
+        question: Select,
+
+        /// The reply that returns the answer to the command
+        ///
+        /// The answer is the position of the selected option, and the first option has the
+        /// position zero.
+        reply: Reply<usize>,
     },
 
     /// A question that the user answers with one line of text
@@ -82,6 +95,24 @@ impl PromptRequest {
         let (reply, pending) = Reply::channel();
 
         (Self::Confirm { question, reply }, pending)
+    }
+
+    /// Creates a request for a selection, and the pending answer to it
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::prompt::PromptRequest;
+    /// use clawless_core::prompt::Select;
+    ///
+    /// let question = Select::new("Kind of change", ["Added", "Changed", "Fixed"]);
+    ///
+    /// let (request, pending) = PromptRequest::select(question);
+    /// ```
+    pub fn select(question: Select) -> (Self, PendingAnswer<usize>) {
+        let (reply, pending) = Reply::channel();
+
+        (Self::Select { question, reply }, pending)
     }
 
     /// Creates a request for a line of text, and the pending answer to it
@@ -115,6 +146,7 @@ impl PromptRequest {
     pub fn question(&self) -> &str {
         match self {
             Self::Confirm { question, .. } => question.question(),
+            Self::Select { question, .. } => question.question(),
             Self::Text { question, .. } => question.question(),
         }
     }
@@ -134,6 +166,7 @@ impl PromptRequest {
     pub fn fail(self, error: AnswerPromptError) {
         match self {
             Self::Confirm { reply, .. } => reply.fail(error),
+            Self::Select { reply, .. } => reply.fail(error),
             Self::Text { reply, .. } => reply.fail(error),
         }
     }
@@ -167,7 +200,7 @@ mod tests {
         let (request, pending) = PromptRequest::confirm(Confirm::new("Release?"));
         match request {
             PromptRequest::Confirm { reply, .. } => reply.answer(Confirmation::Yes),
-            PromptRequest::Text { .. } => {}
+            PromptRequest::Select { .. } | PromptRequest::Text { .. } => {}
         }
 
         let answer = pending.wait().await.expect("should answer");
@@ -188,12 +221,34 @@ mod tests {
         );
     }
 
+    #[test]
+    fn question_with_a_selection_returns_its_text() {
+        let (request, _pending) = PromptRequest::select(Select::new("Category", ["Added"]));
+
+        let question = request.question();
+
+        assert_eq!(question, "Category");
+    }
+
+    #[tokio::test]
+    async fn select_with_an_answer_resolves_the_pending_answer() {
+        let (request, pending) = PromptRequest::select(Select::new("Category", ["Added", "Fixed"]));
+        match request {
+            PromptRequest::Select { reply, .. } => reply.answer(1),
+            PromptRequest::Confirm { .. } | PromptRequest::Text { .. } => {}
+        }
+
+        let answer = pending.wait().await.expect("should answer");
+
+        assert_eq!(answer, 1);
+    }
+
     #[tokio::test]
     async fn text_with_an_answer_resolves_the_pending_answer() {
         let (request, pending) = PromptRequest::text(Text::new("Title"));
         match request {
             PromptRequest::Text { reply, .. } => reply.answer("Fix the race".to_owned()),
-            PromptRequest::Confirm { .. } => {}
+            PromptRequest::Confirm { .. } | PromptRequest::Select { .. } => {}
         }
 
         let answer = pending.wait().await.expect("should answer");

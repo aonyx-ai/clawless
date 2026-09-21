@@ -184,10 +184,19 @@ fn render_event(
 ///
 /// The display is the standard error in every output mode, so the standard output carries only
 /// the result of the command.
+///
+/// The presenter drops a selection without options, because no line is an answer to it.
 async fn ask_user(request: PromptRequest, input: &mut LineReader, display: &mut impl Write) {
     match request {
         PromptRequest::Confirm { question, reply } => {
             line_question::ask(&question, reply, input, display).await;
+        }
+        PromptRequest::Select { question, reply } => {
+            if question.options().is_empty() {
+                drop(reply);
+            } else {
+                line_question::ask(&question, reply, input, display).await;
+            }
         }
         PromptRequest::Text { question, reply } => {
             line_question::ask(&question, reply, input, display).await;
@@ -290,7 +299,7 @@ mod tests {
     use clawless_core::output::Output;
     use clawless_core::process::Invocation;
     use clawless_core::process::Line;
-    use clawless_core::prompt::{Confirm, Confirmation, Prompt};
+    use clawless_core::prompt::{Confirm, Confirmation, Prompt, Select};
 
     use super::*;
 
@@ -542,6 +551,68 @@ mod tests {
             .expect("should succeed");
 
         assert_eq!(String::from_utf8_lossy(&stderr), "Release? [y/N] ");
+    }
+
+    #[tokio::test]
+    async fn present_on_with_a_selection_sends_the_position_to_the_command() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+        let transcript = Transcript::default();
+
+        presenter
+            .present_on(
+                Box::pin(async move {
+                    let output = Output::new(sender);
+                    let prompt = Prompt::builder()
+                        .output(output.clone())
+                        .interactivity(Interactivity::Interactive)
+                        .build();
+
+                    let kind = prompt.select("Kind", ["Added", "Fixed"]).await?;
+                    output.message(format!("The kind is {kind}.")).await?;
+
+                    Ok(())
+                }),
+                &mut transcript.clone(),
+                &mut transcript.clone(),
+                Some(typed(&["2\n"])),
+            )
+            .await
+            .expect("should succeed");
+
+        assert_eq!(
+            transcript.text(),
+            "Kind:\n  1) Added\n  2) Fixed\nEnter a number [1-2]: The kind is Fixed.\n"
+        );
+    }
+
+    #[tokio::test]
+    async fn present_on_with_a_selection_without_options_drops_the_prompt() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        let error = presenter
+            .present_on(
+                Box::pin(async move {
+                    let options: [&str; 0] = [];
+                    let (request, pending) = PromptRequest::select(Select::new("Kind", options));
+                    Output::new(sender).prompt(request).await?;
+                    pending.wait().await?;
+
+                    Ok(())
+                }),
+                &mut stdout,
+                &mut stderr,
+                Some(typed(&["1\n"])),
+            )
+            .await
+            .expect_err("should fail");
+
+        assert_eq!(
+            error.to_string(),
+            "the prompt was dropped without an answer"
+        );
     }
 
     #[tokio::test]
