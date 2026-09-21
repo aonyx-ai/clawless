@@ -1,0 +1,8 @@
+bin.name = "prompt"
+args = ["--json", "confirm", "2.0.0"]
+status.code = 0
+stdout = ""
+stderr = """
+About to release version 2.0.0.
+Nobody can confirm the release, because no terminal is present.
+"""
