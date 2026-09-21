@@ -90,12 +90,15 @@ fn is_diagnostic(event: &ProcessEvent) -> bool {
     }
 }
 
-/// Renders one event to the terminal for the given verbosity and output mode
+/// Renders one event for the given verbosity and output mode
 ///
-/// In text mode, messages and details go to stdout. They therefore interleave with the
+/// `stdout` and `stderr` are the standard output and the standard error of the application. A
+/// test passes buffers.
+///
+/// In text mode, messages and details go to `stdout`. They therefore interleave with the
 /// artifacts, in the order that the command produced them.
 ///
-/// In JSON mode, messages and details go to stderr instead. Stdout then carries only JSON
+/// In JSON mode, messages and details go to `stderr` instead. `stdout` then carries only JSON
 /// artifacts, which a caller can pipe into another tool.
 ///
 /// The output of an external program is supplementary, so it follows the same rule as a detail
@@ -114,32 +117,26 @@ fn is_diagnostic(event: &ProcessEvent) -> bool {
 // to report the failure, so it fails loudly rather than dropping output silently.
 // r[impl process.render.verbosity]
 #[allow(clippy::expect_used)]
-fn render_event(event: Event, verbosity: Verbosity, mode: OutputMode) {
+fn render_event(
+    event: Event,
+    verbosity: Verbosity,
+    mode: OutputMode,
+    stdout: &mut impl Write,
+    stderr: &mut impl Write,
+) {
     match event {
         Event::Message(msg) => match verbosity {
             Verbosity::Quiet => {}
             Verbosity::Default | Verbosity::Verbose => match mode {
-                OutputMode::Text => {
-                    let mut handle = std::io::stdout().lock();
-                    writeln!(handle, "{msg}").expect("should write message");
-                }
-                OutputMode::Json => {
-                    let mut handle = std::io::stderr().lock();
-                    writeln!(handle, "{msg}").expect("should write message");
-                }
+                OutputMode::Text => writeln!(stdout, "{msg}").expect("should write message"),
+                OutputMode::Json => writeln!(stderr, "{msg}").expect("should write message"),
             },
         },
         Event::Detail(msg) => match verbosity {
             Verbosity::Quiet | Verbosity::Default => {}
             Verbosity::Verbose => match mode {
-                OutputMode::Text => {
-                    let mut handle = std::io::stdout().lock();
-                    writeln!(handle, "{msg}").expect("should write detail");
-                }
-                OutputMode::Json => {
-                    let mut handle = std::io::stderr().lock();
-                    writeln!(handle, "{msg}").expect("should write detail");
-                }
+                OutputMode::Text => writeln!(stdout, "{msg}").expect("should write detail"),
+                OutputMode::Json => writeln!(stderr, "{msg}").expect("should write detail"),
             },
         },
         Event::Artifact(artifact) => {
@@ -149,8 +146,7 @@ fn render_event(event: Event, verbosity: Verbosity, mode: OutputMode) {
                     serde_json::to_string(&artifact).expect("should serialize artifact to JSON")
                 }
             };
-            let mut handle = std::io::stdout().lock();
-            writeln!(handle, "{line}").expect("should write artifact");
+            writeln!(stdout, "{line}").expect("should write artifact");
         }
         Event::Process(event) => match verbosity {
             Verbosity::Quiet | Verbosity::Default => {}
@@ -161,11 +157,9 @@ fn render_event(event: Event, verbosity: Verbosity, mode: OutputMode) {
                 };
 
                 if to_stderr {
-                    let mut handle = std::io::stderr().lock();
-                    writeln!(handle, "{event}").expect("should write process event");
+                    writeln!(stderr, "{event}").expect("should write process event");
                 } else {
-                    let mut handle = std::io::stdout().lock();
-                    writeln!(handle, "{event}").expect("should write process event");
+                    writeln!(stdout, "{event}").expect("should write process event");
                 }
             }
         },
@@ -173,11 +167,27 @@ fn render_event(event: Event, verbosity: Verbosity, mode: OutputMode) {
     }
 }
 
-#[async_trait(?Send)]
-impl Presenter for TerminalPresenter {
-    async fn present(
+impl TerminalPresenter {
+    /// Presents the output of a command on the given streams
+    ///
+    /// [`Presenter::present`] passes the standard output and the standard error of the
+    /// application. A test passes buffers.
+    ///
+    /// Each write locks its stream for one line only, so the presenter does not block other
+    /// writers for the whole presentation.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error of the command if the command fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the command panicked, and if a stream cannot be written.
+    async fn present_on(
         self,
         command: Pin<Box<dyn Future<Output = CommandResult> + Send>>,
+        stdout: &mut impl Write,
+        stderr: &mut impl Write,
     ) -> CommandResult {
         let Self {
             verbosity,
@@ -188,13 +198,24 @@ impl Presenter for TerminalPresenter {
         let command_handle = tokio::spawn(command);
 
         while let Some(event) = receiver.recv().await {
-            render_event(event, verbosity, mode);
+            render_event(event, verbosity, mode, stdout, stderr);
         }
 
         // The join fails only if the command task panicked or was aborted. Resuming the
         // panic on this thread preserves the original panic message for the user.
         #[allow(clippy::expect_used)]
         command_handle.await.expect("command task panicked")
+    }
+}
+
+#[async_trait(?Send)]
+impl Presenter for TerminalPresenter {
+    async fn present(
+        self,
+        command: Pin<Box<dyn Future<Output = CommandResult> + Send>>,
+    ) -> CommandResult {
+        self.present_on(command, &mut std::io::stdout(), &mut std::io::stderr())
+            .await
     }
 }
 
@@ -319,6 +340,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn present_on_writes_the_events_of_the_command_to_the_streams() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        presenter
+            .present_on(
+                Box::pin(async move {
+                    sender
+                        .send(Event::Message("hello".to_owned()))
+                        .await
+                        .expect("should send");
+                    Ok(())
+                }),
+                &mut stdout,
+                &mut stderr,
+            )
+            .await
+            .expect("should succeed");
+
+        assert_eq!((stdout, stderr), (b"hello\n".to_vec(), Vec::new()));
+    }
+
+    #[tokio::test]
     async fn present_with_a_prompt_drops_the_request() {
         let (sender, receiver) = event_channel();
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
@@ -387,6 +432,114 @@ mod tests {
             }))
             .await
             .expect("should succeed");
+    }
+
+    #[test]
+    fn render_event_with_a_detail_at_default_verbosity_writes_nothing() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Detail("reading".to_owned()),
+            Verbosity::Default,
+            OutputMode::Text,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!((stdout, stderr), (Vec::new(), Vec::new()));
+    }
+
+    #[test]
+    fn render_event_with_a_detail_at_verbose_verbosity_writes_to_stdout() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Detail("reading".to_owned()),
+            Verbosity::Verbose,
+            OutputMode::Text,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!((stdout, stderr), (b"reading\n".to_vec(), Vec::new()));
+    }
+
+    #[test]
+    fn render_event_with_a_message_at_quiet_verbosity_writes_nothing() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Message("hello".to_owned()),
+            Verbosity::Quiet,
+            OutputMode::Text,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!((stdout, stderr), (Vec::new(), Vec::new()));
+    }
+
+    #[test]
+    fn render_event_with_a_message_in_json_mode_writes_to_stderr() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Message("hello".to_owned()),
+            Verbosity::Default,
+            OutputMode::Json,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!((stdout, stderr), (Vec::new(), b"hello\n".to_vec()));
+    }
+
+    #[test]
+    fn render_event_with_a_message_in_text_mode_writes_to_stdout() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Message("hello".to_owned()),
+            Verbosity::Default,
+            OutputMode::Text,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!((stdout, stderr), (b"hello\n".to_vec(), Vec::new()));
+    }
+
+    #[test]
+    fn render_event_with_a_standard_error_line_in_text_mode_writes_to_stderr() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Process(Box::new(ProcessEvent::Line {
+                id: RunId::next(),
+                line: Line::new(Stream::StandardError, "no such file"),
+            })),
+            Verbosity::Verbose,
+            OutputMode::Text,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!((stdout, stderr), (Vec::new(), b"no such file\n".to_vec()));
+    }
+
+    #[test]
+    fn render_event_with_an_artifact_in_json_mode_writes_json_to_stdout() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Artifact(Box::new(42)),
+            Verbosity::Quiet,
+            OutputMode::Json,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!((stdout, stderr), (b"42\n".to_vec(), Vec::new()));
     }
 
     #[test]
