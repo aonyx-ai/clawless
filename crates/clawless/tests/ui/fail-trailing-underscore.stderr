@@ -1,0 +1,7 @@
+error: command name must not start or end with an underscore
+
+       = help: Clawless writes each underscore of the function name as a hyphen, and a command name must not start or end with a hyphen. Rename the function so that it starts and ends with a letter.
+ --> tests/ui/fail-trailing-underscore.rs:7:14
+  |
+7 | pub async fn deploy_(_args: DeployArgs, _context: Context) -> CommandResult {
+  |              ^^^^^^^

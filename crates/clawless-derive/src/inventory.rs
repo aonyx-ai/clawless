@@ -49,13 +49,17 @@ impl<'a> InventoryGenerator<'a> {
     /// The submission references `super::ClawlessSubcommands`, connecting this leaf to its parent's
     /// inventory collector. Root commands skip submission because they are the entry point, not a
     /// subcommand of anything.
+    ///
+    /// The entry carries the name that the leaf has on the command line, not the name of the
+    /// function. The parent looks the name up in the `ArgMatches` that clap produced, and clap
+    /// knows the leaf under that same name.
     pub(crate) fn submit(&self) -> TokenStream {
         if self.generator.is_root() {
             return quote! {};
         }
 
         let inventory_name = inventory_name();
-        let name = self.generator.ident().to_string();
+        let name = self.generator.command_name().as_str();
         let init_fn_name = self.generator.initialization_function_name();
         let resolve_fn_name = self.generator.resolve_function_name();
 
