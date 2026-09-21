@@ -1,8 +1,8 @@
 //! Questions that a command asks its user
 //!
 //! [`Prompt`] is the interface that asks. [`Confirm`] is a question that the user answers with
-//! yes or no, and [`Confirmation`] is the answer. [`PromptUserError`] is the reason why a command
-//! received no answer.
+//! yes or no, and [`Confirmation`] is the answer. [`Text`] is a question that the user answers
+//! with one line of text. [`PromptUserError`] is the reason why a command received no answer.
 //!
 //! A question reaches the presenter as a [`PromptRequest`], and the presenter answers it.
 //! [`AnswerPromptError`] is the reason that the presenter reports when it has no answer.
@@ -35,6 +35,7 @@ pub use self::confirmation::Confirmation;
 pub use self::prompt_user_error::PromptUserError;
 pub use self::scripted_answer::ScriptedAnswer;
 pub use self::scripted_user::ScriptedUser;
+pub use self::text::Text;
 use crate::cancellation::Cancellation;
 use crate::context::Interactivity;
 use crate::event::prompt::{PendingAnswer, PromptRequest};
@@ -52,6 +53,8 @@ mod prompt_user_error;
 mod scripted_answer;
 /// A user for tests, who answers every prompt from a script
 mod scripted_user;
+/// A question that a user answers with one line of text
+mod text;
 
 /// Asks the user of the application a question and waits for the answer
 ///
@@ -133,6 +136,36 @@ impl Prompt {
         let question = question.into();
         let text = question.question().clone();
         let (request, pending) = PromptRequest::confirm(question);
+
+        self.ask(text, request, pending).await
+    }
+
+    /// Asks the user for one line of text
+    ///
+    /// The question is a [`Text`], or a text that converts into one. The answer is the line as
+    /// the user typed it, without the characters that end the line. The answer can be empty.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PromptUserError::AbsentUser`] if no user is present, and
+    /// [`PromptUserError::CancelledPrompt`] if cancellation stopped the wait. Returns
+    /// [`PromptUserError::UndeliverablePrompt`] if the presenter stopped listening, and
+    /// [`PromptUserError::UnansweredPrompt`] if the prompt came back without an answer.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use clawless_core::prompt::Prompt;
+    ///
+    /// # async fn example(prompt: Prompt) -> Result<(), Box<dyn std::error::Error>> {
+    /// let title = prompt.text("Title of the change").await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn text(&self, question: impl Into<Text>) -> Result<String, PromptUserError> {
+        let question = question.into();
+        let text = question.question().clone();
+        let (request, pending) = PromptRequest::text(question);
 
         self.ask(text, request, pending).await
     }
@@ -276,8 +309,9 @@ mod tests {
         command.abort();
 
         assert_eq!(
-            request.map(|request| match request {
-                PromptRequest::Confirm { question, .. } => question,
+            request.and_then(|request| match request {
+                PromptRequest::Confirm { question, .. } => Some(question),
+                PromptRequest::Text { .. } => None,
             }),
             Some(question)
         );
@@ -343,7 +377,7 @@ mod tests {
         let presenter = tokio::spawn(async move {
             match next_request(&mut receiver).await {
                 Some(PromptRequest::Confirm { reply, .. }) => reply.answer(Confirmation::Yes),
-                None => {}
+                Some(PromptRequest::Text { .. }) | None => {}
             }
         });
 
@@ -371,6 +405,7 @@ mod tests {
         assert_eq!(
             request.map(|request| match request {
                 PromptRequest::Confirm { reply, .. } => reply.is_abandoned(),
+                PromptRequest::Text { reply, .. } => reply.is_abandoned(),
             }),
             Some(true)
         );
@@ -425,6 +460,32 @@ mod tests {
         let prompt = Prompt::builder().output(Output::new(sender)).build();
 
         assert_eq!(prompt.interactivity(), Interactivity::NonInteractive);
+    }
+
+    #[tokio::test]
+    async fn text_with_an_answer_returns_it() {
+        let (prompt, mut receiver) = interactive();
+        let presenter = tokio::spawn(async move {
+            match next_request(&mut receiver).await {
+                Some(PromptRequest::Text { reply, .. }) => reply.answer("Fix the race".to_owned()),
+                Some(PromptRequest::Confirm { .. }) | None => {}
+            }
+        });
+
+        let answer = prompt.text("Title").await.expect("should answer");
+        presenter.await.expect("should join");
+
+        assert_eq!(answer, "Fix the race");
+    }
+
+    #[tokio::test]
+    async fn text_without_a_user_returns_an_error() {
+        let (sender, _receiver) = event_channel();
+        let prompt = Prompt::builder().output(Output::new(sender)).build();
+
+        let error = prompt.text("Title").await.expect_err("should fail");
+
+        assert!(is_absent_user(&error));
     }
 
     #[test]

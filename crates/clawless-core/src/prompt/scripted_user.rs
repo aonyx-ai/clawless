@@ -95,8 +95,14 @@ impl ScriptedUser {
             (PromptRequest::Confirm { reply, .. }, Some(ScriptedAnswer::Confirm(answer))) => {
                 reply.answer(answer);
             }
-            (PromptRequest::Confirm { reply, .. }, None) => {
-                reply.fail(AnswerPromptError::UnscriptedPrompt);
+            (PromptRequest::Text { reply, .. }, Some(ScriptedAnswer::Text(answer))) => {
+                reply.answer(answer);
+            }
+            (request @ PromptRequest::Confirm { .. }, Some(ScriptedAnswer::Text(_)) | None) => {
+                request.fail(AnswerPromptError::UnscriptedPrompt);
+            }
+            (request @ PromptRequest::Text { .. }, Some(ScriptedAnswer::Confirm(_)) | None) => {
+                request.fail(AnswerPromptError::UnscriptedPrompt);
             }
         }
     }
@@ -166,6 +172,15 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn attend_answers_a_text_prompt_from_the_script() {
+        let (prompt, _user) = scripted([ScriptedAnswer::Text("Fix the race".to_owned())]);
+
+        let answer = prompt.text("Title").await.expect("should answer");
+
+        assert_eq!(answer, "Fix the race");
+    }
+
+    #[tokio::test]
     async fn attend_returns_the_events_that_are_no_prompts() {
         let (sender, receiver) = event_channel();
         let user = tokio::spawn(ScriptedUser::default().attend(receiver));
@@ -188,6 +203,15 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["released".to_owned()]
         );
+    }
+
+    #[tokio::test]
+    async fn attend_with_an_answer_for_another_kind_fails_the_prompt() {
+        let (prompt, _user) = scripted([ScriptedAnswer::Confirm(Confirmation::Yes)]);
+
+        let error = prompt.text("Title").await.expect_err("should fail");
+
+        assert!(is_unscripted(&error));
     }
 
     #[tokio::test]

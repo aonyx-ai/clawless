@@ -9,6 +9,9 @@ use super::Confirmation;
 pub enum ScriptedAnswer {
     /// The answer to a confirmation
     Confirm(Confirmation),
+
+    /// The answer to a question for one line of text
+    Text(String),
 }
 
 #[cfg(test)]

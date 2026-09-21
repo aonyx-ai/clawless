@@ -14,6 +14,7 @@ use clawless_core::prompt::AnswerPromptError;
 use super::line_reader::LineReader;
 
 mod confirm;
+mod text;
 
 /// A question that a user answers with one line of text
 ///
@@ -130,10 +131,13 @@ mod tests {
 
     /// Returns the parts of a request for a confirmation without a default
     fn request() -> (Confirm, Reply<Confirmation>, PendingAnswer<Confirmation>) {
-        let (request, pending) = PromptRequest::confirm(Confirm::new("Release?"));
-        let PromptRequest::Confirm { question, reply } = request;
+        let question = Confirm::new("Release?");
+        let (request, pending) = PromptRequest::confirm(question.clone());
 
-        (question, reply, pending)
+        match request {
+            PromptRequest::Confirm { reply, .. } => (question, reply, pending),
+            PromptRequest::Text { .. } => unreachable!("the request is a confirmation"),
+        }
     }
 
     /// Returns a reader over the lines that a user types

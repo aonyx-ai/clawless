@@ -199,7 +199,6 @@ mod tests {
     use super::*;
     use crate::event::Event;
     use crate::event::event_channel;
-    use crate::event::prompt::PromptRequest;
     use crate::process::Invocation;
 
     fn test_output() -> Output {
@@ -371,9 +370,7 @@ mod tests {
 
         assert_eq!(
             event.map(|event| match event {
-                Event::Prompt(request) => match *request {
-                    PromptRequest::Confirm { question, .. } => question.question().clone(),
-                },
+                Event::Prompt(request) => request.question().to_owned(),
                 Event::Process(event) => event.to_string(),
                 Event::Message(text) => text,
                 Event::Detail(text) => text,
