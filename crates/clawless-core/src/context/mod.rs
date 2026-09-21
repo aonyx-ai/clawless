@@ -280,6 +280,7 @@ mod tests {
                 Event::Message(text) => text,
                 Event::Detail(text) => text,
                 Event::Artifact(artifact) => artifact.to_string(),
+                Event::Prompt(request) => format!("{request:?}"),
             }),
             Some(format!("$ {invocation}"))
         );

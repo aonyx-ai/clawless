@@ -5,6 +5,7 @@ pub mod context;
 pub mod event;
 pub mod output;
 pub mod process;
+pub mod prompt;
 
 // Signal-to-cancellation adapter used by the `main!()` macro expansion
 #[doc(hidden)]
