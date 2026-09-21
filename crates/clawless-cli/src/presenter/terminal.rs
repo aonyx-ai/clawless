@@ -102,6 +102,9 @@ fn is_diagnostic(event: &ProcessEvent) -> bool {
 /// and appears only when the user asks for verbose output. A command that wants a program to be
 /// visible at the default verbosity says so itself with a message.
 ///
+/// This presenter cannot ask the user yet, so it drops a prompt. The command then receives an
+/// error and does not wait.
+///
 /// # Panics
 ///
 /// Panics if the process cannot write to the output stream. A reader that closes the pipe
@@ -166,6 +169,7 @@ fn render_event(event: Event, verbosity: Verbosity, mode: OutputMode) {
                 }
             }
         },
+        Event::Prompt(request) => drop(request),
     }
 }
 
@@ -204,8 +208,10 @@ mod tests {
 
     use clawless_core::event::event_channel;
     use clawless_core::event::process::{Outcome, RunId};
+    use clawless_core::event::prompt::PromptRequest;
     use clawless_core::process::Invocation;
     use clawless_core::process::Line;
+    use clawless_core::prompt::Confirm;
 
     use super::*;
 
@@ -310,6 +316,30 @@ mod tests {
             }))
             .await
             .expect("should succeed");
+    }
+
+    #[tokio::test]
+    async fn present_with_a_prompt_drops_the_request() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+
+        let error = presenter
+            .present(Box::pin(async move {
+                let (request, pending) = PromptRequest::confirm(Confirm::new("Release?"));
+                sender
+                    .send(Event::Prompt(Box::new(request)))
+                    .await
+                    .expect("should send");
+                pending.wait().await?;
+                Ok(())
+            }))
+            .await
+            .expect_err("should fail");
+
+        assert_eq!(
+            error.to_string(),
+            "the prompt was dropped without an answer"
+        );
     }
 
     #[tokio::test]

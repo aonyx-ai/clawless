@@ -14,7 +14,11 @@
 //! command runs. Those events arrive while the program runs, which lets a presenter show progress
 //! instead of waiting for the program to end.
 //!
+//! The [`Event::Prompt`] variant carries a [`PromptRequest`], which is a question for the user.
+//! The request arrives after the events that the command sent before it.
+//!
 //! [`ProcessEvent`]: process::ProcessEvent
+//! [`PromptRequest`]: prompt::PromptRequest
 
 use std::fmt::{Debug, Display};
 
@@ -22,10 +26,12 @@ use serde::Serialize;
 
 pub use self::channel::{SendError, event_channel};
 use self::process::ProcessEvent;
+use self::prompt::PromptRequest;
 pub use self::receiver::EventReceiver;
 pub use self::sender::EventSender;
 
 pub mod process;
+pub mod prompt;
 
 /// Bounded channel that carries events from a command to its presenter
 mod channel;
@@ -79,15 +85,18 @@ erased_serde::serialize_trait_object!(Artifact);
 /// An `Event` represents a single piece of output that a command has produced. Events travel from
 /// the producer through an async channel to the Presenter, decoupling production from rendering.
 ///
-/// Four variants:
+/// Five variants:
 ///
 /// - [`Message`] — informational text (shown at default verbosity and above).
 /// - [`Detail`] — supplementary text (shown only at verbose verbosity).
 /// - [`Event::Artifact`] — the primary data a command produces, carried as a trait object that the
 ///   Presenter can render via [`Display`] or [`Serialize`].
 /// - [`Event::Process`] — one step in the run of an external program that the command started.
+/// - [`Event::Prompt`] — a question for the user, with the reply that answers it.
 ///
-/// The Presenter decides which events to render based on its verbosity setting.
+/// The Presenter decides which events to render based on its verbosity setting. Verbosity does
+/// not apply to a prompt, because the command waits for the answer. A presenter that cannot ask
+/// the user drops the request.
 ///
 /// [`Detail`]: Event::Detail
 /// [`Message`]: Event::Message
@@ -110,6 +119,10 @@ pub enum Event {
     /// every message in the channel as large as that name.
     // r[impl event.output.process]
     Process(Box<ProcessEvent>),
+    /// A question for the user
+    ///
+    /// The request is boxed so that the size of an `Event` stays that of its text variants.
+    Prompt(Box<PromptRequest>),
 }
 
 #[cfg(test)]
@@ -125,6 +138,7 @@ mod tests {
     use super::*;
     use crate::event::process::RunId;
     use crate::process::Invocation;
+    use crate::prompt::Confirm;
 
     #[derive(Clone, Debug, Serialize)]
     struct TestArtifact {
@@ -209,8 +223,29 @@ mod tests {
                 Event::Message(_) => None,
                 Event::Detail(_) => None,
                 Event::Artifact(_) => None,
+                Event::Prompt(_) => None,
             },
             Some(id)
+        );
+    }
+
+    #[test]
+    fn prompt_carries_the_request_of_a_command() {
+        let (request, _pending) = PromptRequest::confirm(Confirm::new("Release?"));
+
+        let event = Event::Prompt(Box::new(request));
+
+        assert_eq!(
+            match event {
+                Event::Prompt(request) => match *request {
+                    PromptRequest::Confirm { question, .. } => Some(question),
+                },
+                Event::Message(_) => None,
+                Event::Detail(_) => None,
+                Event::Artifact(_) => None,
+                Event::Process(_) => None,
+            },
+            Some(Confirm::new("Release?"))
         );
     }
 

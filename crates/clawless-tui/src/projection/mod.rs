@@ -349,6 +349,9 @@ impl Projection {
 /// announcement wakes therefore finds every entry already in place, rather than a projection that
 /// calls itself complete while the last entry is still missing.
 ///
+/// A prompt is not stored as an entry. The projection cannot ask a user, so it drops the
+/// request. The command then receives an error and does not wait.
+///
 /// # Panics
 ///
 /// Panics if the internal lock is poisoned.
@@ -367,6 +370,10 @@ async fn drain(
             Event::Detail(text) => Entry::Detail(text),
             Event::Artifact(artifact) => Entry::Artifact(Arc::from(artifact)),
             Event::Process(event) => Entry::Process(Arc::from(event)),
+            Event::Prompt(request) => {
+                drop(request);
+                continue;
+            }
         };
         state.write().expect("lock poisoned").push(entry);
     }
@@ -388,7 +395,9 @@ mod tests {
 
     use clawless_core::event::event_channel;
     use clawless_core::event::process::{ProcessEvent, RunId};
+    use clawless_core::event::prompt::PromptRequest;
     use clawless_core::process::{Line, Stream};
+    use clawless_core::prompt::Confirm;
     use serde::Serialize;
 
     use super::*;
@@ -464,6 +473,24 @@ mod tests {
             panic!("expected Entry::Detail");
         };
         assert_eq!(s, "dtl2");
+    }
+
+    #[tokio::test]
+    async fn drain_drops_a_prompt_that_it_cannot_answer() {
+        let (sender, receiver) = event_channel();
+        let _projection = Projection::new(receiver);
+        let (request, pending) = PromptRequest::confirm(Confirm::new("Release?"));
+        sender
+            .send(Event::Prompt(Box::new(request)))
+            .await
+            .expect("should send");
+
+        let error = pending.wait().await.expect_err("should fail");
+
+        assert_eq!(
+            error.to_string(),
+            "the prompt was dropped without an answer"
+        );
     }
 
     #[tokio::test]
@@ -593,6 +620,22 @@ mod tests {
             panic!("expected Entry::Message");
         };
         assert_eq!(s, "third");
+    }
+
+    #[tokio::test]
+    async fn entries_with_a_prompt_stores_no_entry() {
+        let (sender, receiver) = event_channel();
+        let projection = Projection::new(receiver);
+        let (request, _pending) = PromptRequest::confirm(Confirm::new("Release?"));
+
+        sender
+            .send(Event::Prompt(Box::new(request)))
+            .await
+            .expect("should send");
+        drop(sender);
+        projection.wait_until_complete().await;
+
+        assert!(projection.entries().is_empty());
     }
 
     #[tokio::test]

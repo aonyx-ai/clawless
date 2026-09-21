@@ -8,17 +8,21 @@
 //! [`process_event`] carries the steps of an external program that a command runs. Commands do not
 //! usually call it, because [`Process`] reports a run through it.
 //!
+//! [`prompt`] sends a question for the user.
+//!
 //! [`Process`]: crate::process::Process
 //! [`artifact`]: Output::artifact
 //! [`detail`]: Output::detail
 //! [`message`]: Output::message
 //! [`process_event`]: Output::process_event
+//! [`prompt`]: Output::prompt
 
 use std::fmt::{Debug, Display};
 
 use serde::Serialize;
 
 use crate::event::process::ProcessEvent;
+use crate::event::prompt::PromptRequest;
 use crate::event::{Event, EventSender, SendError};
 
 /// Command output interface that wraps an event channel sender
@@ -224,6 +228,39 @@ impl Output {
     pub async fn process_event(&self, event: ProcessEvent) -> Result<(), SendError> {
         self.sender.send(Event::Process(Box::new(event))).await
     }
+
+    /// Sends a question for the user
+    ///
+    /// The request arrives after every event that this output sent before it. The answer
+    /// arrives at the [`PendingAnswer`] that was created together with the request.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SendError`] if the [`EventReceiver`] has been dropped.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::event_channel;
+    /// use clawless_core::event::prompt::PromptRequest;
+    /// use clawless_core::output::Output;
+    /// use clawless_core::prompt::Confirm;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// let (sender, _receiver) = event_channel();
+    /// let output = Output::new(sender);
+    /// let (request, _pending) = PromptRequest::confirm(Confirm::new("Delete the branch?"));
+    ///
+    /// output.prompt(request).await.expect("should send");
+    /// # }
+    /// ```
+    ///
+    /// [`EventReceiver`]: crate::event::EventReceiver
+    /// [`PendingAnswer`]: crate::event::prompt::PendingAnswer
+    pub async fn prompt(&self, request: PromptRequest) -> Result<(), SendError> {
+        self.sender.send(Event::Prompt(Box::new(request))).await
+    }
 }
 
 #[cfg(test)]
@@ -240,6 +277,7 @@ mod tests {
     use crate::event::event_channel;
     use crate::event::process::RunId;
     use crate::process::Invocation;
+    use crate::prompt::Confirm;
 
     #[derive(Clone, Debug, Serialize)]
     struct TestArtifact {
@@ -325,8 +363,31 @@ mod tests {
                 Event::Message(text) => text,
                 Event::Detail(text) => text,
                 Event::Artifact(artifact) => artifact.to_string(),
+                Event::Prompt(request) => format!("{request:?}"),
             }),
             Some(format!("$ {invocation}"))
+        );
+    }
+
+    #[tokio::test]
+    async fn prompt_sends_prompt_event() {
+        let (sender, mut receiver) = event_channel();
+        let output = Output::new(sender);
+        let (request, _pending) = PromptRequest::confirm(Confirm::new("Release?"));
+
+        output.prompt(request).await.expect("should send");
+
+        assert_eq!(
+            receiver.recv().await.map(|event| match event {
+                Event::Prompt(request) => match *request {
+                    PromptRequest::Confirm { question, .. } => question.question().clone(),
+                },
+                Event::Process(event) => event.to_string(),
+                Event::Message(text) => text,
+                Event::Detail(text) => text,
+                Event::Artifact(artifact) => artifact.to_string(),
+            }),
+            Some("Release?".to_owned())
         );
     }
 
