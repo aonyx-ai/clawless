@@ -86,6 +86,7 @@ mod tests {
         assert!(match pending.wait().await.expect_err("should fail") {
             AnswerPromptError::ClosedInput => true,
             AnswerPromptError::DroppedRequest => false,
+            AnswerPromptError::UnscriptedPrompt => false,
             AnswerPromptError::UnusableTerminal { .. } => false,
         });
     }

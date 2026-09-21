@@ -23,6 +23,15 @@ pub enum AnswerPromptError {
     #[error("the prompt was dropped without an answer")]
     DroppedRequest,
 
+    /// The script of a test holds no answer that fits the prompt
+    ///
+    /// A [`ScriptedUser`] reports this when its script has ended, and when the next answer is
+    /// for another kind of prompt.
+    ///
+    /// [`ScriptedUser`]: super::ScriptedUser
+    #[error("the script holds no answer that fits the prompt")]
+    UnscriptedPrompt,
+
     /// The terminal could not show the prompt or read the answer
     #[error("failed to use the terminal")]
     UnusableTerminal {

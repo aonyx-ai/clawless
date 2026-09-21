@@ -7,6 +7,9 @@
 //! A question reaches the presenter as a [`PromptRequest`], and the presenter answers it.
 //! [`AnswerPromptError`] is the reason that the presenter reports when it has no answer.
 //!
+//! In a test, [`ScriptedUser`] answers each prompt with the next [`ScriptedAnswer`] of its
+//! script.
+//!
 //! # Examples
 //!
 //! ```no_run
@@ -30,6 +33,8 @@ pub use self::answer_prompt_error::AnswerPromptError;
 pub use self::confirm::Confirm;
 pub use self::confirmation::Confirmation;
 pub use self::prompt_user_error::PromptUserError;
+pub use self::scripted_answer::ScriptedAnswer;
+pub use self::scripted_user::ScriptedUser;
 use crate::cancellation::Cancellation;
 use crate::context::Interactivity;
 use crate::event::prompt::{PendingAnswer, PromptRequest};
@@ -43,6 +48,10 @@ mod confirm;
 mod confirmation;
 /// The error returned when a command cannot get an answer from its user
 mod prompt_user_error;
+/// One answer in the script of a scripted user
+mod scripted_answer;
+/// A user for tests, who answers every prompt from a script
+mod scripted_user;
 
 /// Asks the user of the application a question and waits for the answer
 ///
@@ -237,6 +246,7 @@ mod tests {
             PromptUserError::UnansweredPrompt { source, .. } => match source {
                 AnswerPromptError::DroppedRequest => true,
                 AnswerPromptError::ClosedInput => false,
+                AnswerPromptError::UnscriptedPrompt => false,
                 AnswerPromptError::UnusableTerminal { .. } => false,
             },
             PromptUserError::AbsentUser { .. } => false,
