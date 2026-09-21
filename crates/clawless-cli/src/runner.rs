@@ -137,6 +137,7 @@ impl CommandRunner {
             .receiver(receiver)
             .verbosity(output_flags.verbosity())
             .mode(output_flags.mode())
+            .interactivity(interactivity)
             .build();
 
         let rt = tokio::runtime::Runtime::new()?;
