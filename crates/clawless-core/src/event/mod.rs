@@ -237,15 +237,13 @@ mod tests {
 
         assert_eq!(
             match event {
-                Event::Prompt(request) => match *request {
-                    PromptRequest::Confirm { question, .. } => Some(question),
-                },
+                Event::Prompt(request) => Some(request.question().to_owned()),
                 Event::Message(_) => None,
                 Event::Detail(_) => None,
                 Event::Artifact(_) => None,
                 Event::Process(_) => None,
             },
-            Some(Confirm::new("Release?"))
+            Some("Release?".to_owned())
         );
     }
 

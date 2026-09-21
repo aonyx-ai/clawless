@@ -1,0 +1,7 @@
+bin.name = "prompt"
+args = ["text"]
+status.code = 0
+stdout = """
+Nobody can type a title, because no terminal is present.
+"""
+stderr = ""

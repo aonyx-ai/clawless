@@ -189,6 +189,9 @@ async fn ask_user(request: PromptRequest, input: &mut LineReader, display: &mut 
         PromptRequest::Confirm { question, reply } => {
             line_question::ask(&question, reply, input, display).await;
         }
+        PromptRequest::Text { question, reply } => {
+            line_question::ask(&question, reply, input, display).await;
+        }
     }
 }
 
@@ -539,6 +542,36 @@ mod tests {
             .expect("should succeed");
 
         assert_eq!(String::from_utf8_lossy(&stderr), "Release? [y/N] ");
+    }
+
+    #[tokio::test]
+    async fn present_on_with_a_text_prompt_sends_the_line_to_the_command() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+        let transcript = Transcript::default();
+
+        presenter
+            .present_on(
+                Box::pin(async move {
+                    let output = Output::new(sender);
+                    let prompt = Prompt::builder()
+                        .output(output.clone())
+                        .interactivity(Interactivity::Interactive)
+                        .build();
+
+                    let title = prompt.text("Title").await?;
+                    output.message(format!("The title is {title}.")).await?;
+
+                    Ok(())
+                }),
+                &mut transcript.clone(),
+                &mut transcript.clone(),
+                Some(typed(&["Fix the race\n"])),
+            )
+            .await
+            .expect("should succeed");
+
+        assert_eq!(transcript.text(), "Title: The title is Fix the race.\n");
     }
 
     #[tokio::test]

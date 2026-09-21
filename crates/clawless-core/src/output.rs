@@ -379,9 +379,7 @@ mod tests {
 
         assert_eq!(
             receiver.recv().await.map(|event| match event {
-                Event::Prompt(request) => match *request {
-                    PromptRequest::Confirm { question, .. } => question.question().clone(),
-                },
+                Event::Prompt(request) => request.question().to_owned(),
                 Event::Process(event) => event.to_string(),
                 Event::Message(text) => text,
                 Event::Detail(text) => text,

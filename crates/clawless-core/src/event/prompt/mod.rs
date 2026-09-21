@@ -9,7 +9,7 @@
 
 pub use self::pending_answer::PendingAnswer;
 pub use self::reply::Reply;
-use crate::prompt::{Confirm, Confirmation};
+use crate::prompt::{AnswerPromptError, Confirm, Confirmation, Text};
 
 /// The answer to one prompt, which has not arrived yet
 mod pending_answer;
@@ -38,6 +38,7 @@ mod reply;
 ///
 /// match request {
 ///     PromptRequest::Confirm { reply, .. } => reply.answer(Confirmation::No),
+///     PromptRequest::Text { reply, .. } => reply.answer(String::new()),
 /// }
 ///
 /// assert_eq!(pending.wait().await.expect("should answer"), Confirmation::No);
@@ -54,6 +55,15 @@ pub enum PromptRequest {
 
         /// The reply that returns the answer to the command
         reply: Reply<Confirmation>,
+    },
+
+    /// A question that the user answers with one line of text
+    Text {
+        /// The question to ask
+        question: Text,
+
+        /// The reply that returns the answer to the command
+        reply: Reply<String>,
     },
 }
 
@@ -73,6 +83,60 @@ impl PromptRequest {
 
         (Self::Confirm { question, reply }, pending)
     }
+
+    /// Creates a request for a line of text, and the pending answer to it
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::prompt::PromptRequest;
+    /// use clawless_core::prompt::Text;
+    ///
+    /// let (request, pending) = PromptRequest::text(Text::new("Title of the change"));
+    /// ```
+    pub fn text(question: Text) -> (Self, PendingAnswer<String>) {
+        let (reply, pending) = Reply::channel();
+
+        (Self::Text { question, reply }, pending)
+    }
+
+    /// Returns the text of the question, for every kind of prompt
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::prompt::PromptRequest;
+    /// use clawless_core::prompt::Text;
+    ///
+    /// let (request, _pending) = PromptRequest::text(Text::new("Title of the change"));
+    ///
+    /// assert_eq!(request.question(), "Title of the change");
+    /// ```
+    pub fn question(&self) -> &str {
+        match self {
+            Self::Confirm { question, .. } => question.question(),
+            Self::Text { question, .. } => question.question(),
+        }
+    }
+
+    /// Reports to the command why the prompt has no answer, for every kind of prompt
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::prompt::PromptRequest;
+    /// use clawless_core::prompt::{AnswerPromptError, Text};
+    ///
+    /// let (request, pending) = PromptRequest::text(Text::new("Title of the change"));
+    ///
+    /// request.fail(AnswerPromptError::ClosedInput);
+    /// ```
+    pub fn fail(self, error: AnswerPromptError) {
+        match self {
+            Self::Confirm { reply, .. } => reply.fail(error),
+            Self::Text { reply, .. } => reply.fail(error),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -82,7 +146,6 @@ mod tests {
     #![allow(clippy::missing_panics_doc)]
 
     use super::*;
-    use crate::prompt::AnswerPromptError;
 
     #[tokio::test]
     async fn confirm_with_a_dropped_request_reports_the_drop() {
@@ -102,12 +165,40 @@ mod tests {
     #[tokio::test]
     async fn confirm_with_an_answer_resolves_the_pending_answer() {
         let (request, pending) = PromptRequest::confirm(Confirm::new("Release?"));
-        let PromptRequest::Confirm { reply, .. } = request;
-        reply.answer(Confirmation::Yes);
+        match request {
+            PromptRequest::Confirm { reply, .. } => reply.answer(Confirmation::Yes),
+            PromptRequest::Text { .. } => {}
+        }
 
         let answer = pending.wait().await.expect("should answer");
 
         assert_eq!(answer, Confirmation::Yes);
+    }
+
+    #[tokio::test]
+    async fn fail_tells_the_command_why_the_prompt_has_no_answer() {
+        let (request, pending) = PromptRequest::text(Text::new("Title"));
+        request.fail(AnswerPromptError::ClosedInput);
+
+        let error = pending.wait().await.expect_err("should fail");
+
+        assert_eq!(
+            error.to_string(),
+            "the input ended before the user answered"
+        );
+    }
+
+    #[tokio::test]
+    async fn text_with_an_answer_resolves_the_pending_answer() {
+        let (request, pending) = PromptRequest::text(Text::new("Title"));
+        match request {
+            PromptRequest::Text { reply, .. } => reply.answer("Fix the race".to_owned()),
+            PromptRequest::Confirm { .. } => {}
+        }
+
+        let answer = pending.wait().await.expect("should answer");
+
+        assert_eq!(answer, "Fix the race");
     }
 
     #[test]
