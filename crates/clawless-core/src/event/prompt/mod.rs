@@ -94,6 +94,7 @@ mod tests {
         assert!(match error {
             AnswerPromptError::DroppedRequest => true,
             AnswerPromptError::ClosedInput => false,
+            AnswerPromptError::UnscriptedPrompt => false,
             AnswerPromptError::UnusableTerminal { .. } => false,
         });
     }
