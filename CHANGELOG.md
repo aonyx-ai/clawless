@@ -8,6 +8,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-09-23
+
+### Added
+
+- Run external programs from a command
+- Tell a command whether its user can answer
+- Ask the user to confirm from a command
+- Answer prompts from a script in tests
+- Answer a confirmation in the terminal
+- Ask the user for a line of text
+- Ask the user to select an option
+
+### Changed
+
+- Report what Cargo wrote when scaffolding fails
+- Replace underscores with hyphens in command names
+
+### Fixed
+
+- Let a TUI application close on a complete frame
+- Scaffold a command whose name has several words
+
 ## [0.6.1] - 2026-08-28
 
 ### Added
@@ -84,6 +106,8 @@ and this project adheres to
 
 - Initial prototype featuring the `clawless!`, `app!`, and `#[command]` macros
 
+[0.7.0]: https://github.com/aonyx-ai/clawless/releases/tag/v0.7.0
+[0.6.1]: https://github.com/aonyx-ai/clawless/releases/tag/v0.6.1
 [0.6.0]: https://github.com/aonyx-ai/clawless/releases/tag/v0.6.0
 [0.5.0]: https://github.com/aonyx-ai/clawless/releases/tag/v0.5.0
 [0.4.0]: https://github.com/aonyx-ai/clawless/releases/tag/v0.4.0
