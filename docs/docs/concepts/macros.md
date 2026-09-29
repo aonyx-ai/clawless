@@ -1,5 +1,5 @@
 ---
-sidebar_position: 8
+sidebar_position: 9
 ---
 
 # Macros
@@ -21,6 +21,8 @@ Called in `src/main.rs` to generate your application entry point.
 3. Resolves the subcommand tree to find the target leaf
 4. Delegates to the appropriate runner (`CommandRunner` for CLI commands,
    `ApplicationRunner` for TUI applications)
+5. Returns the `Exit` of the leaf, which ends the process with its exit code
+   after it writes its text (see [Exit Codes][exit-codes])
 
 The macro uses a two-phase dispatch strategy: first it resolves which leaf the
 user invoked, then it hands off to the runner that matches the leaf type. This
@@ -205,6 +207,11 @@ Here's the flow when your CLI runs:
      context, presenter, and signal handler, then runs the command
    - For applications: ApplicationRunner sets up a projection
      instead of a presenter for pull-based rendering
+
+5. Exit phase:
+   - The runner returns the Exit of the leaf, and main() returns it
+   - The process writes the text of the Exit to stderr and exits
+     with its code
 ```
 
 See [rendering](./rendering) for how the event channel, presenter, and
@@ -294,3 +301,5 @@ Now that you understand the macro system, learn about:
 - **[Project Structure](./project-structure)** - How module hierarchy becomes
   command hierarchy
 - **[Naming Conventions](./naming-conventions)** - How names map to CLI commands
+
+[exit-codes]: ./exit-codes

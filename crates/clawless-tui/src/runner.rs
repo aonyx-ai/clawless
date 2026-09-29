@@ -12,9 +12,11 @@
 
 use std::future::Future;
 
+use anyhow::Context as _;
 use clawless_core::cancellation::Cancellation;
 use clawless_core::context::Context;
 use clawless_core::event::event_channel;
+use clawless_core::exit::Exit;
 use clawless_core::output::Output;
 use clawless_core::signal::wait_for_shutdown;
 
@@ -68,6 +70,11 @@ impl ApplicationRunner {
     /// never awaits holds the channel open, and this runner then waits for a drain that cannot
     /// end. `CommandRunner` expects the same of a command.
     ///
+    /// The runner returns the [`Exit`] of the application. If the application fails, or if the
+    /// runner cannot build the [`Context`] or the Tokio runtime, the [`Exit`] has the exit code 1
+    /// and the text of the error. The `main` function returns the [`Exit`], and the process writes
+    /// its text only after the application has returned and the drain has ended.
+    ///
     /// # Arguments
     ///
     /// * `matches` — The parsed [`ArgMatches`] for this application leaf, as resolved by the
@@ -75,25 +82,38 @@ impl ApplicationRunner {
     /// * `exec` — Executes the application with the given matches, context, and projection. The
     ///   `#[application]` macro generates a function for this, and any other callable works. A
     ///   caller that builds its command tree at run time passes a closure that owns the
-    ///   application it resolved.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if context construction fails (e.g., the current working directory cannot be
-    /// determined), if the Tokio runtime cannot be created, or if the application itself fails.
+    ///   application it resolved. The application returns `()` for the exit code 0, or an
+    ///   [`Exit`] to choose the exit code and the text.
     ///
     /// [`ArgMatches`]: clap::ArgMatches
     /// [`Cancellation`]: clawless_core::cancellation::Cancellation
     /// [`Context`]: clawless_core::context::Context
     /// [`EventSender`]: clawless_core::event::EventSender
+    /// [`Exit`]: clawless_core::exit::Exit
     /// [`Output`]: clawless_core::output::Output
     /// [`Projection`]: crate::projection::Projection
     // r[impl dispatch.exec.callable]
     // r[impl dispatch.exec.application-drain]
-    pub fn run<E, F>(matches: clap::ArgMatches, exec: E) -> Result<(), Box<dyn std::error::Error>>
+    pub fn run<E, F, T>(matches: clap::ArgMatches, exec: E) -> Exit
     where
         E: FnOnce(clap::ArgMatches, Context, Projection) -> F,
-        F: Future<Output = anyhow::Result<()>> + Send + 'static,
+        F: Future<Output = anyhow::Result<T>> + Send + 'static,
+        T: Into<Exit>,
+    {
+        Self::try_run(matches, exec).unwrap_or_else(|error| Exit::from_error(&error))
+    }
+
+    /// Runs a TUI application to completion and returns its exit, or the error that ended it
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if context construction fails (e.g., the current working directory cannot
+    /// be determined), if the Tokio runtime cannot be created, or if the application itself fails.
+    fn try_run<E, F, T>(matches: clap::ArgMatches, exec: E) -> anyhow::Result<Exit>
+    where
+        E: FnOnce(clap::ArgMatches, Context, Projection) -> F,
+        F: Future<Output = anyhow::Result<T>> + Send + 'static,
+        T: Into<Exit>,
     {
         let cancellation = Cancellation::new();
         let (sender, receiver) = event_channel();
@@ -102,9 +122,10 @@ impl ApplicationRunner {
         let context = Context::builder()
             .cancellation(cancellation.clone())
             .output(output)
-            .build()?;
+            .build()
+            .context("build the context of the application")?;
 
-        let rt = tokio::runtime::Runtime::new()?;
+        let rt = tokio::runtime::Runtime::new().context("start the async runtime")?;
         rt.block_on(async {
             let mut projection = Projection::new(receiver);
             let drain = projection.take_drain();
@@ -125,10 +146,8 @@ impl ApplicationRunner {
                 drop(drain.await);
             }
 
-            result
-        })?;
-
-        Ok(())
+            result.map(Into::into)
+        })
     }
 }
 
@@ -138,6 +157,7 @@ mod tests {
     // would repeat that and give the reader no information.
     #![allow(clippy::missing_panics_doc)]
 
+    use std::process::ExitCode;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
@@ -156,21 +176,23 @@ mod tests {
         let counted = Arc::new(AtomicUsize::new(0));
         let owned = Arc::clone(&counted);
 
-        ApplicationRunner::run(matches, move |_matches, context, projection| async move {
-            for index in 0..300 {
-                context
-                    .output()
-                    .message(format!("event {index}"))
-                    .await
-                    .expect("the projection holds the channel open");
-            }
-            drop(context);
-            projection.wait_until_complete().await;
+        drop(ApplicationRunner::run(
+            matches,
+            move |_matches, context, projection| async move {
+                for index in 0..300 {
+                    context
+                        .output()
+                        .message(format!("event {index}"))
+                        .await
+                        .expect("the projection holds the channel open");
+                }
+                drop(context);
+                projection.wait_until_complete().await;
 
-            owned.store(projection.entries().len(), Ordering::SeqCst);
-            Ok(())
-        })
-        .expect("the runner runs the leaf to completion");
+                owned.store(projection.entries().len(), Ordering::SeqCst);
+                Ok(())
+            },
+        ));
 
         assert_eq!(counted.load(Ordering::SeqCst), 300);
     }
@@ -182,13 +204,59 @@ mod tests {
         let executed = Arc::new(AtomicBool::new(false));
         let owned = Arc::clone(&executed);
 
-        ApplicationRunner::run(matches, move |_matches, _context, _projection| async move {
-            owned.store(true, Ordering::SeqCst);
-            Ok(())
-        })
-        .expect("the runner runs the leaf to completion");
+        drop(ApplicationRunner::run(
+            matches,
+            move |_matches, _context, _projection| async move {
+                owned.store(true, Ordering::SeqCst);
+                Ok(())
+            },
+        ));
 
         assert!(executed.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn run_with_an_application_that_chooses_its_exit_returns_that_exit() {
+        let matches = clap::Command::new("test").get_matches_from(["test"]);
+        let chosen = Exit::builder()
+            .code(ExitCode::from(3))
+            .text("error: the session ended early\n")
+            .build();
+        let returned = chosen.clone();
+
+        let exit =
+            ApplicationRunner::run(matches, move |_matches, _context, _projection| async move {
+                Ok(returned)
+            });
+
+        assert_eq!(exit, chosen);
+    }
+
+    #[test]
+    fn run_with_an_application_that_fails_returns_the_error_with_code_1() {
+        let matches = clap::Command::new("test").get_matches_from(["test"]);
+
+        let exit = ApplicationRunner::run(matches, |_matches, _context, _projection| async {
+            Err::<(), _>(anyhow::anyhow!("the terminal is gone"))
+        });
+
+        assert_eq!(
+            exit,
+            Exit::builder()
+                .code(ExitCode::FAILURE)
+                .text("Error: the terminal is gone\n")
+                .build()
+        );
+    }
+
+    #[test]
+    fn run_with_an_application_that_succeeds_returns_success() {
+        let matches = clap::Command::new("test").get_matches_from(["test"]);
+
+        let exit =
+            ApplicationRunner::run(matches, |_matches, _context, _projection| async { Ok(()) });
+
+        assert_eq!(exit, Exit::from(()));
     }
 
     #[test]

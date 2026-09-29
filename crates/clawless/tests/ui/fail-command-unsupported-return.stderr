@@ -1,0 +1,17 @@
+error[E0277]: the trait bound `Exit: From<u8>` is not satisfied
+  --> tests/ui/fail-command-unsupported-return.rs:13:68
+   |
+12 |         #[command]
+   |         ---------- in this attribute macro expansion
+13 |         pub async fn check(_args: CheckArgs, _context: Context) -> CommandResult<u8> {
+   |                                                                    ^^^^^^^^^^^^^ the trait `From<u8>` is not implemented for `Exit`
+   |
+help: `Exit` implements trait `From<T>`
+  --> $WORKSPACE/crates/clawless-core/src/exit.rs
+   |
+   | impl From<()> for Exit {
+   | ^^^^^^^^^^^^^^^^^^^^^^ `From<()>`
+...
+   | impl From<ExitCode> for Exit {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `From<ExitCode>`
+   = note: this error originates in the attribute macro `command` (in Nightly builds, run with -Z macro-backtrace for more info)

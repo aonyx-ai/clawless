@@ -25,6 +25,7 @@ use clawless_core::context::Interactivity;
 use clawless_core::event::process::ProcessEvent;
 use clawless_core::event::prompt::PromptRequest;
 use clawless_core::event::{Event, EventReceiver};
+use clawless_core::exit::Exit;
 use clawless_core::process::Stream;
 
 use super::Presenter;
@@ -228,11 +229,11 @@ impl TerminalPresenter {
     /// Panics if the command panicked, and if a stream cannot be written.
     async fn present_on(
         self,
-        command: Pin<Box<dyn Future<Output = CommandResult> + Send>>,
+        command: Pin<Box<dyn Future<Output = CommandResult<Exit>> + Send>>,
         stdout: &mut impl Write,
         stderr: &mut impl Write,
         mut input: Option<LineReader>,
-    ) -> CommandResult {
+    ) -> CommandResult<Exit> {
         let Self {
             verbosity,
             mode,
@@ -265,8 +266,8 @@ impl TerminalPresenter {
 impl Presenter for TerminalPresenter {
     async fn present(
         self,
-        command: Pin<Box<dyn Future<Output = CommandResult> + Send>>,
-    ) -> CommandResult {
+        command: Pin<Box<dyn Future<Output = CommandResult<Exit>> + Send>>,
+    ) -> CommandResult<Exit> {
         let input = match self.interactivity {
             Interactivity::Interactive => Some(LineReader::stdin()),
             Interactivity::NonInteractive => None,
@@ -289,6 +290,7 @@ mod tests {
     #![allow(clippy::missing_panics_doc)]
 
     use std::collections::VecDeque;
+    use std::process::ExitCode;
     use std::sync::{Arc, Mutex};
     use std::time::Duration;
 
@@ -333,7 +335,9 @@ mod tests {
     }
 
     /// Returns a command that says what it is about to do, asks, and reports the answer
-    fn confirming(sender: EventSender) -> Pin<Box<dyn Future<Output = CommandResult> + Send>> {
+    fn confirming(
+        sender: EventSender,
+    ) -> Pin<Box<dyn Future<Output = CommandResult<Exit>> + Send>> {
         Box::pin(async move {
             let output = Output::new(sender);
             let prompt = Prompt::builder()
@@ -347,7 +351,7 @@ mod tests {
                 .await?;
             output.message(format!("The user said {answer:?}.")).await?;
 
-            Ok(())
+            Ok(Exit::from(()))
         })
     }
 
@@ -456,16 +460,18 @@ mod tests {
         let (sender, receiver) = event_channel();
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
 
-        presenter
-            .present(Box::pin(async move {
-                sender
-                    .send(Event::Message("consumed".to_string()))
-                    .await
-                    .expect("should send");
-                Ok(())
-            }))
-            .await
-            .expect("should succeed");
+        drop(
+            presenter
+                .present(Box::pin(async move {
+                    sender
+                        .send(Event::Message("consumed".to_string()))
+                        .await
+                        .expect("should send");
+                    Ok(Exit::from(()))
+                }))
+                .await
+                .expect("should succeed"),
+        );
     }
 
     #[tokio::test]
@@ -474,15 +480,17 @@ mod tests {
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
         let transcript = Transcript::default();
 
-        presenter
-            .present_on(
-                confirming(sender),
-                &mut transcript.clone(),
-                &mut transcript.clone(),
-                Some(typed(&["y\n"])),
-            )
-            .await
-            .expect("should succeed");
+        drop(
+            presenter
+                .present_on(
+                    confirming(sender),
+                    &mut transcript.clone(),
+                    &mut transcript.clone(),
+                    Some(typed(&["y\n"])),
+                )
+                .await
+                .expect("should succeed"),
+        );
 
         assert_eq!(
             transcript.text(),
@@ -499,15 +507,17 @@ mod tests {
             .build();
         let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
 
-        presenter
-            .present_on(
-                confirming(sender),
-                &mut stdout,
-                &mut stderr,
-                Some(typed(&["y\n"])),
-            )
-            .await
-            .expect("should succeed");
+        drop(
+            presenter
+                .present_on(
+                    confirming(sender),
+                    &mut stdout,
+                    &mut stderr,
+                    Some(typed(&["y\n"])),
+                )
+                .await
+                .expect("should succeed"),
+        );
 
         assert_eq!(String::from_utf8_lossy(&stderr), "Release? [y/N] ");
     }
@@ -521,15 +531,17 @@ mod tests {
             .build();
         let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
 
-        presenter
-            .present_on(
-                confirming(sender),
-                &mut stdout,
-                &mut stderr,
-                Some(typed(&["y\n"])),
-            )
-            .await
-            .expect("should succeed");
+        drop(
+            presenter
+                .present_on(
+                    confirming(sender),
+                    &mut stdout,
+                    &mut stderr,
+                    Some(typed(&["y\n"])),
+                )
+                .await
+                .expect("should succeed"),
+        );
 
         assert_eq!(String::from_utf8_lossy(&stdout), "");
     }
@@ -540,15 +552,17 @@ mod tests {
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
         let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
 
-        presenter
-            .present_on(
-                confirming(sender),
-                &mut stdout,
-                &mut stderr,
-                Some(typed(&["y\n"])),
-            )
-            .await
-            .expect("should succeed");
+        drop(
+            presenter
+                .present_on(
+                    confirming(sender),
+                    &mut stdout,
+                    &mut stderr,
+                    Some(typed(&["y\n"])),
+                )
+                .await
+                .expect("should succeed"),
+        );
 
         assert_eq!(String::from_utf8_lossy(&stderr), "Release? [y/N] ");
     }
@@ -559,26 +573,28 @@ mod tests {
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
         let transcript = Transcript::default();
 
-        presenter
-            .present_on(
-                Box::pin(async move {
-                    let output = Output::new(sender);
-                    let prompt = Prompt::builder()
-                        .output(output.clone())
-                        .interactivity(Interactivity::Interactive)
-                        .build();
+        drop(
+            presenter
+                .present_on(
+                    Box::pin(async move {
+                        let output = Output::new(sender);
+                        let prompt = Prompt::builder()
+                            .output(output.clone())
+                            .interactivity(Interactivity::Interactive)
+                            .build();
 
-                    let kind = prompt.select("Kind", ["Added", "Fixed"]).await?;
-                    output.message(format!("The kind is {kind}.")).await?;
+                        let kind = prompt.select("Kind", ["Added", "Fixed"]).await?;
+                        output.message(format!("The kind is {kind}.")).await?;
 
-                    Ok(())
-                }),
-                &mut transcript.clone(),
-                &mut transcript.clone(),
-                Some(typed(&["2\n"])),
-            )
-            .await
-            .expect("should succeed");
+                        Ok(Exit::from(()))
+                    }),
+                    &mut transcript.clone(),
+                    &mut transcript.clone(),
+                    Some(typed(&["2\n"])),
+                )
+                .await
+                .expect("should succeed"),
+        );
 
         assert_eq!(
             transcript.text(),
@@ -600,7 +616,7 @@ mod tests {
                     Output::new(sender).prompt(request).await?;
                     pending.wait().await?;
 
-                    Ok(())
+                    Ok(Exit::from(()))
                 }),
                 &mut stdout,
                 &mut stderr,
@@ -621,26 +637,28 @@ mod tests {
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
         let transcript = Transcript::default();
 
-        presenter
-            .present_on(
-                Box::pin(async move {
-                    let output = Output::new(sender);
-                    let prompt = Prompt::builder()
-                        .output(output.clone())
-                        .interactivity(Interactivity::Interactive)
-                        .build();
+        drop(
+            presenter
+                .present_on(
+                    Box::pin(async move {
+                        let output = Output::new(sender);
+                        let prompt = Prompt::builder()
+                            .output(output.clone())
+                            .interactivity(Interactivity::Interactive)
+                            .build();
 
-                    let title = prompt.text("Title").await?;
-                    output.message(format!("The title is {title}.")).await?;
+                        let title = prompt.text("Title").await?;
+                        output.message(format!("The title is {title}.")).await?;
 
-                    Ok(())
-                }),
-                &mut transcript.clone(),
-                &mut transcript.clone(),
-                Some(typed(&["Fix the race\n"])),
-            )
-            .await
-            .expect("should succeed");
+                        Ok(Exit::from(()))
+                    }),
+                    &mut transcript.clone(),
+                    &mut transcript.clone(),
+                    Some(typed(&["Fix the race\n"])),
+                )
+                .await
+                .expect("should succeed"),
+        );
 
         assert_eq!(transcript.text(), "Title: The title is Fix the race.\n");
     }
@@ -668,21 +686,23 @@ mod tests {
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
         let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
 
-        presenter
-            .present_on(
-                Box::pin(async move {
-                    sender
-                        .send(Event::Message("hello".to_owned()))
-                        .await
-                        .expect("should send");
-                    Ok(())
-                }),
-                &mut stdout,
-                &mut stderr,
-                None,
-            )
-            .await
-            .expect("should succeed");
+        drop(
+            presenter
+                .present_on(
+                    Box::pin(async move {
+                        sender
+                            .send(Event::Message("hello".to_owned()))
+                            .await
+                            .expect("should send");
+                        Ok(Exit::from(()))
+                    }),
+                    &mut stdout,
+                    &mut stderr,
+                    None,
+                )
+                .await
+                .expect("should succeed"),
+        );
 
         assert_eq!((stdout, stderr), (b"hello\n".to_vec(), Vec::new()));
     }
@@ -700,7 +720,7 @@ mod tests {
                     .await
                     .expect("should send");
                 pending.wait().await?;
-                Ok(())
+                Ok(Exit::from(()))
             }))
             .await
             .expect_err("should fail");
@@ -709,6 +729,22 @@ mod tests {
             error.to_string(),
             "the prompt was dropped without an answer"
         );
+    }
+
+    #[tokio::test]
+    async fn present_with_an_exit_returns_the_exit() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+
+        let exit = presenter
+            .present(Box::pin(async move {
+                drop(sender);
+                Ok(Exit::builder().code(ExitCode::from(3)).build())
+            }))
+            .await
+            .expect("should succeed");
+
+        assert_eq!(exit, Exit::builder().code(ExitCode::from(3)).build());
     }
 
     #[tokio::test]
@@ -728,34 +764,22 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn present_with_ok_returns_ok() {
-        let (sender, receiver) = event_channel();
-        let presenter = TerminalPresenter::builder().receiver(receiver).build();
-
-        presenter
-            .present(Box::pin(async move {
-                drop(sender);
-                Ok(())
-            }))
-            .await
-            .expect("should succeed");
-    }
-
-    #[tokio::test]
     async fn present_with_receiver_keeps_channel_open_during_execution() {
         let (sender, receiver) = event_channel();
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
 
-        presenter
-            .present(Box::pin(async move {
-                sender
-                    .send(clawless_core::event::Event::Message("hello".to_string()))
-                    .await
-                    .expect("should send while presenter holds receiver");
-                Ok(())
-            }))
-            .await
-            .expect("should succeed");
+        drop(
+            presenter
+                .present(Box::pin(async move {
+                    sender
+                        .send(clawless_core::event::Event::Message("hello".to_string()))
+                        .await
+                        .expect("should send while presenter holds receiver");
+                    Ok(Exit::from(()))
+                }))
+                .await
+                .expect("should succeed"),
+        );
     }
 
     #[test]

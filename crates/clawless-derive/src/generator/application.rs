@@ -54,6 +54,7 @@ impl Generator for ApplicationGenerator {
     fn resolve_function_body(&self) -> TokenStream {
         let args_type = self.args_type();
         let application = self.ident();
+        let map_into_exit = self.map_into_exit();
 
         quote! {
             clawless::resolved_leaf::ResolvedLeaf::Application {
@@ -62,7 +63,7 @@ impl Generator for ApplicationGenerator {
                     Box::pin(async move {
                         use clawless::clap::FromArgMatches;
                         let args = #args_type::from_arg_matches(&matches).unwrap();
-                        #application(args, context, projection).await
+                        #application(args, context, projection).await #map_into_exit
                     })
                 },
             }
@@ -274,7 +275,7 @@ mod tests {
                     Box::pin(async move {
                         use clawless::clap::FromArgMatches;
                         let args = Args::from_arg_matches(&matches).unwrap();
-                        foo(args, context, projection).await
+                        foo(args, context, projection).await.map(clawless::exit::Exit::from)
                     })
                 },
             }

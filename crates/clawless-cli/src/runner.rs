@@ -15,10 +15,11 @@ use std::io::IsTerminal;
 use clawless_core::cancellation::Cancellation;
 use clawless_core::context::{Context, Interactivity};
 use clawless_core::event::event_channel;
+use clawless_core::exit::Exit;
 use clawless_core::output::Output;
 use clawless_core::signal::wait_for_shutdown;
 
-use crate::error::CommandResult;
+use crate::error::{CommandResult, ErrorContext};
 use crate::output::OutputFlags;
 use crate::presenter::{Presenter, TerminalPresenter};
 
@@ -74,29 +75,33 @@ impl CommandRunner {
     /// Output flags (`--quiet`, `--verbose`, `--json`) are augmented at the root level by
     /// `main!()` with `.global(true)`, so they are available in every leaf's [`ArgMatches`].
     ///
+    /// The runner returns the [`Exit`] of the command, and only after the presenter has rendered
+    /// every event of the command. If the command fails, or if the runner cannot build the
+    /// [`Context`] or the Tokio runtime, the [`Exit`] has the exit code 1 and the text of the
+    /// error. The `main` function returns the [`Exit`], and the process then writes its text and
+    /// exits with its code. The text therefore comes after all the output of the command.
+    ///
     /// # Arguments
     ///
     /// * `matches` — The parsed [`ArgMatches`] for this command leaf, as resolved by the
     ///   subcommand tree walk.
     /// * `exec` — Executes the command with the given matches and context. The `#[command]` macro
     ///   generates a function for this, and any other callable works. A caller that builds its
-    ///   command tree at run time passes a closure that owns the command it resolved.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if context construction fails (e.g., the current working directory cannot be
-    /// determined), if the Tokio runtime cannot be created, or if the command itself fails.
+    ///   command tree at run time passes a closure that owns the command it resolved. The command
+    ///   returns `()` for the exit code 0, or an [`Exit`] to choose the exit code and the text.
     ///
     /// [`ArgMatches`]: clap::ArgMatches
     /// [`Cancellation`]: clawless_core::cancellation::Cancellation
     /// [`Context`]: clawless_core::context::Context
+    /// [`Exit`]: clawless_core::exit::Exit
     /// [`Interactivity`]: clawless_core::context::Interactivity
     /// [`TerminalPresenter`]: crate::presenter::TerminalPresenter
     // r[impl dispatch.exec.callable]
-    pub fn run<E, F>(matches: clap::ArgMatches, exec: E) -> Result<(), Box<dyn std::error::Error>>
+    pub fn run<E, F, T>(matches: clap::ArgMatches, exec: E) -> Exit
     where
         E: FnOnce(clap::ArgMatches, Context) -> F,
-        F: Future<Output = CommandResult> + Send + 'static,
+        F: Future<Output = CommandResult<T>> + Send + 'static,
+        T: Into<Exit>,
     {
         let interactivity = detect_interactivity(&std::io::stdin(), &std::io::stderr());
 
@@ -107,19 +112,30 @@ impl CommandRunner {
     ///
     /// [`CommandRunner::run`] detects the interactivity and calls this function. A test calls
     /// this function directly, because the streams of a test are never terminals.
+    fn run_with<E, F, T>(matches: clap::ArgMatches, exec: E, interactivity: Interactivity) -> Exit
+    where
+        E: FnOnce(clap::ArgMatches, Context) -> F,
+        F: Future<Output = CommandResult<T>> + Send + 'static,
+        T: Into<Exit>,
+    {
+        Self::try_run(matches, exec, interactivity).unwrap_or_else(|error| Exit::from_error(&error))
+    }
+
+    /// Runs a CLI command to completion and returns its exit, or the error that ended it
     ///
     /// # Errors
     ///
-    /// Returns an error if context construction fails (e.g., the current working directory cannot be
-    /// determined), if the Tokio runtime cannot be created, or if the command itself fails.
-    fn run_with<E, F>(
+    /// Returns an error if context construction fails (e.g., the current working directory cannot
+    /// be determined), if the Tokio runtime cannot be created, or if the command itself fails.
+    fn try_run<E, F, T>(
         matches: clap::ArgMatches,
         exec: E,
         interactivity: Interactivity,
-    ) -> Result<(), Box<dyn std::error::Error>>
+    ) -> CommandResult<Exit>
     where
         E: FnOnce(clap::ArgMatches, Context) -> F,
-        F: Future<Output = CommandResult> + Send + 'static,
+        F: Future<Output = CommandResult<T>> + Send + 'static,
+        T: Into<Exit>,
     {
         let cancellation = Cancellation::new();
         let output_flags = OutputFlags::from_arg_matches(&matches);
@@ -131,7 +147,8 @@ impl CommandRunner {
             .cancellation(cancellation.clone())
             .interactivity(interactivity)
             .output(output)
-            .build()?;
+            .build()
+            .context("build the context of the command")?;
 
         let presenter = TerminalPresenter::builder()
             .receiver(receiver)
@@ -140,14 +157,15 @@ impl CommandRunner {
             .interactivity(interactivity)
             .build();
 
-        let rt = tokio::runtime::Runtime::new()?;
+        let rt = tokio::runtime::Runtime::new().context("start the async runtime")?;
         rt.block_on(async {
             tokio::spawn(wait_for_shutdown(cancellation));
 
-            presenter.present(Box::pin(exec(matches, context))).await
-        })?;
-
-        Ok(())
+            let command = exec(matches, context);
+            presenter
+                .present(Box::pin(async move { command.await.map(Into::into) }))
+                .await
+        })
     }
 }
 
@@ -159,10 +177,16 @@ mod tests {
 
     use std::fs::File;
     use std::path::Path;
+    use std::process::ExitCode;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::{Arc, Mutex};
 
     use super::*;
+
+    /// Returns the matches of a command line without arguments
+    fn matches() -> clap::ArgMatches {
+        OutputFlags::augment_command(clap::Command::new("test")).get_matches_from(["test"])
+    }
 
     #[test]
     fn detect_interactivity_without_a_terminal_returns_non_interactive() {
@@ -178,36 +202,78 @@ mod tests {
     // r[verify dispatch.exec.callable]
     #[test]
     fn run_with_a_closure_that_owns_state_executes_the_leaf() {
-        let matches =
-            OutputFlags::augment_command(clap::Command::new("test")).get_matches_from(["test"]);
         let executed = Arc::new(AtomicBool::new(false));
         let owned = Arc::clone(&executed);
 
-        CommandRunner::run(matches, move |_matches, _context| async move {
-            owned.store(true, Ordering::SeqCst);
-            Ok(())
-        })
-        .expect("the runner runs the leaf to completion");
+        drop(CommandRunner::run(
+            matches(),
+            move |_matches, _context| async move {
+                owned.store(true, Ordering::SeqCst);
+                Ok(())
+            },
+        ));
 
         assert!(executed.load(Ordering::SeqCst));
     }
 
     #[test]
+    fn run_with_a_command_that_chooses_its_exit_returns_that_exit() {
+        let chosen = Exit::builder()
+            .code(ExitCode::from(3))
+            .text("error: 0.7.0 is not a stable release\n")
+            .build();
+        let returned = chosen.clone();
+
+        let exit = CommandRunner::run_with(
+            matches(),
+            move |_matches, _context| async move { Ok(returned) },
+            Interactivity::NonInteractive,
+        );
+
+        assert_eq!(exit, chosen);
+    }
+
+    #[test]
+    fn run_with_a_command_that_fails_returns_the_error_with_code_1() {
+        let exit = CommandRunner::run_with(
+            matches(),
+            |_matches, _context| async { Err::<(), _>(anyhow::anyhow!("the file is missing")) },
+            Interactivity::NonInteractive,
+        );
+
+        assert_eq!(
+            exit,
+            Exit::builder()
+                .code(ExitCode::FAILURE)
+                .text("Error: the file is missing\n")
+                .build()
+        );
+    }
+
+    #[test]
+    fn run_with_a_command_that_succeeds_returns_success() {
+        let exit = CommandRunner::run_with(
+            matches(),
+            |_matches, _context| async { Ok(()) },
+            Interactivity::NonInteractive,
+        );
+
+        assert_eq!(exit, Exit::from(()));
+    }
+
+    #[test]
     fn run_with_interactivity_passes_it_to_the_context() {
-        let matches =
-            OutputFlags::augment_command(clap::Command::new("test")).get_matches_from(["test"]);
         let seen = Arc::new(Mutex::new(None));
         let owned = Arc::clone(&seen);
 
-        CommandRunner::run_with(
-            matches,
+        drop(CommandRunner::run_with(
+            matches(),
             move |_matches, context| async move {
                 *owned.lock().expect("should lock") = Some(context.interactivity());
                 Ok(())
             },
             Interactivity::Interactive,
-        )
-        .expect("the runner runs the leaf to completion");
+        ));
 
         assert_eq!(
             *seen.lock().expect("should lock"),

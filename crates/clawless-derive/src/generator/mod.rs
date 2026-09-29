@@ -7,9 +7,10 @@ pub(crate) use application::ApplicationGenerator;
 pub(crate) use command::CommandGenerator;
 use darling::FromMeta;
 use darling::ast::NestedMeta;
-use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
-use syn::{Error, Expr, Ident, ItemFn, Lit, Meta, Result, Type};
+use proc_macro2::{Span, TokenStream};
+use quote::{format_ident, quote, quote_spanned};
+use syn::spanned::Spanned;
+use syn::{Error, Expr, Ident, ItemFn, Lit, Meta, Result, ReturnType, Type};
 
 use crate::command_name::CommandName;
 use crate::inventory::inventory_name;
@@ -48,6 +49,24 @@ pub(crate) trait Generator {
     /// `CommandGenerator` returns `ResolvedLeaf::Command`, `ApplicationGenerator` returns
     /// `ResolvedLeaf::Application`.
     fn resolve_function_body(&self) -> TokenStream;
+
+    /// Returns the method call that turns the success value of the leaf into an `Exit`
+    ///
+    /// The call carries the location of the return type. A leaf that returns an unsupported
+    /// success type, such as `CommandResult<u8>`, therefore gets its compiler error on the return
+    /// type and not on the attribute.
+    ///
+    /// The call keeps the hygiene of the macro, so lints still see it as generated code. With the
+    /// full span of the return type, Clippy would report the conversion of an `Exit` into itself
+    /// as a useless conversion in the code of the user.
+    fn map_into_exit(&self) -> TokenStream {
+        let span = match &self.input().sig.output {
+            ReturnType::Default => Span::call_site(),
+            ReturnType::Type(_, return_type) => Span::call_site().located_at(return_type.span()),
+        };
+
+        quote_spanned! {span=> .map(clawless::exit::Exit::from)}
+    }
 
     /// Returns whether this is the root command
     fn is_root(&self) -> bool {

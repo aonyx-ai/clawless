@@ -112,6 +112,7 @@ crates/
   └── clawless-tui/          # TUI presentation layer (pull-based)
 examples/
   ├── cancellation/          # Cooperative cancellation example
+  ├── exit-code/             # Choosing the exit code and its text
   ├── hello-world/           # Reference example project
   ├── output/                # Messages, details, and artifacts
   ├── process/               # Running external programs
@@ -490,7 +491,8 @@ fn helper() {}
 ### Error Handling
 
 - Use `anyhow` for error handling. `CommandResult` is an alias for
-  `anyhow::Result<()>`.
+  `anyhow::Result<T>` with `()` as the default for `T`. A command returns
+  `CommandResult<Exit>` to choose its exit code and its text.
 - Provide rich error context using `.context("description")?`.
 - Error context messages should be lowercase sentence fragments suitable for
   "failed to {context}".

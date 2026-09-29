@@ -152,6 +152,10 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 /// dispatch: first it parses arguments and resolves the subcommand tree to find the leaf, then
 /// it matches on the `ResolvedLeaf` variant to delegate to the appropriate runner.
 ///
+/// The generated `main` function returns the `Exit` of the leaf. After `main` has returned, the
+/// process writes the text of the `Exit` to the standard error and exits with its code. Nothing
+/// ends the process early, so the runner renders every event of the leaf before the text.
+///
 /// # Example
 ///
 /// ```rust,ignore
@@ -163,7 +167,7 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn main(_input: TokenStream) -> TokenStream {
     let output = quote! {
-        fn main() -> Result<(), Box<dyn std::error::Error>> {
+        fn main() -> clawless::exit::Exit {
             let app = clawless::output::OutputFlags::augment_command(commands::clawless_init());
             let matches = app.get_matches();
             let leaf = commands::clawless_resolve(matches);
@@ -192,6 +196,10 @@ pub fn main(_input: TokenStream) -> TokenStream {
 /// 1. An `args` parameter: a `clap::Args` struct with the command's arguments
 /// 2. A `context` parameter: the `Context` providing access to the application environment
 ///    and the cancellation token for cooperative shutdown
+///
+/// A command returns `CommandResult`. The process then exits with the code 0 if the command
+/// returns `Ok(())`, and with the code 1 if it returns an error. A command that chooses the exit
+/// code and the text of the process returns `CommandResult<Exit>` instead.
 ///
 /// # Attributes
 ///
@@ -297,6 +305,10 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
 /// 1. An `args` parameter: a `clap::Args` struct with the application's arguments
 /// 2. A `context` parameter: the `Context` for emitting events and cooperative shutdown
 /// 3. A `projection` parameter: the `Projection` for querying accumulated state
+///
+/// An application returns `CommandResult` or `CommandResult<Exit>`, the same as a command. The
+/// process writes the text of an `Exit` after the application has returned, so restore the
+/// terminal before the application returns.
 ///
 /// # Projection Visibility
 ///
