@@ -316,7 +316,7 @@ mod tests {
             .text("error\n")
             .build();
 
-        exit.report_to(&mut output, &mut display);
+        let _code = exit.report_to(&mut output, &mut display);
 
         assert_eq!(*transcript.borrow(), b"partial lineerror\n");
     }
@@ -341,7 +341,7 @@ mod tests {
             .build();
         let mut display = Vec::new();
 
-        exit.report_to(&mut Vec::new(), &mut display);
+        let _code = exit.report_to(&mut Vec::new(), &mut display);
 
         assert_eq!(display, b"error: no line break");
     }
@@ -351,7 +351,7 @@ mod tests {
         let exit = Exit::from(());
         let mut display = Vec::new();
 
-        exit.report_to(&mut Vec::new(), &mut display);
+        let _code = exit.report_to(&mut Vec::new(), &mut display);
 
         assert!(display.is_empty());
     }
