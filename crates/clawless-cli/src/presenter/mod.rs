@@ -15,6 +15,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use async_trait::async_trait;
+use clawless_core::exit::Exit;
 
 pub use self::terminal::TerminalPresenter;
 use crate::error::CommandResult;
@@ -44,7 +45,7 @@ mod terminal;
 /// use clawless::presenter::{Presenter, TerminalPresenter};
 ///
 /// let presenter = TerminalPresenter::builder().receiver(receiver).build();
-/// presenter.present(Box::pin(command_future)).await?;
+/// let exit = presenter.present(Box::pin(command_future)).await?;
 /// ```
 ///
 /// [`EventReceiver`]: clawless_core::event::EventReceiver
@@ -57,6 +58,10 @@ pub trait Presenter {
     /// consume events from their [`EventReceiver`] concurrently with command execution to render
     /// output in real time.
     ///
+    /// An implementation returns only when its rendering is complete. The runner writes the text
+    /// of the returned [`Exit`] after `present` returns, and the text must come after all the
+    /// output of the command.
+    ///
     /// The command future is boxed and pinned because the concrete future type varies by call
     /// site. The future is [`Send`] because commands execute on Tokio's multi-threaded runtime.
     ///
@@ -66,8 +71,9 @@ pub trait Presenter {
     /// command's [`CommandResult`] without modification.
     ///
     /// [`EventReceiver`]: clawless_core::event::EventReceiver
+    /// [`Exit`]: clawless_core::exit::Exit
     async fn present(
         self,
-        command: Pin<Box<dyn Future<Output = CommandResult> + Send>>,
-    ) -> CommandResult;
+        command: Pin<Box<dyn Future<Output = CommandResult<Exit>> + Send>>,
+    ) -> CommandResult<Exit>;
 }

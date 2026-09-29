@@ -1,0 +1,13 @@
+bin.name = "exit-code"
+args = ["check", "1.x.0"]
+status.code = 1
+stdout = """
+Checking version 1.x.0.
+"""
+stderr = """
+Error: read the version 1.x.0
+
+Caused by:
+    0: read the part x
+    1: invalid digit found in string
+"""

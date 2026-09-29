@@ -31,9 +31,36 @@ pub use anyhow::Error;
 /// question mark `?` operator and return early when an unrecoverable error
 /// occurs.
 ///
-/// The `CommandResult` is a type alias for `anyhow::Result<()>`, which provides
+/// The `CommandResult` is a type alias for [`anyhow::Result<T>`], which provides
 /// a more ergonomic way to handle arbitrary errors. Since it isn't possible to
 /// recover from the error, we do not need to provide a specific error type
-/// that a caller could handle gracefully. Similarly, commands do not need to
-/// return a value, thus the result is always `Result<()>`.
-pub type CommandResult = anyhow::Result<()>;
+/// that a caller could handle gracefully.
+///
+/// The success type defaults to `()`. A command that returns `Ok(())` ends the
+/// process with the exit code 0, and a command that returns an error ends it
+/// with the exit code 1 and the text of the error. A command that chooses its
+/// exit code and its text returns an [`Exit`] instead, as `CommandResult<Exit>`.
+///
+/// # Examples
+///
+/// ```
+/// use std::process::ExitCode;
+///
+/// use clawless_cli::error::CommandResult;
+/// use clawless_core::exit::Exit;
+///
+/// fn check(major_version: u64) -> CommandResult<Exit> {
+///     if major_version == 0 {
+///         return Ok(Exit::builder()
+///             .code(ExitCode::from(3))
+///             .text("error: the version is not a stable release\n")
+///             .build());
+///     }
+///
+///     Ok(Exit::from(()))
+/// }
+/// ```
+///
+/// [`Exit`]: clawless_core::exit::Exit
+/// [`anyhow::Result<T>`]: anyhow::Result
+pub type CommandResult<T = ()> = anyhow::Result<T>;

@@ -57,6 +57,12 @@ kills it, and how to read what it produced afterwards.
 Asking the user a question from your commands. Learn the three kinds of prompt,
 what a prompt returns without a user, and how a test answers a prompt.
 
+### [Exit Codes](./exit-codes)
+
+Ending the process with a code that your command chooses. Learn how a command
+returns an exit code and its own text, and which exit codes Clawless uses
+itself.
+
 ### [Macros](./macros)
 
 Clawless uses four macros to wire up your CLI. Understand how `main!`,
@@ -118,10 +124,12 @@ If you're new to Clawless:
 6. Read **[External Programs](./external-programs)** when your CLI needs to run
    other programs
 7. Read **[Prompts](./prompts)** when your CLI needs an answer from its user
-8. Explore **[Project Structure](./project-structure)** to understand how to
+8. Read **[Exit Codes](./exit-codes)** when a script or a CI job reads the exit
+   code of your CLI
+9. Explore **[Project Structure](./project-structure)** to understand how to
    organize your CLI
-9. Read **[Macros](./macros)** if you're curious about implementation details
-10. Reference **[Naming Conventions](./naming-conventions)** when you need to
+10. Read **[Macros](./macros)** if you're curious about implementation details
+11. Reference **[Naming Conventions](./naming-conventions)** when you need to
     look up specific rules
 
 For experienced developers, the **[Macros](./macros)** section provides insight

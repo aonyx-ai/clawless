@@ -1,0 +1,12 @@
+# In JSON mode, messages go to stderr, the same stream as the text. The case
+# therefore shows that the output from before the end of the command comes
+# before the text, and that stdout carries only JSON.
+bin.name = "exit-code"
+args = ["--json", "check", "0.7.0"]
+status.code = 3
+stdout = ""
+stderr = """
+Checking version 0.7.0.
+error: 0.7.0 is not a stable release
+  help: a stable release has a major version of 1 or more
+"""

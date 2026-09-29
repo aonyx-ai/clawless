@@ -1,0 +1,26 @@
+warning: unused import: `clawless::tui::projection::Projection`
+ --> tests/ui/fail-application-unsupported-return.rs:3:9
+  |
+3 |     use clawless::tui::projection::Projection;
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0277]: the trait bound `Exit: From<u8>` is not satisfied
+  --> tests/ui/fail-application-unsupported-return.rs:19:14
+   |
+14 |         #[application]
+   |         -------------- in this attribute macro expansion
+...
+19 |         ) -> CommandResult<u8> {
+   |              ^^^^^^^^^^^^^ the trait `From<u8>` is not implemented for `Exit`
+   |
+help: `Exit` implements trait `From<T>`
+  --> $WORKSPACE/crates/clawless-core/src/exit.rs
+   |
+   | impl From<()> for Exit {
+   | ^^^^^^^^^^^^^^^^^^^^^^ `From<()>`
+...
+   | impl From<ExitCode> for Exit {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `From<ExitCode>`
+   = note: this error originates in the attribute macro `application` (in Nightly builds, run with -Z macro-backtrace for more info)

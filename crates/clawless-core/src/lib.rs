@@ -3,6 +3,7 @@
 pub mod cancellation;
 pub mod context;
 pub mod event;
+pub mod exit;
 pub mod output;
 pub mod process;
 pub mod prompt;
@@ -19,6 +20,7 @@ pub mod signal;
 pub mod prelude {
     pub use super::cancellation::Cancellation;
     pub use super::context::{Context, ContextError, CurrentWorkingDirectory, Interactivity};
+    pub use super::exit::Exit;
     pub use super::process::{Execution, Invocation, Process};
     pub use super::prompt::{Confirmation, Prompt};
 }

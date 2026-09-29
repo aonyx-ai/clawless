@@ -73,7 +73,8 @@ pub async fn command_name(args: ArgsStruct, context: Context) -> CommandResult
   runtime
 - **First parameter** - An arguments struct deriving `Args`
 - **Second parameter** - `Context` for accessing framework features
-- **Return type** - `CommandResult` (alias for `anyhow::Result<()>`)
+- **Return type** - `CommandResult` (alias for `anyhow::Result<()>`), or
+  `CommandResult<Exit>` to choose the exit code
 
 **Parameter naming:**
 
@@ -102,15 +103,18 @@ the long description shown in `--help`.
 
 ## CommandResult and error handling
 
-Commands return `CommandResult`, which is a type alias for `anyhow::Result<()>`:
+Commands return `CommandResult`, which is a type alias for `anyhow::Result<T>`
+with `()` as the default for `T`:
 
 ```rust
-pub type CommandResult = anyhow::Result<()>;
+pub type CommandResult<T = ()> = anyhow::Result<T>;
 ```
 
 This means:
 
 - Commands either succeed (return `Ok(())`) or fail (return `Err`)
+- A command that succeeds exits with the code 0, and a command that fails exits
+  with the code 1
 - You can use `?` to propagate errors
 - Any error type implementing `Into<anyhow::Error>` works
 - Errors automatically display nice messages to users
@@ -162,6 +166,11 @@ Error: Failed to parse TOML configuration
 Caused by:
     expected '=' at line 5 column 10
 ```
+
+### Choosing the exit code
+
+A command that returns `CommandResult<Exit>` chooses the exit code of the
+process and the text that the user reads last. See [Exit Codes][exit-codes].
 
 ## The #[command] macro
 
@@ -279,3 +288,5 @@ Now that you understand commands, learn about:
 - **[Context](./context)** - Accessing framework features in commands
 - **[Project Structure](./project-structure)** - Organizing commands in your
   project
+
+[exit-codes]: ./exit-codes

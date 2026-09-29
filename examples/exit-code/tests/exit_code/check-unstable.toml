@@ -1,0 +1,10 @@
+bin.name = "exit-code"
+args = ["check", "0.7.0"]
+status.code = 3
+stdout = """
+Checking version 0.7.0.
+"""
+stderr = """
+error: 0.7.0 is not a stable release
+  help: a stable release has a major version of 1 or more
+"""

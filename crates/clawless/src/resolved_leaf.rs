@@ -13,31 +13,36 @@ use std::pin::Pin;
 
 use clawless_cli::error::CommandResult;
 use clawless_core::context::Context;
+use clawless_core::exit::Exit;
 use clawless_tui::projection::Projection;
 
 /// Function pointer type for executing a resolved command
 ///
-/// Accepts parsed [`ArgMatches`] and a [`Context`], returning a pinned future that produces a
-/// [`CommandResult`].
+/// Accepts parsed [`ArgMatches`] and a [`Context`], returning a pinned future that produces the
+/// [`Exit`] of the command. The `#[command]` macro turns a command that returns `()` into the
+/// [`Exit`] with the exit code 0.
 ///
 /// [`ArgMatches`]: clap::ArgMatches
 /// [`Context`]: clawless_core::context::Context
+/// [`Exit`]: clawless_core::exit::Exit
 pub type CommandExec =
-    fn(clap::ArgMatches, Context) -> Pin<Box<dyn Future<Output = CommandResult> + Send>>;
+    fn(clap::ArgMatches, Context) -> Pin<Box<dyn Future<Output = CommandResult<Exit>> + Send>>;
 
 /// Function pointer type for executing a resolved application
 ///
 /// Accepts parsed [`ArgMatches`], a [`Context`], and a [`Projection`], returning a pinned future
-/// that produces a [`CommandResult`].
+/// that produces the [`Exit`] of the application. The `#[application]` macro turns an
+/// application that returns `()` into the [`Exit`] with the exit code 0.
 ///
 /// [`ArgMatches`]: clap::ArgMatches
 /// [`Context`]: clawless_core::context::Context
+/// [`Exit`]: clawless_core::exit::Exit
 /// [`Projection`]: clawless_tui::projection::Projection
 pub type ApplicationExec = fn(
     clap::ArgMatches,
     Context,
     Projection,
-) -> Pin<Box<dyn Future<Output = CommandResult> + Send>>;
+) -> Pin<Box<dyn Future<Output = CommandResult<Exit>> + Send>>;
 
 /// Resolved subcommand leaf
 ///

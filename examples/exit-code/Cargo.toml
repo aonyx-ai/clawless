@@ -1,0 +1,22 @@
+[package]
+name = "exit-code"
+description = "Demonstrates how a command chooses its exit code and its text in clawless"
+
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+# We do not want to publish examples to crates.io, since they provide no value
+# or functionality on their own.
+publish = false
+
+[dependencies]
+clawless = { workspace = true }
+
+[dev-dependencies]
+trycmd = { workspace = true }
+
+[lints]
+workspace = true

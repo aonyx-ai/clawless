@@ -6,6 +6,8 @@
 /// everything from this module, users can conveniently access the necessary types and traits to
 /// define and run commands without needing to import each item individually.
 pub mod prelude {
+    pub use std::process::ExitCode;
+
     pub use clap;
     pub use clap::{Args, FromArgMatches};
     pub use clawless_cli::error::{CommandResult, Error, ErrorContext};
@@ -28,6 +30,7 @@ pub use clawless_core::process;
 pub use clawless_core::prompt;
 pub use clawless_derive::{application, artifact, command, commands, detail, main, message};
 
+pub mod exit;
 pub mod resolved_leaf;
 
 /// TUI presentation layer re-exports

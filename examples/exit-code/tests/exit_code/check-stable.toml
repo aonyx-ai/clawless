@@ -1,0 +1,8 @@
+bin.name = "exit-code"
+args = ["check", "1.4.0"]
+status.code = 0
+stdout = """
+Checking version 1.4.0.
+Version 1.4.0 is a stable release.
+"""
+stderr = ""

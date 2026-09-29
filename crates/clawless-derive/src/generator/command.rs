@@ -54,6 +54,7 @@ impl Generator for CommandGenerator {
     fn resolve_function_body(&self) -> TokenStream {
         let args_type = self.args_type();
         let command = self.ident();
+        let map_into_exit = self.map_into_exit();
 
         quote! {
             clawless::resolved_leaf::ResolvedLeaf::Command {
@@ -62,7 +63,7 @@ impl Generator for CommandGenerator {
                     Box::pin(async move {
                         use clawless::clap::FromArgMatches;
                         let args = #args_type::from_arg_matches(&matches).unwrap();
-                        #command(args, context).await
+                        #command(args, context).await #map_into_exit
                     })
                 },
             }
@@ -388,7 +389,7 @@ mod tests {
                     Box::pin(async move {
                         use clawless::clap::FromArgMatches;
                         let args = Args::from_arg_matches(&matches).unwrap();
-                        foo(args, context).await
+                        foo(args, context).await.map(clawless::exit::Exit::from)
                     })
                 },
             }
