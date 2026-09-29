@@ -210,6 +210,7 @@ Here's the flow when your CLI runs:
 
 5. Exit phase:
    - The runner returns the Exit of the leaf, and main() returns it
+     in a ProcessExit
    - The process writes the text of the Exit to stderr and exits
      with its code
 ```

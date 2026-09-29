@@ -152,9 +152,10 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 /// dispatch: first it parses arguments and resolves the subcommand tree to find the leaf, then
 /// it matches on the `ResolvedLeaf` variant to delegate to the appropriate runner.
 ///
-/// The generated `main` function returns the `Exit` of the leaf. After `main` has returned, the
-/// process writes the text of the `Exit` to the standard error and exits with its code. Nothing
-/// ends the process early, so the runner renders every event of the leaf before the text.
+/// The generated `main` function returns the `Exit` of the leaf as a `ProcessExit`. After `main`
+/// has returned, the process writes the text of the `Exit` to the standard error and exits with
+/// its code. Nothing ends the process early, so the runner renders every event of the leaf before
+/// the text.
 ///
 /// # Example
 ///
@@ -167,19 +168,21 @@ pub fn commands(_input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn main(_input: TokenStream) -> TokenStream {
     let output = quote! {
-        fn main() -> clawless::exit::Exit {
+        fn main() -> clawless::exit::ProcessExit {
             let app = clawless::output::OutputFlags::augment_command(commands::clawless_init());
             let matches = app.get_matches();
             let leaf = commands::clawless_resolve(matches);
 
-            match leaf {
+            let exit = match leaf {
                 clawless::resolved_leaf::ResolvedLeaf::Command { matches, exec } => {
                     clawless::runner::CommandRunner::run(matches, exec)
                 }
                 clawless::resolved_leaf::ResolvedLeaf::Application { matches, exec } => {
                     clawless::tui::runner::ApplicationRunner::run(matches, exec)
                 }
-            }
+            };
+
+            clawless::exit::ProcessExit::from(exit)
         }
     };
     output.into()

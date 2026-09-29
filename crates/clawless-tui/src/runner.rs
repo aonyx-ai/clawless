@@ -72,8 +72,9 @@ impl ApplicationRunner {
     ///
     /// The runner returns the [`Exit`] of the application. If the application fails, or if the
     /// runner cannot build the [`Context`] or the Tokio runtime, the [`Exit`] has the exit code 1
-    /// and the text of the error. The `main` function returns the [`Exit`], and the process writes
-    /// its text only after the application has returned and the drain has ended.
+    /// and the text of the error. The `main` function returns the [`Exit`] in a `ProcessExit`, and
+    /// the process writes its text only after the application has returned and the drain has
+    /// ended.
     ///
     /// # Arguments
     ///

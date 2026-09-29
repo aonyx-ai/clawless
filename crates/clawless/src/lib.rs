@@ -26,11 +26,11 @@ pub use clawless_cli::runner;
 pub use clawless_core::cancellation;
 pub use clawless_core::context;
 pub use clawless_core::event;
-pub use clawless_core::exit;
 pub use clawless_core::process;
 pub use clawless_core::prompt;
 pub use clawless_derive::{application, artifact, command, commands, detail, main, message};
 
+pub mod exit;
 pub mod resolved_leaf;
 
 /// TUI presentation layer re-exports

@@ -78,8 +78,9 @@ impl CommandRunner {
     /// The runner returns the [`Exit`] of the command, and only after the presenter has rendered
     /// every event of the command. If the command fails, or if the runner cannot build the
     /// [`Context`] or the Tokio runtime, the [`Exit`] has the exit code 1 and the text of the
-    /// error. The `main` function returns the [`Exit`], and the process then writes its text and
-    /// exits with its code. The text therefore comes after all the output of the command.
+    /// error. The `main` function returns the [`Exit`] in a `ProcessExit`, and the process then
+    /// writes its text and exits with its code. The text therefore comes after all the output of
+    /// the command.
     ///
     /// # Arguments
     ///
