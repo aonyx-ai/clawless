@@ -7,7 +7,7 @@
 [tools]
 # Mise builds a tool of the cargo backend from source, unless cargo-binstall is
 # available. With cargo-binstall, it downloads a prebuilt binary instead.
-cargo-binstall = "1.25.1"
+cargo-binstall = "1.25.2"
 
 # Prettier, markdownlint, and the validator of Renovate run on node, and mise
 # puts no node on the path for a tool of its npm backend, so the pin below is
