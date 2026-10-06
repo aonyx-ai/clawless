@@ -9,10 +9,7 @@
       "Bash(git checkout:*)",
       "Bash(git pull:*)",
       "Bash(git switch:*)",
-      "Bash(just format-rust:*)",
-      "Bash(just lint-rust:*)",
-      "Bash(just pre-commit:*)",
-      "Bash(just test-rust:*)",
+      "Bash(mise run rakko:*)",
       "WebFetch(domain:clawless.rs)"
     ]
   },
@@ -29,12 +26,10 @@
     "autoAllowBashIfSandboxed": true,
     "filesystem": {
       "allowWrite": [
-        ".flox/cache",
-        ".flox/log",
-        ".flox/run",
-        "~/.cache/flox",
+        "~/.cache/mise",
         "~/.cargo",
-        "~/.local/share/flox",
+        "~/.local/share/mise",
+        "~/.local/state/mise",
         "~/.rustup"
       ]
     }

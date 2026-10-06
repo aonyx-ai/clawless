@@ -28,18 +28,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # The setup cleans the tree itself.
+          clean: false
           persist-credentials: false
 
-      - name: Install Flox
-        uses: flox/install-flox-action@5bb9eaaffbeaa699a8251a1ae21ecf4c8e0e37d4 # v2.7.0
-
-      - name: Remove Flox installer (if it exists)
-        run: rm -f flox.x86_64-linux.deb
+      - name: Set up the tools
+        uses: $/.github/actions/setup
 
       - name: Build the documentation
-        uses: flox/activate-action@6abc249840d01f0c59473f21ba74821564d320b7 # v2.0.0
-        with:
-          command: just docs build
+        working-directory: docs
+        run: |
+          npm ci
+          npm run build
 
       - name: Upload the documentation artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # 5.0.0

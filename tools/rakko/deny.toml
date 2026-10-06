@@ -1,0 +1,34 @@
+# Cargo-deny looks for its configuration from the directory of a run upwards,
+# so this file answers for the harness and the deny.toml above answers for the
+# crates of this repository. The two workspaces need different answers,
+# because the harness is a package that nothing publishes and it depends on
+# Rakko, which brings dependencies that Clawless itself does not.
+
+[licenses]
+# Add a license here when a dependency of the harness needs it, and only when
+# it is OSI- or FSF-approved.
+allow = ["Apache-2.0", "MIT", "MPL-2.0", "Unicode-3.0"]
+
+[licenses.private]
+# The harness is never published and carries no license expression of its own.
+ignore = true
+
+[bans]
+# Two versions of one crate build and link both, which grows the binary and
+# can split a type across the versions. It is a warning, because a duplicate
+# often comes from a transitive dependency that the workspace cannot control.
+multiple-versions = "warn"
+
+# A wildcard requirement accepts any future release, including one with a
+# breaking change, so a build that works today can break without a noticeable
+# change here.
+wildcards = "deny"
+
+# The crates of Rakko come from Git without a version, so that Renovate follows
+# the default branch of Rakko, and cargo-deny reads a missing version as a
+# wildcard. The revision pins each of them to one commit, so none can move
+# without a change to the manifest. The option exempts only dependencies that
+# come from Git or a path, and only for a crate that is never published, which
+# leaves the crates of Rakko as the only exception. A crate from crates.io
+# still needs a real requirement.
+allow-wildcard-paths = true

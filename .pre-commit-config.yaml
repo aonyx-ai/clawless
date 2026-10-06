@@ -1,8 +1,8 @@
 # pre-commit configuration
 #
 # We use pre-commit to enforce a consistent style in our repositories. The hooks
-# check for a few common issues with files, and then execute the
-# `just pre-commit` to run formatters and linters.
+# check for a few common issues with files, and then run the `pre-commit`
+# command of the harness, which drives the formatters and the linters.
 #
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
@@ -15,15 +15,22 @@ repos:
         args: ["--maxkb=1024"]
       - id: check-case-conflict
       - id: end-of-file-fixer
-        exclude: ^.flox/env/manifest.lock$
+        # Mise writes the stubs in `bin` without a final newline, and it
+        # recognizes a stub of its own by its exact content. A newline added
+        # here makes `mise generate task-stubs` refuse to write the file ever
+        # again, so the generated directory stays out of this hook.
+        exclude: ^bin/
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
         exclude: .*(stdout|stderr)$
   - repo: local
     hooks:
-      - id: just
-        name: just
-        entry: just
-        args: ["pre-commit"]
+      - id: rakko
+        name: rakko
+        # Git runs the hook outside the mise environment, and only mise itself
+        # is on the PATH there, so the hook enters the environment. The task
+        # builds the harness and hands it every argument that follows.
+        entry: mise
+        args: ["run", "rakko", "--", "pre-commit", "--fix"]
         language: system
         pass_filenames: false

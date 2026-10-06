@@ -1,5 +1,9 @@
 exclude = [
   ".claude/worktrees/**",
-  ".flox/**",
+  # Cargo writes its build output to the target directory of each workspace,
+  # and packaging a crate leaves the normalized manifest of the package there.
+  # Taplo does not read .gitignore and anchors each pattern at this directory,
+  # so the pattern names the target directory at every depth.
+  "**/target/**",
   "crates/cargo-clawless/tests/commands/new.out/cli/Cargo.toml",
 ]

@@ -1,0 +1,77 @@
+---
+name: Set up the tools
+description: Clean the checkout, install the tools that mise pins, and download the Rust toolchains
+
+# Every job of every workflow provisions the same way, so the steps live here
+# instead of once per job in each workflow. A job checks out the code with
+# `clean: false` and runs this action next, because the first step below takes
+# over the cleaning of the checkout.
+
+runs:
+  using: composite
+  steps:
+    # A persistent self-hosted runner holds the tree of its last job, and the
+    # checkout used to remove everything in it that git does not track, so
+    # every job built again what the jobs before had built. The step below
+    # removes the same files, except the directories that cargo builds in, so
+    # a job starts from the build output of the jobs before. It names the root
+    # and the harness, the two places where cargo can build, whether or not
+    # this repository builds in both, so the step reads the same in every
+    # repository. On a clean machine it removes nothing.
+    - name: Remove what earlier jobs left in the tree
+      shell: bash
+      run: git clean -ffdx -e /target/ -e /tools/rakko/target/
+
+    # A runner of GitHub starts from a clean disk, and so does a runner that a
+    # service starts for a single job. A persistent self-hosted runner keeps
+    # its home directory between jobs, so the tools of the jobs before are
+    # still there, and a restore of the cache only downloads them again. There
+    # the restore took most of a short job, because the jobs that run at the
+    # same time share one connection. The step below looks for the tools of an
+    # earlier job, and the installation restores the cache only without them.
+    - name: Look for the tools of an earlier job
+      id: earlier
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        if [ -n "${MISE_DATA_DIR:-}" ]; then
+            data="${MISE_DATA_DIR}"
+        elif [ "${RUNNER_OS}" = "Windows" ]; then
+            data="${LOCALAPPDATA}/mise"
+        else
+            data="${HOME}/.local/share/mise"
+        fi
+
+        if [ -n "$(ls -A "${data}/installs" 2>/dev/null)" ]; then
+            echo "found=true" >> "${GITHUB_OUTPUT}"
+        else
+            echo "found=false" >> "${GITHUB_OUTPUT}"
+        fi
+
+    - name: Install the tools
+      uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+      # When the binary of mise on the runner is not the version below, the
+      # action runs `mise self-update`, which asks the API of GitHub for the
+      # release. Without a token, that call can run into the rate limit of
+      # GitHub, and the action sets its token only after the call. The token
+      # is `GITHUB_TOKEN`, because the action passes `MISE_GITHUB_TOKEN` to
+      # the later steps only when it is not set.
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        # Without a pin the action installs the release that mise reports as
+        # the newest one, and a release whose upload failed carries no file to
+        # download. Renovate advances the pin, so a release that breaks costs
+        # one revert instead of a red pull request.
+        # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
+        version: 2026.10.3
+        cache: ${{ steps.earlier.outputs.found != 'true' }}
+
+    # The installation runs the task that downloads the toolchains which mise
+    # only recorded, but a failed task is only a warning there. The task runs
+    # again here, where a failure stops the job instead of leaving a toolchain
+    # for the first command that selects it to download.
+    - name: Download the toolchains
+      shell: bash
+      run: mise run install-toolchains
