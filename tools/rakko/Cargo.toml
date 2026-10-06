@@ -1,0 +1,72 @@
+[workspace]
+
+[package]
+name = "harness"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# The binary is named `rakko`, so that it reads well on the command line.
+[[bin]]
+name = "rakko"
+path = "src/main.rs"
+
+[dependencies]
+rakko-action = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-baseline = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-check-msrv = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-cli = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-format-json = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-format-markdown = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-format-rust = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-format-toml = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-format-yaml = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-lint-github-actions = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-lint-markdown = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-lint-rust = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-lint-yaml = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-pre-commit = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-rust-library = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-set-msrv = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-test-rust = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+rakko-test-rust-docs = { git = "https://github.com/aonyx-ai/rakko", rev = "3d45e6c7425ec398896075eec4d59b7cda47b5b9" }
+
+[workspace.lints.clippy]
+# Require documentation on private items as well, since that helps with long-term maintainability.
+missing_docs_in_private_items = "warn"
+
+# Require errors, panics, and unsafe code to be documented.
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+missing_safety_doc = "warn"
+unnecessary_safety_doc = "warn"
+
+# `unwrap` and `expect` can cause panics, which is why we ban them from production code.
+expect_used = "warn"
+unwrap_used = "warn"
+
+# Forbid printing anything to stdout or stderr.
+print_stderr = "warn"
+print_stdout = "warn"
+
+# Prefer `mod.rs` over `name.rs` so that every module is a self-contained unit.
+self_named_module_files = "warn"
+
+[workspace.lints.rust]
+# Detect explicit lifetime requirements that the compiler can infer.
+explicit_outlives_requirements = "deny"
+
+# Types must implement or derive `Debug` so that they can be easily debugged.
+missing_debug_implementations = "deny"
+
+# Require documentation for all public items
+missing_docs = "deny"
+
+# Public but unreachable items are likely a mistake.
+unreachable_pub = "deny"
+
+# Unsafe code can lead to undefined behavior and security vulnerabilities.
+unsafe_code = "deny"
+
+[lints]
+workspace = true

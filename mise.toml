@@ -1,0 +1,159 @@
+# Mise provisions every external tool that this repository needs, at the
+# versions that this file pins. The actions of the harness install nothing:
+# each of them resolves its tool through mise and stops when mise reports
+# none, so a pin that is missing here fails a command instead of letting it
+# run against whatever the machine happens to carry.
+
+[tools]
+# Mise builds a tool of the cargo backend from source, unless cargo-binstall is
+# available. With cargo-binstall, it downloads a prebuilt binary instead.
+cargo-binstall = "1.25.1"
+
+# Prettier, markdownlint, and the validator of Renovate run on node, and mise
+# puts no node on the path for a tool of its npm backend, so the pin below is
+# what lets the actions that wrap them start any of the three. Node also builds
+# the documentation site in `docs`. The validator supports fewer versions of
+# node than the others, so it limits how far the pin can move.
+node = "24.21.0"
+
+# The first toolchain is the default for builds, Clippy, and the tests. The
+# second is a nightly toolchain, which rustfmt needs for the unstable options
+# in `.rustfmt.toml`, and which cargo-udeps needs for the unstable option that
+# records the crates a target loaded. The pin names the nightly by its date, so
+# every machine and every job format with the same nightly. A pin of the bare
+# channel cannot promise that. Mise links each Rust toolchain that it installs
+# to the directory of rustup, and it takes such a link for a toolchain that a
+# user linked by hand. It then ignores `mise.lock` for Rust, and the channel
+# resolves to the newest nightly that the machine holds, or that rustup offers
+# during an install. Renovate moves the date forward once a week, and it
+# changes `mise.lock` in the same pull request, because an install with
+# `--locked` refuses a pin that the lockfile does not hold. The third is the
+# oldest toolchain that the crates promise to compile on, and `check-msrv` runs
+# the compiler on it. That pin repeats the `rust-version` of the root
+# `Cargo.toml`, because the action reads the version from the manifest and then
+# asks mise for the toolchain, and Rakko installs nothing. A pin that stops
+# agreeing with the manifest therefore fails the check instead of moving it.
+# Mise installs all three through rustup, so an action that names a toolchain
+# reaches it through the proxy of rustup. The `rust-src` component carries the
+# source of the standard library, which rust-analyzer reads.
+rust = [
+  { version = "1.99.0", components = [
+    "clippy",
+    "rust-src",
+    "rustfmt",
+  ] },
+  { version = "nightly-2026-10-04", components = [
+    "rustfmt",
+  ] },
+  { version = "1.88.0" },
+]
+
+"cargo:cargo-deny" = "0.20.2"
+"cargo:cargo-nextest" = "0.9.146"
+"cargo:cargo-udeps" = "0.1.61"
+jq = "1.8.2"
+"npm:markdownlint-cli" = "0.49.1"
+# The release of pre-commit is a Python zipapp, and the registry maps that
+# file to no Windows download, so the pin names the backend that installs
+# from the package index instead and works on every platform.
+"pipx:pre-commit" = "4.6.2"
+"npm:prettier" = "3.9.9"
+# Renovate publishes several releases a day. The shared preset of Renovate that
+# this repository extends moves the pin once a week, so that the releases
+# arrive as one pull request per week and not as several per day.
+"npm:renovate" = "44.133.0"
+taplo = "0.10.0"
+
+# The pin below installs no tool that an action runs. The registry maps
+# pre-commit above and yamllint below to the package index of Python, and the
+# backend that installs from it reaches for uvx when uv is one of the tools
+# that mise provisions, and for pipx when it is not. Not every machine carries
+# pipx, so without this pin the provisioning can stop at those two.
+uv = "0.12.23"
+
+yamllint = "1.38.0"
+zizmor = "1.30.1"
+
+[settings]
+# The lockfile records the version, the download, and the checksum that each
+# pin resolved to on every platform, so every machine and every job installs
+# the same files.
+lockfile = true
+
+# The installer that mise carries lays a package of npm out the way pnpm
+# does: one directory per package, and a link from every package to each of
+# its dependencies. Windows creates such a link only for an account that may,
+# so a tool that reads a dependency of its own finds none of them there. The
+# npm that ships with node writes one directory that holds every package
+# instead, which needs no link, so the setting hands the install to it.
+npm.shell_out = true
+
+[env]
+# The directory holds the stubs that `mise generate task-stubs` writes, one per
+# task, so that `rakko` runs the harness wherever mise supplies its
+# environment. Mise writes the stubs once and never touches them again, so a
+# change to the tasks below wants a fresh run of the generator.
+_.path = ["{{ config_root }}/bin"]
+
+[hooks]
+# `mise install` provisions the tools above and then downloads the toolchains
+# that it only recorded.
+#
+# The hook starts mise again, and that second mise provisions before it runs a
+# task. It would then install a tool that the first one has just written and
+# has yet to record, and the installer of a tool refuses to overwrite what is
+# already there. The flag stops that provisioning, so the hook only runs the
+# task. It is a flag and not a variable in front of the command, because a
+# variable in front of a command is syntax of a shell of Unix, and the shell
+# that mise starts a hook with on Windows reads it as the name of a program.
+postinstall = "mise run --skip-tools install-toolchains"
+
+[tasks.install-toolchains]
+description = "Download every pinned Rust toolchain that rustup is missing"
+# The default shell of a task is `sh`, which is dash on Debian and Ubuntu, and
+# dash has no `pipefail`.
+shell = "bash -c"
+# Mise installs a Rust toolchain through rustup, and it records the install as
+# a symlink to the shared cargo directory. That symlink is what mise reads
+# afterwards, so a machine that carries the symlink without the toolchain
+# behind it reports the toolchain as installed while rustup has never
+# downloaded it. A cache that holds the mise directory and not the rustup home
+# is the usual way to get there. Whatever selects such a toolchain first
+# downloads it, and two commands that select it at once ruin each other's
+# download.
+#
+# This task closes that gap, so that every toolchain the project pins is on
+# the machine before anything asks for it. It looks only at the toolchains
+# that mise reports as installed, because a toolchain that mise has not
+# installed is still mise's to install, and a run that provisions nothing Rust
+# then downloads nothing either. It calls rustup instead of mise, because mise
+# runs this task while `mise install` still holds its own lock. The profile is
+# the one that rustup is configured with, which carries the components that
+# the checks of this repository need.
+#
+# The question to mise only reads, so it provisions nothing while the install
+# that reached this task still holds the lock of mise.
+#
+# The jq of Windows writes its standard output in the text mode of the
+# platform, which ends every line with two characters. The loop splits the
+# answer at the second of them, so without the removal each name of a
+# toolchain would carry the first one, and rustup would refuse the name.
+run = '''
+set -euo pipefail
+
+for toolchain in $(mise ls --current --json rust | jq -r '.[] | select(.installed) | .version' | tr -d '\r'); do
+    if rustup toolchain list | grep -q "^${toolchain}-"; then
+        continue
+    fi
+
+    echo "Downloading the ${toolchain} toolchain..." >&2
+    rustup toolchain install "${toolchain}" --no-self-update
+done
+'''
+
+[tasks.rakko]
+description = "Run the maintenance actions of this repository"
+# `raw_args` hands every argument to the harness untouched, so that a flag such
+# as `--help` reaches the harness instead of being read by mise.
+raw_args = true
+run = 'cargo run --quiet --manifest-path "{{ config_root }}/tools/rakko/Cargo.toml" --'

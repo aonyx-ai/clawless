@@ -1,0 +1,4 @@
+# This file marks the root of the project. A run of the harness searches for
+# it, from the directory that the run starts in upwards, and every path that
+# an action reads, writes, or reports starts at the directory that holds it.
+# Rakko does not read the file today.
