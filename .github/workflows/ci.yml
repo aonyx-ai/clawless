@@ -67,9 +67,6 @@ jobs:
     permissions:
       contents: read
 
-    env:
-      NEXTEST_PROFILE: ci
-
     needs: commands
 
     strategy:
