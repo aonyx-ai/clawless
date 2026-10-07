@@ -65,7 +65,7 @@ runs:
         # download. Renovate advances the pin, so a release that breaks costs
         # one revert instead of a red pull request.
         # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
-        version: 2026.10.3
+        version: 2026.10.4
         cache: ${{ steps.earlier.outputs.found != 'true' }}
 
     # The installation runs the task that downloads the toolchains which mise
