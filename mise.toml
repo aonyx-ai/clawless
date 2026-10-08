@@ -49,7 +49,7 @@ rust = [
 ]
 
 "cargo:cargo-deny" = "0.20.2"
-"cargo:cargo-nextest" = "0.9.146"
+"cargo:cargo-nextest" = "0.9.148"
 "cargo:cargo-udeps" = "0.1.61"
 jq = "1.8.2"
 "npm:markdownlint-cli" = "0.49.1"

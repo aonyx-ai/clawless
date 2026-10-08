@@ -55,9 +55,9 @@ backend = "cargo:cargo-deny"
 specifiers = ["0.20.2"]
 
 [[tools."cargo:cargo-nextest"]]
-version = "0.9.146"
+version = "0.9.148"
 backend = "cargo:cargo-nextest"
-specifiers = ["0.9.146"]
+specifiers = ["0.9.148"]
 
 [[tools."cargo:cargo-udeps"]]
 version = "0.1.61"
