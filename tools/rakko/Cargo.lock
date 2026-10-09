@@ -572,7 +572,7 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 [[package]]
 name = "rakko-action"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "bon",
  "dunce",
@@ -584,7 +584,7 @@ dependencies = [
 [[package]]
 name = "rakko-baseline"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "rakko-action",
  "rakko-check-renovate-config",
@@ -601,7 +601,7 @@ dependencies = [
 [[package]]
 name = "rakko-build-internal-docs"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "rakko-action",
  "rakko-cargo",
@@ -612,7 +612,7 @@ dependencies = [
 [[package]]
 name = "rakko-cargo"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "bon",
  "getset",
@@ -629,7 +629,7 @@ dependencies = [
 [[package]]
 name = "rakko-check-dependencies"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "getset",
  "rakko-action",
@@ -644,7 +644,7 @@ dependencies = [
 [[package]]
 name = "rakko-check-latest-deps"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "rakko-action",
  "rakko-cargo",
@@ -657,7 +657,7 @@ dependencies = [
 [[package]]
 name = "rakko-check-minimal-deps"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "rakko-action",
  "rakko-cargo",
@@ -670,7 +670,7 @@ dependencies = [
 [[package]]
 name = "rakko-check-msrv"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "rakko-action",
  "rakko-cargo",
@@ -681,7 +681,7 @@ dependencies = [
 [[package]]
 name = "rakko-check-renovate-config"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "bon",
  "getset",
@@ -696,7 +696,7 @@ dependencies = [
 [[package]]
 name = "rakko-check-unused-deps"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "getset",
  "rakko-action",
@@ -710,7 +710,7 @@ dependencies = [
 [[package]]
 name = "rakko-cli"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "clap",
  "clawless",
@@ -723,7 +723,7 @@ dependencies = [
 [[package]]
 name = "rakko-format-json"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "getset",
  "rakko-action",
@@ -735,7 +735,7 @@ dependencies = [
 [[package]]
 name = "rakko-format-markdown"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "getset",
  "rakko-action",
@@ -747,7 +747,7 @@ dependencies = [
 [[package]]
 name = "rakko-format-rust"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "getset",
  "rakko-action",
@@ -759,7 +759,7 @@ dependencies = [
 [[package]]
 name = "rakko-format-toml"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "getset",
  "rakko-action",
@@ -771,7 +771,7 @@ dependencies = [
 [[package]]
 name = "rakko-format-yaml"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "getset",
  "rakko-action",
@@ -783,7 +783,7 @@ dependencies = [
 [[package]]
 name = "rakko-lint-github-actions"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "bon",
  "getset",
@@ -798,7 +798,7 @@ dependencies = [
 [[package]]
 name = "rakko-lint-markdown"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "bon",
  "getset",
@@ -813,7 +813,7 @@ dependencies = [
 [[package]]
 name = "rakko-lint-rust"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "rakko-action",
  "rakko-cargo",
@@ -824,7 +824,7 @@ dependencies = [
 [[package]]
 name = "rakko-lint-toml"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "rakko-action",
  "rakko-taplo",
@@ -835,7 +835,7 @@ dependencies = [
 [[package]]
 name = "rakko-lint-yaml"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "bon",
  "getset",
@@ -848,7 +848,7 @@ dependencies = [
 [[package]]
 name = "rakko-nextest"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "getset",
  "rakko-action",
@@ -862,7 +862,7 @@ dependencies = [
 [[package]]
 name = "rakko-pre-commit"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "getset",
  "rakko-action",
@@ -873,7 +873,7 @@ dependencies = [
 [[package]]
 name = "rakko-prettier"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "bon",
  "getset",
@@ -887,7 +887,7 @@ dependencies = [
 [[package]]
 name = "rakko-rust"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "rakko-action",
  "rakko-build-internal-docs",
@@ -902,7 +902,7 @@ dependencies = [
 [[package]]
 name = "rakko-rust-library"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "rakko-action",
  "rakko-check-minimal-deps",
@@ -914,7 +914,7 @@ dependencies = [
 [[package]]
 name = "rakko-set-msrv"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "getset",
  "rakko-action",
@@ -929,7 +929,7 @@ dependencies = [
 [[package]]
 name = "rakko-taplo"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "bon",
  "getset",
@@ -942,7 +942,7 @@ dependencies = [
 [[package]]
 name = "rakko-test-rust"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "rakko-action",
  "rakko-cargo",
@@ -954,7 +954,7 @@ dependencies = [
 [[package]]
 name = "rakko-test-rust-docs"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "getset",
  "rakko-action",
@@ -966,7 +966,7 @@ dependencies = [
 [[package]]
 name = "rakko-tool"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "getset",
  "kawauso-process",
@@ -978,7 +978,7 @@ dependencies = [
 [[package]]
 name = "rakko-worktree"
 version = "0.1.0"
-source = "git+https://github.com/aonyx-ai/rakko?rev=f1ede04a8c00f00cc2256b0fe45f3375e3769217#f1ede04a8c00f00cc2256b0fe45f3375e3769217"
+source = "git+https://github.com/aonyx-ai/rakko?rev=45d0125890212feef2849513ba31f4bea08af2b8#45d0125890212feef2849513ba31f4bea08af2b8"
 dependencies = [
  "getset",
  "kawauso-process",
