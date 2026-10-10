@@ -1,36 +1,4 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["github>aonyx-ai/renovate-config"],
-
-  customManagers: [
-    // A composite action pins the version of mise that `jdx/mise-action`
-    // installs, and no manager of Renovate reads an input of an action. The
-    // manager below takes the annotation that the pin carries, in the format
-    // that the presets of Renovate use for a version that a comment
-    // describes. It reads the composite actions and the workflows, because a
-    // pin that carries the annotation can sit in either.
-    {
-      customType: "regex",
-      managerFilePatterns: [
-        ".github/actions/*/action.yml",
-        ".github/workflows/*.yml",
-      ],
-      matchStrings: [
-        "# renovate: datasource=(?<datasource>[a-zA-Z0-9-._]+?) depName=(?<depName>[^\\s]+?)(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?\\s+version: [\"']?(?<currentValue>.+?)[\"']?\\s",
-      ],
-    },
-  ],
-
-  packageRules: [
-    // Rakko publishes no release to crates.io yet, so the harness depends on
-    // each of its crates by revision, and the cargo manager advances every
-    // revision to the head of the default branch of Rakko. The rule below
-    // advances them in one pull request, because they name one commit of one
-    // repository and a harness that mixed two would not build.
-    {
-      matchManagers: ["cargo"],
-      matchPackageNames: ["https://github.com/aonyx-ai/rakko"],
-      groupName: "rakko",
-    },
-  ],
 }
