@@ -57,7 +57,7 @@ jq = "1.8.2"
 # file to no Windows download, so the pin names the backend that installs
 # from the package index instead and works on every platform.
 "pipx:pre-commit" = "4.6.2"
-"npm:prettier" = "3.9.9"
+"npm:prettier" = "3.9.10"
 # Renovate publishes several releases a day. The shared preset of Renovate that
 # this repository extends moves the pin once a week, so that the releases
 # arrive as one pull request per week and not as several per day.
