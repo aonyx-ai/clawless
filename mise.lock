@@ -178,9 +178,9 @@ specifiers = ["1.99.0"]
 components = "clippy,rust-src,rustfmt"
 
 [[tools.rust]]
-version = "nightly-2026-10-04"
+version = "nightly-2026-10-12"
 backend = "core:rust"
-specifiers = ["nightly-2026-10-04"]
+specifiers = ["nightly-2026-10-12"]
 
 [tools.rust.options]
 components = "rustfmt"
