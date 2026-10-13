@@ -160,9 +160,9 @@ backend = "npm:renovate"
 specifiers = ["44.133.0"]
 
 [[tools."pipx:pre-commit"]]
-version = "4.6.2"
+version = "4.7.0"
 backend = "pipx:pre-commit"
-specifiers = ["4.6.2"]
+specifiers = ["4.7.0"]
 
 [[tools.rust]]
 version = "1.88.0"
