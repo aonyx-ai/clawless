@@ -37,7 +37,7 @@ node = "24.22.0"
 # reaches it through the proxy of rustup. The `rust-src` component carries the
 # source of the standard library, which rust-analyzer reads.
 rust = [
-  { version = "1.99.0", components = [
+  { version = "1.99.1", components = [
     "clippy",
     "rust-src",
     "rustfmt",
