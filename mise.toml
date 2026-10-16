@@ -80,6 +80,18 @@ zizmor = "1.31.1"
 # the same files.
 lockfile = true
 
+# The lockfile covers each platform that installs the tools: the runners of CI
+# (`ubuntu-latest`, which is `linux-x64`), and the machines of the contributors
+# (`macos-arm64`). `mise lock` writes an entry of each tool for each platform
+# of the list, and it skips a platform for which a tool has no build. It also
+# writes an entry for the platform of the machine that runs it, so a run on a
+# platform outside the list adds that platform. The lockfile can also hold
+# entries of other platforms. `mise lock` keeps them while the version of their
+# tool stays, and it removes them when the version changes. Only the platforms
+# of the list must have an entry. Add a platform here before a job or a
+# contributor installs the tools on it.
+lockfile_platforms = ["linux-x64", "macos-arm64"]
+
 # The installer that mise carries lays a package of npm out the way pnpm
 # does: one directory per package, and a link from every package to each of
 # its dependencies. Windows creates such a link only for an account that may,
