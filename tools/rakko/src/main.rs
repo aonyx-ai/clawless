@@ -42,7 +42,7 @@ use rakko_test_rust_docs::TestRustDocs;
 /// crate promises, and a harness stops when two bundles give it two actions
 /// of one name.
 fn main() {
-    let pre_commit = PreCommit::new(actions_that_write(), actions_that_read());
+    let pre_commit = PreCommit::new(actions_that_write().into_iter().chain(actions_that_read()));
 
     rakko_cli::builder()
         .mount(rakko_baseline::bundle())
