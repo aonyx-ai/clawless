@@ -52,7 +52,7 @@ rust = [
 "cargo:cargo-nextest" = "0.9.149"
 "cargo:cargo-udeps" = "0.1.61"
 jq = "1.8.2"
-"npm:markdownlint-cli" = "0.49.1"
+"npm:markdownlint-cli" = "0.50.0"
 # The release of pre-commit is a Python zipapp, and the registry maps that
 # file to no Windows download, so the pin names the backend that installs
 # from the package index instead and works on every platform.
