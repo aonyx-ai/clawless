@@ -42,7 +42,7 @@ rust = [
     "rust-src",
     "rustfmt",
   ] },
-  { version = "nightly-2026-10-18", components = [
+  { version = "nightly-2026-10-25", components = [
     "rustfmt",
   ] },
   { version = "1.88.0" },
