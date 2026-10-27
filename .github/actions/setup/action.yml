@@ -50,7 +50,7 @@ runs:
         fi
 
     - name: Install the tools
-      uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+      uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
       # When the binary of mise on the runner is not the version below, the
       # action runs `mise self-update`, which asks the API of GitHub for the
       # release. Without a token, that call can run into the rate limit of
