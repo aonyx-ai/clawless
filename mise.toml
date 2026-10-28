@@ -14,7 +14,7 @@ cargo-binstall = "1.26.1"
 # what lets the actions that wrap them start any of the three. Node also builds
 # the documentation site in `docs`. The validator supports fewer versions of
 # node than the others, so it limits how far the pin can move.
-node = "24.22.1"
+node = "24.22.2"
 
 # The first toolchain is the default for builds, Clippy, and the tests. The
 # second is a nightly toolchain, which rustfmt needs for the unstable options
