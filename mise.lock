@@ -75,9 +75,9 @@ backend = "npm:prettier"
 specifiers = ["3.9.10"]
 
 [[tools."npm:renovate"]]
-version = "44.133.0"
+version = "44.199.2"
 backend = "npm:renovate"
-specifiers = ["44.133.0"]
+specifiers = ["44.199.2"]
 
 [[tools."pipx:pre-commit"]]
 version = "4.7.0"
