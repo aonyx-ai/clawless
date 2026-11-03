@@ -72,7 +72,7 @@ taplo = "0.10.0"
 uv = "0.13.7"
 
 yamllint = "1.38.0"
-zizmor = "1.31.1"
+zizmor = "1.32.0"
 
 [settings]
 # The lockfile records the version, the download, and the checksum that each
