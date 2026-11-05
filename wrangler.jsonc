@@ -1,0 +1,16 @@
+{
+  // The site is static, so the Worker has no `main`: Cloudflare serves the
+  // assets directly, and no code of ours runs on a request.
+  "name": "clawless-rs",
+  "compatibility_date": "2026-09-03",
+  // The Worker answers on the custom domain that den attaches to it. A
+  // workers.dev hostname would be a second public origin serving the same
+  // site.
+  "workers_dev": false,
+  "assets": {
+    "directory": "./docs/build",
+    // Docusaurus writes a `404.html`. Cloudflare serves it, with a 404 status,
+    // for a path that matches no file, so a broken link still shows the site.
+    "not_found_handling": "404-page",
+  },
+}
