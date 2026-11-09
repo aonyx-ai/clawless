@@ -61,7 +61,7 @@ jq = "1.8.2"
 # Renovate publishes several releases a day. The shared preset of Renovate that
 # this repository extends moves the pin once a week, so that the releases
 # arrive as one pull request per week and not as several per day.
-"npm:renovate" = "44.199.2"
+"npm:renovate" = "44.222.5"
 taplo = "0.10.0"
 
 # The pin below installs no tool that an action runs. The registry maps
