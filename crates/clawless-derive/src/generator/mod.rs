@@ -117,14 +117,12 @@ pub(crate) trait Generator {
         }
     }
 
-    // r[impl dispatch.resolve.sync]
     /// Generates the `_resolve` function that walks subcommands and returns a `ResolvedLeaf`
     fn resolve_function(&self) -> TokenStream {
         let resolve_function_name = self.resolve_function_name();
         let resolve_function_body = self.resolve_function_body();
         let inventory_name = inventory_name();
 
-        // r[impl dispatch.resolve.delegate]
         quote! {
             pub fn #resolve_function_name(matches: clawless::clap::ArgMatches) -> clawless::resolved_leaf::ResolvedLeaf {
                 for subcommand in clawless::inventory::iter::<#inventory_name> {

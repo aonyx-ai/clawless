@@ -71,11 +71,8 @@ mod sender;
 /// assert_eq!(artifact.to_string(), "42 users");
 /// ```
 ///
-// r[impl event.artifact.structured]
-// r[impl event.artifact.text]
 pub trait Artifact: Display + Debug + Send + Sync + erased_serde::Serialize {}
 
-// r[impl event.artifact.zero-cost]
 impl<T> Artifact for T where T: Display + Serialize + Debug + Send + Sync + 'static {}
 
 erased_serde::serialize_trait_object!(Artifact);
@@ -100,24 +97,19 @@ erased_serde::serialize_trait_object!(Artifact);
 ///
 /// [`Detail`]: Event::Detail
 /// [`Message`]: Event::Message
-// r[impl event.safety.event-send]
 #[derive(Debug)]
 pub enum Event {
     /// Informational message
-    // r[impl event.output.message]
     Message(String),
     /// Supplementary detail
-    // r[impl event.output.detail]
     Detail(String),
     /// Primary command output
-    // r[impl event.output.artifact]
     Artifact(Box<dyn Artifact>),
     /// One step in the run of an external program
     ///
     /// The event is boxed so that the size of an `Event` stays that of its text variants. A run
     /// names its command in the events that start and end it, and an unboxed variant would make
     /// every message in the channel as large as that name.
-    // r[impl event.output.process]
     Process(Box<ProcessEvent>),
     /// A question for the user
     ///
@@ -166,7 +158,6 @@ mod tests {
         assert!(debug.contains("hello"));
     }
 
-    // r[verify event.artifact.text]
     #[test]
     fn artifact_display_renders_via_display_trait() {
         let boxed: Box<dyn Artifact> = Box::new(test_artifact());
@@ -176,7 +167,6 @@ mod tests {
         assert_eq!(display, "hello");
     }
 
-    // r[verify event.artifact.structured]
     #[test]
     fn artifact_serializes_via_erased_serde() {
         let boxed: Box<dyn Artifact> = Box::new(test_artifact());
@@ -186,7 +176,6 @@ mod tests {
         assert_eq!(json, r#"{"value":"hello"}"#);
     }
 
-    // r[verify event.output.detail]
     #[test]
     fn detail_with_empty_string_is_valid() {
         let event = Event::Detail(String::new());
@@ -196,7 +185,6 @@ mod tests {
         assert!(debug.contains("Detail"));
     }
 
-    // r[verify event.output.message]
     #[test]
     fn message_with_empty_string_is_valid() {
         let event = Event::Message(String::new());
@@ -206,7 +194,6 @@ mod tests {
         assert!(debug.contains("Message"));
     }
 
-    // r[verify event.output.process]
     #[test]
     fn process_carries_the_event_of_a_run() {
         let id = RunId::next();
@@ -247,7 +234,6 @@ mod tests {
         );
     }
 
-    // r[verify event.safety.event-send]
     #[test]
     fn trait_send() {
         fn assert_send<T: Send>() {}

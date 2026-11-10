@@ -115,11 +115,6 @@ mod state;
 /// [`EventReceiver`]: clawless_core::event::EventReceiver
 /// [`RwLock`]: std::sync::RwLock
 /// [`wait_until_complete`]: Projection::wait_until_complete
-// r[impl projection.new]
-// r[impl projection.new.drain]
-// r[impl projection.safety.send]
-// r[impl projection.safety.sync]
-// r[impl projection.safety.unpin]
 #[derive(Debug)]
 pub struct Projection {
     /// The entries so far, which the projection shares with the drain task
@@ -193,7 +188,6 @@ impl Projection {
     /// # Panics
     ///
     /// Panics if the internal lock is poisoned.
-    // r[impl projection.query.entries]
     // Panics only on a poisoned lock, as documented above.
     #[allow(clippy::expect_used)]
     pub fn entries(&self) -> Vec<Entry> {
@@ -209,7 +203,6 @@ impl Projection {
     /// Panics if the internal lock is poisoned.
     ///
     /// [`entries`]: Projection::entries
-    // r[impl projection.query.messages]
     // Panics only on a poisoned lock, as documented above.
     #[allow(clippy::expect_used)]
     pub fn messages(&self) -> Vec<Entry> {
@@ -225,7 +218,6 @@ impl Projection {
     /// Panics if the internal lock is poisoned.
     ///
     /// [`entries`]: Projection::entries
-    // r[impl projection.query.details]
     // Panics only on a poisoned lock, as documented above.
     #[allow(clippy::expect_used)]
     pub fn details(&self) -> Vec<Entry> {
@@ -241,7 +233,6 @@ impl Projection {
     /// Panics if the internal lock is poisoned.
     ///
     /// [`entries`]: Projection::entries
-    // r[impl projection.query.artifacts]
     // Panics only on a poisoned lock, as documented above.
     #[allow(clippy::expect_used)]
     pub fn artifacts(&self) -> Vec<Entry> {
@@ -259,7 +250,6 @@ impl Projection {
     /// Panics if the internal lock is poisoned.
     ///
     /// [`ProcessId`]: clawless_core::event::process::RunId
-    // r[impl projection.query.processes]
     // Panics only on a poisoned lock, as documented above.
     #[allow(clippy::expect_used)]
     pub fn processes(&self) -> Vec<Entry> {
@@ -276,7 +266,6 @@ impl Projection {
     /// Panics if the internal lock is poisoned.
     ///
     /// [`EventSender`]: clawless_core::event::EventSender
-    // r[impl projection.lifecycle.complete]
     // Panics only on a poisoned lock, as documented above.
     #[allow(clippy::expect_used)]
     pub fn is_complete(&self) -> bool {
@@ -319,7 +308,6 @@ impl Projection {
     /// [`Context`]: clawless_core::context::Context
     /// [`EventSender`]: clawless_core::event::EventSender
     /// [`is_complete`]: Projection::is_complete
-    // r[impl projection.lifecycle.wait]
     pub async fn wait_until_complete(&self) {
         let mut completion = self.completion.clone();
 
@@ -357,7 +345,6 @@ impl Projection {
 /// Panics if the internal lock is poisoned.
 // The lock is poisoned only if another thread panicked while holding it. The drain task has
 // no way to publish events into a state it cannot lock, so it fails loudly instead.
-// r[impl projection.lifecycle.order]
 #[allow(clippy::expect_used)]
 async fn drain(
     mut receiver: EventReceiver,
@@ -413,7 +400,6 @@ mod tests {
         }
     }
 
-    // r[verify projection.query.artifacts]
     #[tokio::test]
     async fn artifacts_returns_artifact_entries_only() {
         let (sender, receiver) = event_channel();
@@ -441,7 +427,6 @@ mod tests {
         assert_eq!(a.to_string(), "art");
     }
 
-    // r[verify projection.query.details]
     #[tokio::test]
     async fn details_returns_detail_entries_only() {
         let (sender, receiver) = event_channel();
@@ -515,7 +500,6 @@ mod tests {
         assert_eq!(s, "buffered");
     }
 
-    // r[verify projection.entry.artifact]
     #[tokio::test]
     async fn entries_returns_artifact_events_as_entries() {
         let (sender, receiver) = event_channel();
@@ -539,7 +523,6 @@ mod tests {
         assert_eq!(a.to_string(), "result");
     }
 
-    // r[verify projection.entry.detail]
     #[tokio::test]
     async fn entries_returns_detail_events_as_entries() {
         let (sender, receiver) = event_channel();
@@ -561,8 +544,6 @@ mod tests {
         assert_eq!(s, "info");
     }
 
-    // r[verify projection.entry.message]
-    // r[verify projection.query.entries]
     #[tokio::test]
     async fn entries_returns_message_events_as_entries() {
         let (sender, receiver) = event_channel();
@@ -584,7 +565,6 @@ mod tests {
         assert_eq!(s, "hello");
     }
 
-    // r[verify projection.entry.order]
     #[tokio::test]
     async fn entries_preserves_receive_order() {
         let (sender, receiver) = event_channel();
@@ -648,7 +628,6 @@ mod tests {
         assert!(!projection.is_complete());
     }
 
-    // r[verify projection.query.messages]
     #[tokio::test]
     async fn messages_returns_message_entries_only() {
         let (sender, receiver) = event_channel();
@@ -682,7 +661,6 @@ mod tests {
         assert_eq!(s, "msg2");
     }
 
-    // r[verify projection.new]
     #[tokio::test]
     async fn new_returns_empty_projection() {
         let (_sender, receiver) = event_channel();
@@ -693,8 +671,6 @@ mod tests {
         assert!(!projection.is_complete());
     }
 
-    // r[verify projection.new.drain]
-    // r[verify projection.lifecycle.complete]
     #[tokio::test]
     async fn new_starts_drain_that_completes_when_channel_closes() {
         let (sender, receiver) = event_channel();
@@ -706,7 +682,6 @@ mod tests {
         assert!(projection.is_complete());
     }
 
-    // r[verify projection.query.processes]
     #[tokio::test]
     async fn processes_returns_process_entries_only() {
         let (sender, receiver) = event_channel();
@@ -745,28 +720,24 @@ mod tests {
         assert!(handle.is_none());
     }
 
-    // r[verify projection.safety.send]
     #[test]
     fn trait_send() {
         fn assert_send<T: Send>() {}
         assert_send::<Projection>();
     }
 
-    // r[verify projection.safety.sync]
     #[test]
     fn trait_sync() {
         fn assert_sync<T: Sync>() {}
         assert_sync::<Projection>();
     }
 
-    // r[verify projection.safety.unpin]
     #[test]
     fn trait_unpin() {
         fn assert_unpin<T: Unpin>() {}
         assert_unpin::<Projection>();
     }
 
-    // r[verify projection.lifecycle.wait]
     #[tokio::test]
     async fn wait_until_complete_after_the_drain_finished_returns_immediately() {
         let (sender, receiver) = event_channel();
@@ -784,7 +755,6 @@ mod tests {
     // still calls itself incomplete. The multi-threaded flavor is what gives the check teeth,
     // because the drain runs on another worker and the two writes can be observed apart. A
     // current-thread runtime hides the difference.
-    // r[verify projection.lifecycle.order]
     #[tokio::test(flavor = "multi_thread")]
     async fn wait_until_complete_reports_completion_when_it_returns() {
         let mut torn = 0;
@@ -811,7 +781,6 @@ mod tests {
     // Awaiting the send only puts an event in the channel, so a projection read straight after it
     // is almost always still empty. This is the await that closes that gap, and the count is what
     // a closing frame depends on.
-    // r[verify projection.lifecycle.wait]
     #[tokio::test(flavor = "multi_thread")]
     async fn wait_until_complete_shows_the_event_that_preceded_it() {
         let mut incomplete = 0;

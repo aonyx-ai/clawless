@@ -40,7 +40,6 @@ static NEXT_RUN_ID: AtomicU64 = AtomicU64::new(0);
 /// ```
 ///
 /// [`ProcessEvent`]: super::ProcessEvent
-// r[impl process.event.correlation]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct RunId(u64);
 
@@ -66,7 +65,6 @@ impl RunId {
     /// ```
     ///
     /// [`Process::run`]: crate::process::Process::run
-    // r[impl process.event.correlation.unique]
     pub fn next() -> Self {
         Self(NEXT_RUN_ID.fetch_add(1, Ordering::Relaxed))
     }
@@ -116,8 +114,6 @@ mod tests {
         assert_eq!(text, id.get().to_string());
     }
 
-    // r[verify process.event.correlation]
-    // r[verify process.event.correlation.unique]
     #[test]
     fn next_returns_a_new_identity_every_time() {
         let first = RunId::next();

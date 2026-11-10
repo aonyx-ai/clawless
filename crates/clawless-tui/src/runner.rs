@@ -41,7 +41,6 @@ use crate::projection::Projection;
 ///
 /// [`Context`]: clawless_core::context::Context
 /// [`Projection`]: crate::projection::Projection
-// r[impl dispatch.exec.application-runner]
 #[derive(Debug)]
 pub struct ApplicationRunner;
 
@@ -93,8 +92,6 @@ impl ApplicationRunner {
     /// [`Exit`]: clawless_core::exit::Exit
     /// [`Output`]: clawless_core::output::Output
     /// [`Projection`]: crate::projection::Projection
-    // r[impl dispatch.exec.callable]
-    // r[impl dispatch.exec.application-drain]
     pub fn run<E, F, T>(matches: clap::ArgMatches, exec: E) -> Exit
     where
         E: FnOnce(clap::ArgMatches, Context, Projection) -> F,
@@ -198,7 +195,6 @@ mod tests {
         assert_eq!(counted.load(Ordering::SeqCst), 300);
     }
 
-    // r[verify dispatch.exec.callable]
     #[test]
     fn run_with_a_closure_that_owns_state_executes_the_leaf() {
         let matches = clap::Command::new("test").get_matches_from(["test"]);

@@ -52,7 +52,6 @@ fn detect_interactivity(input: &impl IsTerminal, display: &impl IsTerminal) -> I
 ///     clawless::runner::CommandRunner::run(matches, exec)
 /// }
 /// ```
-// r[impl dispatch.exec.command-runner]
 #[derive(Debug)]
 pub struct CommandRunner;
 
@@ -97,7 +96,6 @@ impl CommandRunner {
     /// [`Exit`]: clawless_core::exit::Exit
     /// [`Interactivity`]: clawless_core::context::Interactivity
     /// [`TerminalPresenter`]: crate::presenter::TerminalPresenter
-    // r[impl dispatch.exec.callable]
     pub fn run<E, F, T>(matches: clap::ArgMatches, exec: E) -> Exit
     where
         E: FnOnce(clap::ArgMatches, Context) -> F,
@@ -200,7 +198,6 @@ mod tests {
         assert_eq!(interactivity, Interactivity::NonInteractive);
     }
 
-    // r[verify dispatch.exec.callable]
     #[test]
     fn run_with_a_closure_that_owns_state_executes_the_leaf() {
         let executed = Arc::new(AtomicBool::new(false));

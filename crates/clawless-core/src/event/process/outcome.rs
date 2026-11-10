@@ -23,21 +23,18 @@ use std::process::ExitStatus;
 /// ```
 ///
 /// [`Exited`]: Outcome::Exited
-// r[impl process.event.outcome]
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Outcome {
     /// Cancellation stopped the program before it ended
     ///
     /// Clawless killed the program, so it has no exit status. The output that
     /// reached the consumer before this point is everything the program wrote.
-    // r[impl process.event.outcome.cancelled]
     Cancelled,
 
     /// The program ran to its end
     ///
     /// The status says how it ended. A program that a signal stopped carries no
     /// exit code, which [`ExitStatus::code`] reports as `None`.
-    // r[impl process.event.outcome.exited]
     Exited(ExitStatus),
 
     /// The run started and produced no result
@@ -45,7 +42,6 @@ pub enum Outcome {
     /// A stream of the program could not be read, the end of the program could
     /// not be waited for, or the events of the run could no longer be reported.
     /// The program itself may well have done its work.
-    // r[impl process.event.outcome.incomplete]
     Incomplete,
 }
 
@@ -85,7 +81,6 @@ mod tests {
         assert_eq!(text, "was cancelled before it ended");
     }
 
-    // r[verify process.event.outcome.incomplete]
     #[test]
     fn display_with_incomplete_names_the_missing_result() {
         let outcome = Outcome::Incomplete;

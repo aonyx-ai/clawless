@@ -8,8 +8,6 @@
 // would repeat that and give the reader no information.
 #![allow(clippy::missing_panics_doc)]
 
-// r[verify process.render.verbosity]
-// r[verify process.render.streams]
 #[test]
 fn process() {
     trycmd::TestCases::new().case("tests/process/*.toml");

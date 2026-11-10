@@ -90,16 +90,6 @@ than large rewrites.
   them.
 - Getting the details right is really important!
 
-### Specifications
-
-The `specs/` directory contains the project's design specifications.
-[`specs/README.md`][specs-readme] defines the ubiquitous language, hexagonal
-architecture, and layered crate structure; consult it before introducing new
-domain concepts or modifying architectural boundaries. New features should have
-a spec before implementation begins. Specs for already-shipped features are
-historical records; do not update their API references when the API changes in
-a later PR.
-
 ### Structure
 
 ```text
@@ -118,7 +108,6 @@ examples/
   ├── process/               # Running external programs
   └── prompt/                # Asking the user a question
 docs/                        # Docusaurus documentation site
-specs/                       # Design specifications
 tools/
   └── rakko/                 # Harness of the maintenance commands
 ```
@@ -546,9 +535,6 @@ fn helper() {}
 - Name tests descriptively: `function_name_<condition>_<result>`, e.g.
   `greet_with_name_returns_greeting`.
 - Each test should have exactly one assertion.
-- A `// r[verify <rule>]` comment belongs to the test directly below it.
-  Alphabetical ordering means a new test often lands between an existing
-  annotation and its test, so check what sits above the insertion point.
 
 Testing tools:
 
@@ -734,8 +720,8 @@ Documentation should explain the "why", not just the "what". Write it for a
 reader that has no prior context, and especially no knowledge of the
 conversation that led to the code.
 
-Write for a consumer of the published crate. A published crate bundles neither
-the specifications nor the design notes, so never reference them from a doc
+Write for a consumer of the published crate. A published crate does not include
+the other documents of this repository, so never reference them from a doc
 comment. Internal rationale, such as which library a function hides, stays out
 of the documentation as well. Document what the API does, what it requires of
 the caller, and how it fails.
@@ -862,7 +848,6 @@ Apache-2.0 or MIT license.
 [mise]: https://mise.jdx.dev
 [nextest-agents]: https://github.com/nextest-rs/nextest/blob/main/AGENTS.md
 [rakko]: https://github.com/aonyx-ai/rakko
-[specs-readme]: specs/README.md
 [tbaggery]: https://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
 [trycmd]: https://docs.rs/trycmd/latest/trycmd/
 [trybuild]: https://docs.rs/trybuild/latest/trybuild/

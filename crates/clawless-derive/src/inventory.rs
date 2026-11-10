@@ -24,7 +24,6 @@ impl<'a> InventoryGenerator<'a> {
         Self { generator }
     }
 
-    // r[impl dispatch.resolve.uniform]
     /// Generates the `ClawlessSubcommands` struct that the `inventory` crate collects at link time
     ///
     /// Every module that uses `#[command]` or `#[application]` gets its own copy of this struct.
