@@ -33,8 +33,6 @@ use crate::cancellation::Cancellation;
 ///
 /// Panics if the OS signal handler cannot be registered, which indicates system resource
 /// exhaustion.
-// r[impl cancel.os.first]
-// r[impl cancel.os.second]
 // Registering an OS signal handler fails only when the process has exhausted its resources.
 // The process cannot honor a shutdown request it is unable to observe, so there is nothing to
 // recover to. The `# Panics` section documents this for callers.
@@ -63,8 +61,6 @@ pub fn wait_for_shutdown(cancellation: Cancellation) -> impl Future<Output = ()>
 ///
 /// Panics if the operating system cannot register the signal handler. This occurs when the
 /// system has no resources left.
-// r[impl cancel.os.unix]
-// r[impl cancel.os.eager]
 // Registering an OS signal handler fails only when the process has exhausted its resources.
 // The process cannot honor a shutdown request it is unable to observe, so there is nothing to
 // recover to. The `# Panics` section documents this for callers.

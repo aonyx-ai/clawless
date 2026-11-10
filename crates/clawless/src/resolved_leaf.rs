@@ -57,14 +57,8 @@ pub type ApplicationExec = fn(
 /// [`ArgMatches`]: clap::ArgMatches
 /// [`ApplicationRunner`]: clawless_tui::runner::ApplicationRunner
 /// [`CommandRunner`]: clawless_cli::runner::CommandRunner
-// r[impl dispatch.safety.send]
-// r[impl dispatch.safety.sync]
-// r[impl dispatch.safety.unpin]
 #[derive(Debug)]
 pub enum ResolvedLeaf {
-    // r[impl dispatch.leaf.command]
-    // r[impl dispatch.leaf.matches]
-    // r[impl dispatch.leaf.exec]
     /// A stateless CLI command rendered through a push-based presenter
     ///
     /// The command receives parsed arguments and a [`Context`] for emitting events. A
@@ -78,7 +72,6 @@ pub enum ResolvedLeaf {
         /// Executes the command with the given matches and context
         exec: CommandExec,
     },
-    // r[impl dispatch.leaf.application]
     /// A stateful TUI application that queries a pull-based projection
     ///
     /// The application receives parsed arguments, a [`Context`] for emitting events, and a
@@ -104,21 +97,18 @@ mod tests {
 
     use super::*;
 
-    // r[verify dispatch.safety.send]
     #[test]
     fn trait_send() {
         fn assert_send<T: Send>() {}
         assert_send::<ResolvedLeaf>();
     }
 
-    // r[verify dispatch.safety.sync]
     #[test]
     fn trait_sync() {
         fn assert_sync<T: Sync>() {}
         assert_sync::<ResolvedLeaf>();
     }
 
-    // r[verify dispatch.safety.unpin]
     #[test]
     fn trait_unpin() {
         fn assert_unpin<T: Unpin>() {}

@@ -115,11 +115,6 @@ enum Streamed {
 /// ```
 ///
 /// [`Context::process`]: crate::context::Context::process
-// r[impl process.new]
-// r[impl process.new.grace]
-// r[impl process.safety.clone]
-// r[impl process.safety.send]
-// r[impl process.safety.sync]
 #[derive(Clone, Debug, Builder)]
 pub struct Process {
     /// The channel that carries the events of a run
@@ -197,9 +192,6 @@ impl Process {
     /// [success]: Execution::require_success
     /// [unreportable]: RunProcessError::UnreportableOutput
     /// [unrunnable]: RunProcessError::UnrunnableCommand
-    // r[impl process.run]
-    // r[impl process.run.capture]
-    // r[impl process.run.stream]
     pub async fn run(&self, invocation: Invocation) -> Result<Execution, RunProcessError> {
         let started = Instant::now();
         let id = RunId::next();
@@ -250,8 +242,6 @@ impl Process {
     /// The result of the ending is dropped. The caller is cancelling, so it
     /// discards the output of the run either way, and a program that could not
     /// be waited for is no longer this application's concern.
-    // r[impl process.run.cancel.grace]
-    // r[impl process.run.cancel.bound]
     async fn cancel(
         &self,
         id: RunId,
@@ -280,7 +270,6 @@ impl Process {
     ///
     /// [unreportable]: RunProcessError::UnreportableOutput
     /// [unrunnable]: RunProcessError::UnrunnableCommand
-    // r[impl process.run.cancel]
     async fn stream(
         &self,
         id: RunId,
@@ -325,7 +314,6 @@ impl Process {
     /// [cancelled]: RunProcessError::CancelledRun
     /// [unreportable]: RunProcessError::UnreportableOutput
     /// [unrunnable]: RunProcessError::UnrunnableCommand
-    // r[impl process.run.cancel]
     async fn complete(
         &self,
         id: RunId,
@@ -384,7 +372,6 @@ impl Process {
     ///
     /// Returns [`SendError`] if the consumer of the events has stopped
     /// listening.
-    // r[impl process.run.lifecycle]
     async fn end(
         &self,
         id: RunId,
@@ -522,8 +509,6 @@ mod tests {
         }
     }
 
-    // r[verify process.new]
-    // r[verify process.safety.clone]
     #[tokio::test]
     async fn clone_reports_through_the_same_channel() {
         let (sender, receiver) = event_channel();
@@ -537,7 +522,6 @@ mod tests {
         assert_eq!(drain(receiver).await.len(), 2);
     }
 
-    // r[verify process.event.finished]
     #[tokio::test]
     async fn run_reports_the_command_and_the_time_of_the_run() {
         let (sender, receiver) = event_channel();
@@ -561,8 +545,6 @@ mod tests {
         );
     }
 
-    // r[verify process.event.lifecycle]
-    // r[verify process.run.lifecycle]
     #[tokio::test]
     async fn run_reports_the_lifecycle_of_the_program() {
         let (sender, receiver) = event_channel();
@@ -588,9 +570,6 @@ mod tests {
         );
     }
 
-    // r[verify process.event.line]
-    // r[verify process.run]
-    // r[verify process.run.stream]
     #[tokio::test]
     async fn run_reports_the_lines_of_the_program() {
         let (sender, receiver) = event_channel();
@@ -611,8 +590,6 @@ mod tests {
         );
     }
 
-    // r[verify process.event.outcome]
-    // r[verify process.event.outcome.exited]
     #[tokio::test]
     async fn run_reports_the_outcome_of_the_program() {
         let (sender, receiver) = event_channel();
@@ -627,7 +604,6 @@ mod tests {
         );
     }
 
-    // r[verify process.event.started.identifier]
     #[tokio::test]
     async fn run_reports_the_identifier_of_the_program() {
         let (sender, receiver) = event_channel();
@@ -646,7 +622,6 @@ mod tests {
         );
     }
 
-    // r[verify process.event.started]
     #[tokio::test]
     async fn run_reports_the_start_of_the_program() {
         let (sender, receiver) = event_channel();
@@ -662,7 +637,6 @@ mod tests {
         );
     }
 
-    // r[verify process.run.capture]
     #[tokio::test]
     async fn run_returns_the_capture_of_the_program() {
         let (sender, _receiver) = event_channel();
@@ -676,7 +650,6 @@ mod tests {
         assert_eq!(execution.stdout().to_string_lossy().trim(), "hello");
     }
 
-    // r[verify process.event.line]
     #[tokio::test]
     async fn run_separates_the_streams_of_the_program() {
         let (sender, receiver) = event_channel();
@@ -700,7 +673,6 @@ mod tests {
         );
     }
 
-    // r[verify process.run.cancel.grace]
     #[cfg(unix)]
     #[tokio::test]
     async fn run_with_a_cancelled_token_lets_the_program_end_itself() {
@@ -745,7 +717,6 @@ mod tests {
         assert!(marker.exists());
     }
 
-    // r[verify process.run.cancel]
     #[cfg(unix)]
     #[tokio::test]
     async fn run_with_a_cancelled_token_kills_the_program() {
@@ -783,7 +754,6 @@ mod tests {
         );
     }
 
-    // r[verify process.event.outcome.cancelled]
     #[tokio::test]
     async fn run_with_a_cancelled_token_reports_the_cancellation() {
         let cancellation = Cancellation::new();
@@ -803,7 +773,6 @@ mod tests {
         assert_eq!(outcome(&drain(receiver).await), Some(Outcome::Cancelled));
     }
 
-    // r[verify process.run.cancel.error]
     #[tokio::test]
     async fn run_with_a_cancelled_token_returns_an_error() {
         let cancellation = Cancellation::new();
@@ -822,7 +791,6 @@ mod tests {
         assert!(is_cancelled(&error));
     }
 
-    // r[verify process.run.report.error]
     #[tokio::test]
     async fn run_with_a_closed_channel_returns_an_error() {
         let (sender, receiver) = event_channel();
@@ -837,7 +805,6 @@ mod tests {
         assert!(matches_unreportable_output(&error));
     }
 
-    // r[verify process.run.error]
     #[tokio::test]
     async fn run_with_a_missing_program_returns_an_error() {
         let (sender, _receiver) = event_channel();
@@ -851,7 +818,6 @@ mod tests {
         assert!(matches_unrunnable_command(&error));
     }
 
-    // r[verify process.run.cancel.grace]
     #[cfg(unix)]
     #[tokio::test]
     async fn run_with_a_program_that_closed_its_streams_ends_itself_on_cancellation() {
@@ -881,7 +847,6 @@ mod tests {
         assert!(marker.exists());
     }
 
-    // r[verify process.run.cancel]
     #[cfg(unix)]
     #[tokio::test]
     async fn run_with_a_program_that_closed_its_streams_stops_on_cancellation() {
@@ -905,8 +870,6 @@ mod tests {
         assert!(is_cancelled(&error));
     }
 
-    // r[verify process.new.grace]
-    // r[verify process.run.cancel.bound]
     #[cfg(unix)]
     #[tokio::test]
     async fn run_with_a_program_that_leaves_a_child_returns_within_the_grace_period() {
@@ -942,7 +905,6 @@ mod tests {
         assert_eq!(execution.status().code(), Some(3));
     }
 
-    // r[verify process.run.cancel]
     #[tokio::test]
     async fn run_with_cancellation_while_the_program_runs_returns_an_error() {
         let cancellation = Cancellation::new();
@@ -981,14 +943,12 @@ mod tests {
         assert!(is_cancelled(&error));
     }
 
-    // r[verify process.safety.send]
     #[test]
     fn trait_send() {
         fn assert_send<T: Send>() {}
         assert_send::<Process>();
     }
 
-    // r[verify process.safety.sync]
     #[test]
     fn trait_sync() {
         fn assert_sync<T: Sync>() {}

@@ -11,8 +11,6 @@ use super::Event;
 /// `EventSender` produces another handle to the same channel, not an independent channel.
 ///
 /// [`EventReceiver`]: super::EventReceiver
-// r[impl event.safety.producer-clone]
-// r[impl event.safety.producer-concurrent]
 #[derive(Clone, Debug)]
 pub struct EventSender {
     /// The half of the Tokio channel that sends events
@@ -60,7 +58,6 @@ mod tests {
         assert_send::<EventSender>();
     }
 
-    // r[verify event.safety.producer-concurrent]
     #[test]
     fn trait_sync() {
         fn assert_sync<T: Sync>() {}

@@ -22,7 +22,6 @@ use crate::event::SendError;
 ///
 /// [`Execution`]: kawauso_process::Execution
 /// [success]: kawauso_process::Execution::require_success
-// r[impl process.error]
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum RunProcessError {
@@ -31,7 +30,6 @@ pub enum RunProcessError {
     /// Clawless killed the program, so the run has no exit status and no
     /// complete output. A command that treats cancellation as an orderly end
     /// matches this variant and returns without an error.
-    // r[impl process.run.cancel.error]
     #[error("the command `{invocation}` was cancelled before it ended")]
     #[non_exhaustive]
     CancelledRun {
@@ -46,7 +44,6 @@ pub enum RunProcessError {
     /// and its result could not be collected. The message is the one of the
     /// underlying failure, because this layer knows nothing that the run does
     /// not already state.
-    // r[impl process.run.error]
     #[error(transparent)]
     #[non_exhaustive]
     UnrunnableCommand {
@@ -58,7 +55,6 @@ pub enum RunProcessError {
     ///
     /// The presenter stopped listening while the program ran, so the run has no
     /// consumer left. The program itself was killed with the run.
-    // r[impl process.run.report.error]
     #[error("failed to report the output of the command `{invocation}`")]
     #[non_exhaustive]
     UnreportableOutput {
@@ -78,7 +74,6 @@ mod tests {
 
     use super::*;
 
-    // r[verify process.error]
     #[test]
     fn display_with_a_cancelled_run_names_the_command() {
         let error = RunProcessError::CancelledRun {

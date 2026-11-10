@@ -12,7 +12,6 @@ use std::process::Stdio;
 
 use assert_cmd::cargo::*;
 
-// r[verify cancel.os.first]
 #[test]
 fn sigint_triggers_graceful_cancellation() {
     let mut child = std::process::Command::new(cargo_bin!("cancellation"))

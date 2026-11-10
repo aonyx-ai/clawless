@@ -12,10 +12,6 @@ use clawless_core::event::process::ProcessEvent;
 /// when returned from queries.
 ///
 /// [`Event`]: clawless_core::event::Event
-// r[impl projection.entry.message]
-// r[impl projection.entry.detail]
-// r[impl projection.entry.artifact]
-// r[impl projection.entry.process]
 #[derive(Clone, Debug)]
 pub enum Entry {
     /// Informational message
@@ -124,7 +120,6 @@ mod tests {
         assert_eq!(text, "hello");
     }
 
-    // r[verify projection.entry.process]
     #[test]
     fn display_process_renders_the_event() {
         let entry = Entry::Process(Arc::new(ProcessEvent::Line {

@@ -52,9 +52,6 @@ use crate::event::{Event, EventSender, SendError};
 /// [`artifact`]: Output::artifact
 /// [`detail`]: Output::detail
 /// [`message`]: Output::message
-// r[impl output.safety.clone]
-// r[impl output.safety.send]
-// r[impl output.safety.concurrent]
 #[derive(Clone, Debug)]
 pub struct Output {
     /// Channel that carries the emitted events
@@ -102,8 +99,6 @@ impl Output {
     /// ```
     ///
     /// [`EventReceiver`]: crate::event::EventReceiver
-    // r[impl output.send.message]
-    // r[impl output.send.async]
     pub async fn message(&self, message: impl Display) -> Result<(), SendError> {
         self.sender.send(Event::Message(message.to_string())).await
     }
@@ -134,7 +129,6 @@ impl Output {
     /// ```
     ///
     /// [`EventReceiver`]: crate::event::EventReceiver
-    // r[impl output.send.detail]
     pub async fn detail(&self, detail: impl Display) -> Result<(), SendError> {
         self.sender.send(Event::Detail(detail.to_string())).await
     }
@@ -180,7 +174,6 @@ impl Output {
     /// ```
     ///
     /// [`EventReceiver`]: crate::event::EventReceiver
-    // r[impl output.send.artifact]
     pub async fn artifact<T>(&self, value: T) -> Result<(), SendError>
     where
         T: Display + Serialize + Debug + Send + Sync + 'static,
@@ -224,7 +217,6 @@ impl Output {
     ///
     /// [`EventReceiver`]: crate::event::EventReceiver
     /// [`Process`]: crate::process::Process
-    // r[impl output.send.process]
     pub async fn process_event(&self, event: ProcessEvent) -> Result<(), SendError> {
         self.sender.send(Event::Process(Box::new(event))).await
     }
@@ -290,7 +282,6 @@ mod tests {
         }
     }
 
-    // r[verify output.send.artifact]
     #[tokio::test]
     async fn artifact_sends_artifact_event() {
         let (sender, mut receiver) = event_channel();
@@ -324,7 +315,6 @@ mod tests {
         assert_eq!(error.to_string(), "event channel closed");
     }
 
-    // r[verify output.safety.clone]
     #[tokio::test]
     async fn clone_produces_independent_handle() {
         let (sender, mut receiver) = event_channel();
@@ -341,7 +331,6 @@ mod tests {
         assert!(matches!(second, Event::Message(ref s) if s == "from clone"));
     }
 
-    // r[verify output.send.process]
     #[tokio::test]
     async fn process_event_sends_process_event() {
         let (sender, mut receiver) = event_channel();
@@ -389,7 +378,6 @@ mod tests {
         );
     }
 
-    // r[verify output.send.detail]
     #[tokio::test]
     async fn detail_sends_detail_event() {
         let (sender, mut receiver) = event_channel();
@@ -416,8 +404,6 @@ mod tests {
         assert_eq!(error.to_string(), "event channel closed");
     }
 
-    // r[verify output.send.message]
-    // r[verify output.send.async]
     #[tokio::test]
     async fn message_sends_message_event() {
         let (sender, mut receiver) = event_channel();
@@ -430,7 +416,6 @@ mod tests {
         assert!(matches!(event, Event::Message(ref s) if s == "hello"));
     }
 
-    // r[verify output.send.error]
     #[tokio::test]
     async fn message_to_closed_channel_returns_error() {
         let (sender, receiver) = event_channel();

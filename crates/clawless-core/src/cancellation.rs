@@ -39,12 +39,6 @@ pub use tokio_util::sync::WaitForCancellationFuture;
 /// ```
 ///
 /// [`CancellationToken`]: tokio_util::sync::CancellationToken
-// r[impl cancel.token.clone]
-// r[impl cancel.token.default]
-// r[impl cancel.safety.send]
-// r[impl cancel.safety.sync]
-// r[impl cancel.safety.unpin]
-// r[impl cancel.tree.outlive]
 #[derive(Clone, Debug, Default)]
 pub struct Cancellation {
     /// Shared token, where every clone observes the same cancellation signal
@@ -62,7 +56,6 @@ impl Cancellation {
     /// let cancellation = Cancellation::new();
     /// assert!(!cancellation.is_cancelled());
     /// ```
-    // r[impl cancel.token.new]
     pub fn new() -> Self {
         Self::default()
     }
@@ -85,9 +78,6 @@ impl Cancellation {
     /// assert!(child.is_cancelled());
     /// assert!(!parent.is_cancelled());
     /// ```
-    // r[impl cancel.tree.child]
-    // r[impl cancel.tree.child-to-parent]
-    // r[impl cancel.tree.depth]
     pub fn child(&self) -> Self {
         Self {
             token: self.token.child_token(),
@@ -109,9 +99,6 @@ impl Cancellation {
     ///
     /// assert!(cancellation.is_cancelled());
     /// ```
-    // r[impl cancel.signal.cancel]
-    // r[impl cancel.signal.idempotent]
-    // r[impl cancel.tree.parent-to-child]
     pub fn cancel(&self) {
         self.token.cancel();
     }
@@ -132,7 +119,6 @@ impl Cancellation {
     /// cancellation.cancel();
     /// assert!(cancellation.is_cancelled());
     /// ```
-    // r[impl cancel.signal.check]
     pub fn is_cancelled(&self) -> bool {
         self.token.is_cancelled()
     }
@@ -157,8 +143,6 @@ impl Cancellation {
     /// cancellation.cancelled().await;
     /// # }
     /// ```
-    // r[impl cancel.signal.await]
-    // r[impl cancel.signal.await-already]
     pub fn cancelled(&self) -> WaitForCancellationFuture<'_> {
         self.token.cancelled()
     }
@@ -172,9 +156,6 @@ mod tests {
 
     use super::*;
 
-    // r[verify cancel.signal.cancel]
-    // r[verify cancel.signal.idempotent]
-    // r[verify cancel.signal.check]
     #[test]
     fn cancel_marks_token_as_cancelled() {
         let cancellation = Cancellation::new();
@@ -188,7 +169,6 @@ mod tests {
         assert!(cancellation.is_cancelled());
     }
 
-    // r[verify cancel.signal.await-already]
     #[tokio::test]
     async fn cancelled_on_already_cancelled_completes_immediately() {
         let cancellation = Cancellation::new();
@@ -197,7 +177,6 @@ mod tests {
         cancellation.cancelled().await;
     }
 
-    // r[verify cancel.tree.child-to-parent]
     #[test]
     fn child_cancel_does_not_affect_parent() {
         let parent = Cancellation::new();
@@ -209,8 +188,6 @@ mod tests {
         assert!(!parent.is_cancelled());
     }
 
-    // r[verify cancel.tree.parent-to-child]
-    // r[verify cancel.tree.child]
     #[test]
     fn child_cancelled_by_parent() {
         let parent = Cancellation::new();
@@ -222,7 +199,6 @@ mod tests {
         assert!(child.is_cancelled());
     }
 
-    // r[verify cancel.tree.outlive]
     #[test]
     fn child_outlives_dropped_parent() {
         let child = {
@@ -235,7 +211,6 @@ mod tests {
         assert!(child.is_cancelled());
     }
 
-    // r[verify cancel.tree.depth]
     #[test]
     fn deeply_nested_children_propagate() {
         let root = Cancellation::new();
@@ -251,7 +226,6 @@ mod tests {
         assert!(level3.is_cancelled());
     }
 
-    // r[verify cancel.token.default]
     #[test]
     fn default_creates_uncancelled_token() {
         let cancellation = Cancellation::default();
@@ -259,7 +233,6 @@ mod tests {
         assert!(!cancellation.is_cancelled());
     }
 
-    // r[verify cancel.token.new]
     #[test]
     fn new_creates_uncancelled_token() {
         let cancellation = Cancellation::new();
@@ -267,21 +240,18 @@ mod tests {
         assert!(!cancellation.is_cancelled());
     }
 
-    // r[verify cancel.safety.send]
     #[test]
     fn trait_send() {
         fn assert_send<T: Send>() {}
         assert_send::<Cancellation>();
     }
 
-    // r[verify cancel.safety.sync]
     #[test]
     fn trait_sync() {
         fn assert_sync<T: Sync>() {}
         assert_sync::<Cancellation>();
     }
 
-    // r[verify cancel.safety.unpin]
     #[test]
     fn trait_unpin() {
         fn assert_unpin<T: Unpin>() {}

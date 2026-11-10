@@ -71,14 +71,12 @@ mod run_id;
 /// [`Finished`]: ProcessEvent::Finished
 /// [`Line`]: ProcessEvent::Line
 /// [`Started`]: ProcessEvent::Started
-// r[impl process.event.lifecycle]
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum ProcessEvent {
     /// The program started
     ///
     /// The event names the command, which is what a consumer shows while the
     /// program runs.
-    // r[impl process.event.started]
     Started {
         /// The run that started
         id: RunId,
@@ -91,7 +89,6 @@ pub enum ProcessEvent {
         /// `None` when the operating system did not report one. A consumer
         /// that names the program to a tool of the platform, or that writes
         /// the identifier to a log, reads it here.
-        // r[impl process.event.started.identifier]
         process_id: Option<ProcessId>,
     },
 
@@ -100,7 +97,6 @@ pub enum ProcessEvent {
     /// The line carries the stream that produced it, so that a consumer can
     /// show a diagnostic apart from a result, or drop one of the two. It holds
     /// no characters that end a line.
-    // r[impl process.event.line]
     Line {
         /// The run that wrote the line
         id: RunId,
@@ -113,7 +109,6 @@ pub enum ProcessEvent {
     ///
     /// No further event carries this identity. A consumer that shows running
     /// programs removes the run here.
-    // r[impl process.event.finished]
     Finished {
         /// The run that ended
         id: RunId,
@@ -150,7 +145,6 @@ impl ProcessEvent {
     ///
     /// assert_eq!(event.id(), id);
     /// ```
-    // r[impl process.event.correlation.accessor]
     pub fn id(&self) -> RunId {
         match self {
             Self::Started { id, .. } => *id,
@@ -170,7 +164,6 @@ impl ProcessEvent {
 /// The text never names the stream that produced a line. A presenter that
 /// separates the two writes them to different places instead of labelling them,
 /// which keeps the output of the program readable.
-// r[impl process.event.display]
 impl Display for ProcessEvent {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -221,7 +214,6 @@ mod tests {
         assert_eq!(text, "no such file");
     }
 
-    // r[verify process.event.display]
     #[test]
     fn display_with_started_reads_as_a_prompt() {
         let event = ProcessEvent::Started {
@@ -250,7 +242,6 @@ mod tests {
         assert_eq!(found, id);
     }
 
-    // r[verify process.event.correlation.accessor]
     #[test]
     fn id_with_line_returns_the_run() {
         let id = RunId::next();

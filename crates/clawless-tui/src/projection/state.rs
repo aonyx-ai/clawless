@@ -193,7 +193,6 @@ mod tests {
         assert_eq!(s, "hello");
     }
 
-    // r[verify projection.entry.order]
     #[test]
     fn push_preserves_insertion_order() {
         let mut state = ProjectionState::default();
@@ -218,7 +217,6 @@ mod tests {
         assert_eq!(s, "third");
     }
 
-    // r[verify projection.lifecycle.complete]
     #[test]
     fn set_complete_marks_state_as_complete() {
         let mut state = ProjectionState::default();

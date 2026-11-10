@@ -92,7 +92,6 @@ pub struct TerminalPresenter {
 ///
 /// The start and the end of a run are not output of the program. They belong with the result,
 /// which is where a transcript reads in the order that a person expects.
-// r[impl process.render.streams]
 fn is_diagnostic(event: &ProcessEvent) -> bool {
     match event {
         ProcessEvent::Started { .. } => false,
@@ -129,7 +128,6 @@ fn is_diagnostic(event: &ProcessEvent) -> bool {
 // Writing to the process output stream fails only when the stream itself is gone, such as a
 // pipe the reader has closed. A presenter whose output stream has vanished has nowhere left
 // to report the failure, so it fails loudly rather than dropping output silently.
-// r[impl process.render.verbosity]
 #[allow(clippy::expect_used)]
 fn render_event(
     event: Event,
@@ -417,7 +415,6 @@ mod tests {
         assert!(!diagnostic);
     }
 
-    // r[verify process.render.streams]
     #[test]
     fn is_diagnostic_with_a_standard_error_line_returns_true() {
         let event = ProcessEvent::Line {

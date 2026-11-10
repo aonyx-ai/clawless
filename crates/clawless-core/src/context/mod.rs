@@ -45,19 +45,13 @@ mod interactivity;
 ///     Ok(())
 /// }
 /// ```
-// r[impl context.safety.send]
-// r[impl context.safety.sync]
-// r[impl context.safety.unpin]
 #[derive(Clone, Debug, CopyGetters, Getters)]
 pub struct Context {
     /// The working directory in which a command was called
-    // r[impl context.field.cwd]
     #[getset(get = "pub")]
     current_working_directory: CurrentWorkingDirectory,
 
     /// The cancellation token for cooperative shutdown
-    // r[impl cancel.context.field]
-    // r[impl context.field.cancellation]
     #[getset(get = "pub")]
     cancellation: Cancellation,
 
@@ -66,7 +60,6 @@ pub struct Context {
     interactivity: Interactivity,
 
     /// The output handler for sending events to the presenter
-    // r[impl context.field.output]
     #[getset(get = "pub")]
     output: Output,
 }
@@ -99,10 +92,6 @@ impl Context {
     ///     .output(output)
     ///     .build()?;
     /// ```
-    // r[impl context.new]
-    // r[impl context.new.error]
-    // r[impl cancel.context.default]
-    // r[impl cancel.context.injectable]
     #[builder]
     pub fn new(
         #[builder(into)] current_working_directory: Option<CurrentWorkingDirectory>,
@@ -152,7 +141,6 @@ impl Context {
     ///     Ok(())
     /// }
     /// ```
-    // r[impl context.process]
     pub fn process(&self) -> Process {
         Process::builder()
             .output(self.output.clone())
@@ -206,9 +194,6 @@ mod tests {
         Output::new(sender)
     }
 
-    // r[verify context.field.cancellation]
-    // r[verify cancel.context.injectable]
-    // r[verify cancel.context.field]
     #[test]
     fn new_with_cancellation_uses_provided_token() {
         let cancellation = Cancellation::new();
@@ -224,7 +209,6 @@ mod tests {
         assert!(context.cancellation().is_cancelled());
     }
 
-    // r[verify context.field.cwd]
     #[test]
     fn new_with_cwd_uses_provided_value() {
         let context = Context::builder()
@@ -236,8 +220,6 @@ mod tests {
         assert_eq!(context.current_working_directory().get(), Path::new("/tmp"));
     }
 
-    // r[verify context.new]
-    // r[verify context.field.output]
     #[test]
     fn new_with_defaults_detects_cwd() {
         let expected = std::env::current_dir().expect("should get current dir");
@@ -250,7 +232,6 @@ mod tests {
         assert_eq!(context.current_working_directory().get(), expected);
     }
 
-    // r[verify cancel.context.default]
     #[test]
     fn new_with_defaults_has_uncancelled_token() {
         let context = Context::builder()
@@ -285,7 +266,6 @@ mod tests {
         assert_eq!(context.interactivity(), Interactivity::Interactive);
     }
 
-    // r[verify context.process]
     #[cfg(unix)]
     #[tokio::test]
     async fn process_reports_through_the_output_of_the_context() {
@@ -380,21 +360,18 @@ mod tests {
         );
     }
 
-    // r[verify context.safety.send]
     #[test]
     fn trait_send() {
         fn assert_send<T: Send>() {}
         assert_send::<Context>();
     }
 
-    // r[verify context.safety.sync]
     #[test]
     fn trait_sync() {
         fn assert_sync<T: Sync>() {}
         assert_sync::<Context>();
     }
 
-    // r[verify context.safety.unpin]
     #[test]
     fn trait_unpin() {
         fn assert_unpin<T: Unpin>() {}
