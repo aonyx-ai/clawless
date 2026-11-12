@@ -70,9 +70,9 @@ backend = "npm:markdownlint-cli"
 specifiers = ["0.50.0"]
 
 [[tools."npm:prettier"]]
-version = "3.10.0"
+version = "3.10.1"
 backend = "npm:prettier"
-specifiers = ["3.10.0"]
+specifiers = ["3.10.1"]
 
 [[tools."npm:renovate"]]
 version = "44.222.5"
