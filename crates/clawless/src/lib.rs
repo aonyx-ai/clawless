@@ -2,9 +2,9 @@
 
 /// A prelude module to easily import Clawless essentials
 ///
-/// This module re-exports the most commonly used items from the Clawless crate. By importing
-/// everything from this module, users can conveniently access the necessary types and traits to
-/// define and run commands without needing to import each item individually.
+/// This module re-exports the most commonly used items from the Clawless crate. Users who import
+/// everything from this module get the types and traits that define and run commands, without
+/// importing each item individually.
 pub mod prelude {
     pub use std::process::ExitCode;
 
@@ -52,9 +52,9 @@ pub mod output {
     pub use clawless_core::output::Output;
 }
 
-// Re-export the clap crate for use with the `clawless-derive` crate
+/// Re-exports the clap crate for use with the `clawless-derive` crate
 #[doc(hidden)]
 pub use clap;
-// Re-export the inventory crate for use with the `clawless-derive` crate
+/// Re-exports the inventory crate for use with the `clawless-derive` crate
 #[doc(hidden)]
 pub use inventory;

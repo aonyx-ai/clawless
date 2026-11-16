@@ -1,3 +1,5 @@
+//! Generates a single command file and registers it with its parent module
+
 use std::fs::{create_dir_all, read_to_string, write};
 use std::path::{Path, PathBuf};
 
@@ -11,13 +13,13 @@ use crate::input::CommandName;
 /// Arguments for the `generate command` command
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, Args)]
 pub struct GenerateCommandArgs {
-    /// Name of the command to generate.
+    /// Name of the command to generate
     ///
     /// Use slash notation for nested commands (e.g., "db/migrate").
     name: String,
 }
 
-/// Generate a new command in a Clawless project
+/// Creates a new command in a Clawless project
 ///
 /// This command creates a new command file with boilerplate code and automatically
 /// adds the necessary `mod` statement to the parent module. It supports nested
@@ -39,26 +41,17 @@ pub struct GenerateCommandArgs {
 /// cargo clawless generate command db/migrate
 /// ```
 #[command(alias = "c")]
-// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
-// raw Markdown heading in the terminal rather than documenting an API.
-#[allow(clippy::missing_errors_doc)]
+#[allow(
+    clippy::missing_errors_doc,
+    reason = "a command's doc comment is its `--help` text, so an `# Errors` section would render as a raw Markdown heading in the terminal rather than documenting an API"
+)]
 pub async fn command(args: GenerateCommandArgs, context: Context) -> CommandResult {
-    // Check is command is running inside a Clawless project
-    let project = find_clawless_project(context.current_working_directory())?;
-
-    // Parse command name to support nested commands (e.g. `clawless generate command generate/context`)
-    let command_name = CommandName::try_from(&args.name)?;
-
-    // Create `src/commands/<parent commands>/` directories if they do not exist
-    create_parent_directory(&project, &command_name)?;
-
-    // Create `src/commands/<parent commands>/<command>.rs` file with boilerplate code
-    create_command_file(&project, &command_name)?;
-
-    // Add mod <command> to parent module
-    insert_mod_statement(&project, &command_name)?;
-
-    // Print a success message to the user
+    let project = find_clawless_project(context.current_working_directory())
+        .context("find Clawless project")?;
+    let command_name = CommandName::try_from(&args.name).context("parse command name")?;
+    create_parent_directory(&project, &command_name).context("create parent directory")?;
+    create_command_file(&project, &command_name).context("create command file")?;
+    insert_mod_statement(&project, &command_name).context("insert mod statement")?;
 
     Ok(())
 }
@@ -66,7 +59,8 @@ pub async fn command(args: GenerateCommandArgs, context: Context) -> CommandResu
 /// Returns the root of the Clawless project that contains the given directory
 ///
 /// The search examines each parent directory in turn. A user can therefore run the command
-/// from anywhere inside a project.
+/// from anywhere inside a project. The `main.rs` file sits in `src`, so the project root is the
+/// parent of that directory.
 ///
 /// # Errors
 ///
@@ -75,14 +69,16 @@ pub async fn command(args: GenerateCommandArgs, context: Context) -> CommandResu
 /// it.
 fn find_clawless_project(current_working_directory: &CurrentWorkingDirectory) -> Result<PathBuf> {
     let main_rs_path = find_main_rs(current_working_directory)
-        .ok_or_else(|| anyhow!("failed to find a main.rs file in the current directory or any of its parent directories"))?;
+        .ok_or_else(|| anyhow!("failed to find a main.rs file in the current directory or any of its parent directories"))
+        .context("search for main.rs")?;
 
-    check_main_rs(&main_rs_path)?;
+    check_main_rs(&main_rs_path).context("check main.rs for Clawless entry point")?;
 
     let project_path = main_rs_path
-        .parent() // src
-        .and_then(Path::parent) // crate root
-        .ok_or_else(|| anyhow!("failed to determine the project directory from main.rs path"))?
+        .parent()
+        .and_then(Path::parent)
+        .ok_or_else(|| anyhow!("failed to determine the project directory from main.rs path"))
+        .context("determine project directory")?
         .to_path_buf();
 
     Ok(project_path)
@@ -96,7 +92,6 @@ fn find_main_rs(current_working_directory: &CurrentWorkingDirectory) -> Option<P
     let mut dir = current_working_directory.get().to_path_buf();
 
     loop {
-        // Check for src/main.rs first, then main.rs in the current directory
         let src_main_rs = dir.join("src").join("main.rs");
         if src_main_rs.exists() {
             return Some(src_main_rs);
@@ -107,7 +102,6 @@ fn find_main_rs(current_working_directory: &CurrentWorkingDirectory) -> Option<P
             return Some(main_rs);
         }
 
-        // Move up to parent directory, or return None if at filesystem root
         dir = dir.parent()?.to_path_buf();
     }
 }
@@ -196,28 +190,26 @@ fn create_command_file(project_path: &Path, command_name: &CommandName) -> Resul
 
 /// Declares the new command in its parent module
 ///
-/// The generator puts the statement after the last `mod` or `use` statement. The new code
-/// therefore lands where a person writes it by hand. A second run makes no further change.
+/// The generator puts the statement after the last `mod` or `use` statement. Without either, it
+/// puts the statement after the first line that is not an inner doc comment, or at the start of the file.
+/// The new code therefore lands where a person writes it by hand. A second run makes no further
+/// change.
 ///
 /// # Errors
 ///
 /// Returns an error if the parent module cannot be found, read, or written.
 fn insert_mod_statement(project: &Path, command_name: &CommandName) -> Result<()> {
-    // Find the parent module file where the mod statement should be inserted
-    let parent = find_parent_module(project, command_name)?;
+    let parent = find_parent_module(project, command_name).context("find parent module")?;
 
     let mod_statement = format!("mod {};", command_name.name());
 
-    // Read current content and ensure we don't duplicate the mod statement
-    let mut content = read_to_string(&parent)?;
+    let mut content = read_to_string(&parent).context("read parent module file")?;
     if content.contains(&mod_statement) {
         return Ok(());
     }
 
-    // Read the file into memory so that we can iterate over it
     let mut lines: Vec<&str> = content.lines().collect();
 
-    // Find insertion point: after last mod, or last use, or first non-doc-comment line, or at start
     let index =
         lines
             .iter()
@@ -236,15 +228,12 @@ fn insert_mod_statement(project: &Path, command_name: &CommandName) -> Result<()
             })
             .unwrap_or(0);
 
-    // Insert the mod statement after the found index
     lines.insert(index + 1, &mod_statement);
     content = lines.join("\n");
 
-    // Insert a trailing newline
     content.push('\n');
 
-    // Write the updated content back to the parent module file
-    write(&parent, content)?;
+    write(&parent, content).context("write updated parent module file")?;
 
     Ok(())
 }
@@ -261,20 +250,16 @@ fn insert_mod_statement(project: &Path, command_name: &CommandName) -> Result<()
 fn find_parent_module(project: &Path, command_name: &CommandName) -> Result<PathBuf> {
     let parent_modules = command_name.parent_modules();
 
-    // The parent module is either "commands" (if no nesting) or the last element in parent_modules
     let commands_default = "commands".to_string();
     let parent_name = parent_modules.last().unwrap_or(&commands_default);
 
-    // Determine the path to the parent module file (either as a file or mod.rs)
     let mut base = project.join("src").join("commands");
 
-    // Navigate down to the parent's directory, excluding the parent itself
     if parent_modules.len() > 1 {
         for module in &parent_modules[..parent_modules.len() - 1] {
             base = base.join(module);
         }
     } else if parent_modules.is_empty() {
-        // Parent is src/commands itself
         base = project.join("src");
     }
 
@@ -295,9 +280,10 @@ fn find_parent_module(project: &Path, command_name: &CommandName) -> Result<Path
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design. A `# Panics` section on every test would repeat that and give the reader no information"
+    )]
 
     use std::fs::{create_dir, create_dir_all, write};
 
@@ -306,18 +292,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn check_clawless_project_finds_main_in_src_directory() {
+    fn check_clawless_project_fails_without_clawless_macro() {
         let cwd = TempDir::new().unwrap();
 
-        let src_directory = cwd.path().join("src");
-        create_dir(&src_directory).unwrap();
+        let main_rs_path = cwd.path().join("main.rs");
+        write(&main_rs_path, "fn main() {}").unwrap();
 
-        let main_rs_path = src_directory.join("main.rs");
-        write(&main_rs_path, "clawless::main!();").unwrap();
+        let check = find_clawless_project(&cwd.path().into());
 
-        let check = find_clawless_project(&cwd.path().into()).unwrap();
+        assert!(check.is_err());
+    }
 
-        assert_eq!(cwd.path(), &check);
+    #[test]
+    fn check_clawless_project_fails_without_main_rs() {
+        let cwd = TempDir::new().unwrap();
+
+        let check = find_clawless_project(&cwd.path().into());
+
+        assert!(check.is_err());
     }
 
     #[test]
@@ -340,8 +332,6 @@ mod tests {
         let cwd = TempDir::new().unwrap();
 
         let src_directory = cwd.path().join("src");
-
-        // Create a subdirectory in which to call `check_clawless_project`
         let sub_dir = src_directory.join("subdir");
         create_dir_all(&sub_dir).unwrap();
 
@@ -354,28 +344,38 @@ mod tests {
     }
 
     #[test]
-    fn check_clawless_project_fails_without_main_rs() {
+    fn check_clawless_project_finds_main_in_src_directory() {
         let cwd = TempDir::new().unwrap();
 
-        let check = find_clawless_project(&cwd.path().into());
+        let src_directory = cwd.path().join("src");
+        create_dir(&src_directory).unwrap();
 
-        assert!(check.is_err());
+        let main_rs_path = src_directory.join("main.rs");
+        write(&main_rs_path, "clawless::main!();").unwrap();
+
+        let check = find_clawless_project(&cwd.path().into()).unwrap();
+
+        assert_eq!(cwd.path(), &check);
     }
 
     #[test]
-    fn check_clawless_project_fails_without_clawless_macro() {
+    fn create_command_file_has_function_boilerplate() {
         let cwd = TempDir::new().unwrap();
+        create_dir_all(cwd.path().join("src").join("commands").join("parent")).unwrap();
 
-        let main_rs_path = cwd.path().join("main.rs");
-        write(&main_rs_path, "fn main() {}").unwrap();
+        let command_name =
+            CommandName::try_from(&"parent/command".to_string()).expect("should succeed");
 
-        let check = find_clawless_project(&cwd.path().into());
+        create_command_file(cwd.path(), &command_name).unwrap();
 
-        assert!(check.is_err());
+        let command_file_path = command_name.path_from_project_root(cwd.path());
+        let content = read_to_string(command_file_path).unwrap();
+
+        assert!(content.contains("pub async fn command(args: CommandArgs, context: Context)"));
     }
 
     #[test]
-    fn create_command_file_writes_boilerplate() {
+    fn create_command_file_has_struct_boilerplate() {
         let cwd = TempDir::new().unwrap();
         create_dir_all(cwd.path().join("src").join("commands").join("parent")).unwrap();
 
@@ -388,7 +388,6 @@ mod tests {
         let content = read_to_string(command_file_path).unwrap();
 
         assert!(content.contains("pub struct CommandArgs"));
-        assert!(content.contains("pub async fn command(args: CommandArgs, context: Context)"));
     }
 
     #[test]
@@ -422,33 +421,6 @@ mod tests {
     }
 
     #[test]
-    fn insert_mod_statement_inserts_after_use_in_commands_rs() {
-        let cwd = TempDir::new().unwrap();
-        create_dir_all(cwd.path().join("src")).unwrap();
-
-        let commands_rs_path = cwd.path().join("src").join("commands.rs");
-        // file with use statements but no mod statements
-        write(
-            &commands_rs_path,
-            "use crate::foo;\nuse crate::bar;\n\nfn helper() {}\n",
-        )
-        .unwrap();
-
-        let command_name = CommandName::try_from(&"mycmd".to_string()).expect("should succeed");
-
-        insert_mod_statement(cwd.path(), &command_name).unwrap();
-
-        let content = read_to_string(&commands_rs_path).unwrap();
-        assert!(content.contains("mod mycmd;"));
-
-        // Ensure the inserted `mod` appears after at last `use` and before the function
-        let idx_first_use = content.find("use crate::bar;").unwrap();
-        let idx_mod = content.find("mod mycmd;").unwrap();
-        let idx_fn = content.find("fn helper()").unwrap();
-        assert!(idx_first_use < idx_mod && idx_mod < idx_fn);
-    }
-
-    #[test]
     fn insert_mod_statement_does_not_duplicate_existing_mod() {
         let cwd = TempDir::new().unwrap();
         create_dir_all(cwd.path().join("src")).unwrap();
@@ -458,12 +430,11 @@ mod tests {
 
         let command_name = CommandName::try_from(&"mycmd".to_string()).expect("should succeed");
 
-        // Should be a no-op and not produce a second `mod mycmd;`
         insert_mod_statement(cwd.path(), &command_name).unwrap();
 
         let content = read_to_string(&commands_rs_path).unwrap();
-        // There should be exactly one occurrence
         let occurrences = content.matches("mod mycmd;").count();
+
         assert_eq!(occurrences, 1);
     }
 
@@ -486,12 +457,53 @@ mod tests {
         insert_mod_statement(cwd.path(), &command_name).unwrap();
 
         let content = read_to_string(&parent_mod_rs).unwrap();
-        assert!(content.contains("mod command;"));
 
-        // Ensure the mod was inserted before the implementation comment and after at least one use
         let idx_existing_mod = content.find("mod another_command;").unwrap();
         let idx_mod = content.find("mod command;").unwrap();
         let idx_impl = content.find("// implementation").unwrap();
+
         assert!(idx_existing_mod < idx_mod && idx_mod < idx_impl);
+    }
+
+    #[test]
+    fn insert_mod_statement_inserts_after_use_in_commands_rs() {
+        let cwd = TempDir::new().unwrap();
+        create_dir_all(cwd.path().join("src")).unwrap();
+
+        let commands_rs_path = cwd.path().join("src").join("commands.rs");
+        write(
+            &commands_rs_path,
+            "use crate::foo;\nuse crate::bar;\n\nfn helper() {}\n",
+        )
+        .unwrap();
+
+        let command_name = CommandName::try_from(&"mycmd".to_string()).expect("should succeed");
+
+        insert_mod_statement(cwd.path(), &command_name).unwrap();
+
+        let content = read_to_string(&commands_rs_path).unwrap();
+
+        let idx_first_use = content.find("use crate::bar;").unwrap();
+        let idx_mod = content.find("mod mycmd;").unwrap();
+        let idx_fn = content.find("fn helper()").unwrap();
+        assert!(idx_first_use < idx_mod && idx_mod < idx_fn);
+    }
+
+    #[test]
+    fn trait_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<GenerateCommandArgs>();
+    }
+
+    #[test]
+    fn trait_sync() {
+        fn assert_sync<T: Sync>() {}
+        assert_sync::<GenerateCommandArgs>();
+    }
+
+    #[test]
+    fn trait_unpin() {
+        fn assert_unpin<T: Unpin>() {}
+        assert_unpin::<GenerateCommandArgs>();
     }
 }

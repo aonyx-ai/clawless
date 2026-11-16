@@ -5,5 +5,4 @@
 
 pub use self::command_name::*;
 
-/// Parsed command name and its parent modules
 mod command_name;

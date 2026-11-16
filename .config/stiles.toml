@@ -1,0 +1,14 @@
+# Stiles reads this file when `stiles check` runs against this repository. The
+# patterns below anchor at the repository root, not at `.config`.
+# `/tools/rakko/` holds the harness, a workspace of its own that the toolchain
+# of the root workspace does not load, so stiles cannot analyze its types.
+# `/crates/cargo-clawless/tests/commands/` holds the projects that the command
+# tests generate and compare. No crate of the workspace loads them.
+ignore = ["/crates/cargo-clawless/tests/commands/", "/tools/rakko/"]
+
+# The rules of Aonyx live in their own repository, pinned to one commit that
+# builds against the stiles that the action `lint-stiles` pins. Both pins move
+# together.
+[[lints]]
+git = "https://github.com/aonyx-ai/stiles-aonyx-rules"
+rev = "764333ada2cdbfe1391dc9a9389718ade61181f2"
