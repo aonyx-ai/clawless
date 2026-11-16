@@ -20,9 +20,9 @@ url_api = "https://api.github.com/repos/cargo-bins/cargo-binstall/releases/asset
 provenance = "github-attestations"
 
 [[tools."cargo:cargo-deny"]]
-version = "0.20.2"
+version = "0.21.0"
 backend = "cargo:cargo-deny"
-specifiers = ["0.20.2"]
+specifiers = ["0.21.0"]
 
 [[tools."cargo:cargo-nextest"]]
 version = "0.9.152"
