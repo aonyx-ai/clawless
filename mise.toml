@@ -48,7 +48,7 @@ rust = [
   { version = "1.88.0" },
 ]
 
-"cargo:cargo-deny" = "0.20.2"
+"cargo:cargo-deny" = "0.21.0"
 "cargo:cargo-nextest" = "0.9.152"
 "cargo:cargo-udeps" = "0.1.61"
 jq = "1.8.2"
