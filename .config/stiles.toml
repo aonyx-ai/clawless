@@ -4,7 +4,13 @@
 # of the root workspace does not load, so stiles cannot analyze its types.
 # `/crates/cargo-clawless/tests/commands/` holds the projects that the command
 # tests generate and compare. No crate of the workspace loads them.
-ignore = ["/crates/cargo-clawless/tests/commands/", "/tools/rakko/"]
+# `/crates/clawless/tests/ui/` holds the trybuild cases, which trybuild compiles
+# on its own, so no target of the workspace loads them either.
+ignore = [
+    "/crates/cargo-clawless/tests/commands/",
+    "/crates/clawless/tests/ui/",
+    "/tools/rakko/",
+]
 
 # The rules of Aonyx live in their own repository, pinned to one commit that
 # builds against the stiles that the action `lint-stiles` pins. Both pins move
