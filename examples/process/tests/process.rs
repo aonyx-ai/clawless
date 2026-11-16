@@ -4,9 +4,10 @@
 //! machine has. The cases cover what the command reports at each verbosity, in each output
 //! mode, and when the program fails or does not exist at all.
 
-// An assertion in a test panics by design. A `# Panics` section on every test
-// would repeat that and give the reader no information.
-#![allow(clippy::missing_panics_doc)]
+#![allow(
+    clippy::missing_panics_doc,
+    reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+)]
 
 #[test]
 fn process() {

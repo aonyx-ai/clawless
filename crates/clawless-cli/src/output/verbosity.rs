@@ -1,3 +1,5 @@
+//! How much detail the presenter renders
+
 /// Level of output detail requested by the user
 ///
 /// `Verbosity` controls whether events are rendered by the presenter. It is
@@ -33,9 +35,10 @@ pub enum Verbosity {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
 

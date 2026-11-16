@@ -1,7 +1,7 @@
 //! The way in which a command ends the process
 //!
-//! A command that returns `()` ends the process with the exit code 0, and a command that returns
-//! an error ends it with the exit code 1. A command that needs a different ending returns an
+//! A command that returns `()` ends the process with the exit code 0. A command that returns an
+//! error ends it with the exit code 1. A command that needs a different ending returns an
 //! [`Exit`], which carries the exit code and an optional text that the command rendered itself.
 //!
 //! An [`Exit`] is a plain value. The runner of an application returns it, and the `main`
@@ -16,9 +16,9 @@ use getset::CopyGetters;
 /// The exit code and the text with which a command ends the process
 ///
 /// A wrapper, such as a script or a CI job, reads the exit code of a program to decide what to do
-/// next. A command therefore needs to choose the code. The chosen code is not always a failure: a
-/// check that finds a problem ends as planned, and it can still exit with a code other than 0 to
-/// tell the wrapper what it found.
+/// next. A command therefore needs to choose the code. The chosen code is not always a failure. A
+/// check that finds a problem ends as planned. It can still exit with a code other than 0 to tell
+/// the wrapper what it found.
 ///
 /// The text is what the command wants the user to read last, such as a diagnostic that the
 /// application rendered itself. Clawless does not render the text. It writes the text to the
@@ -157,9 +157,10 @@ impl From<ExitCode> for Exit {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
 

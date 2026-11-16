@@ -1,3 +1,5 @@
+//! The half of the event channel that sends events
+
 use tokio::sync::mpsc;
 
 use super::Event;
@@ -9,6 +11,28 @@ use super::Event;
 ///
 /// Internally, `EventSender` wraps a [`tokio::sync::mpsc::Sender<Event>`]. Cloning an
 /// `EventSender` produces another handle to the same channel, not an independent channel.
+///
+/// # Examples
+///
+/// ```
+/// use clawless_core::event::{Event, event_channel};
+///
+/// # #[tokio::main(flavor = "current_thread")]
+/// # async fn main() {
+/// let (sender, mut receiver) = event_channel();
+/// let clone = sender.clone();
+///
+/// let message = Event::Message("from the sender".to_string());
+/// sender.send(message).await.expect("the receiver is alive");
+/// let message = Event::Message("from the clone".to_string());
+/// clone.send(message).await.expect("the receiver is alive");
+///
+/// let first = receiver.recv().await;
+/// assert!(matches!(first, Some(Event::Message(text)) if text == "from the sender"));
+/// let second = receiver.recv().await;
+/// assert!(matches!(second, Some(Event::Message(text)) if text == "from the clone"));
+/// # }
+/// ```
 ///
 /// [`EventReceiver`]: super::EventReceiver
 #[derive(Clone, Debug)]
@@ -34,21 +58,38 @@ impl EventSender {
     ///
     /// Returns [`SendError`] if the [`EventReceiver`] has been dropped.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::{Event, event_channel};
+    ///
+    /// # #[tokio::main(flavor = "current_thread")]
+    /// # async fn main() {
+    /// let (sender, receiver) = event_channel();
+    /// drop(receiver);
+    ///
+    /// let result = sender.send(Event::Detail("lost".to_string())).await;
+    ///
+    /// assert!(result.is_err());
+    /// # }
+    /// ```
+    ///
     /// [`EventReceiver`]: super::EventReceiver
     /// [`SendError`]: super::SendError
     pub async fn send(&self, event: Event) -> Result<(), super::SendError> {
         self.inner
             .send(event)
             .await
-            .map_err(|e| super::SendError(e.0))
+            .map_err(|e| super::SendError::new(e.0))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
 

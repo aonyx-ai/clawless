@@ -54,16 +54,20 @@ impl LineQuestion for Select {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use clawless_core::prompt::Select;
 
     use crate::presenter::line_question::LineQuestion;
 
     fn kinds() -> Select {
-        Select::new("Kind of change", ["Added", "Changed", "Fixed"])
+        Select::builder()
+            .question("Kind of change")
+            .options(["Added", "Changed", "Fixed"])
+            .build()
     }
 
     #[test]
@@ -80,7 +84,10 @@ mod tests {
 
     #[test]
     fn introduction_with_ten_options_aligns_the_numbers() {
-        let question = Select::new("Digit", (0..10).map(|digit| digit.to_string()));
+        let question = Select::builder()
+            .question("Digit")
+            .options((0..10).map(|digit| digit.to_string()))
+            .build();
 
         let introduction = question.introduction().unwrap_or_default();
 
@@ -155,7 +162,10 @@ mod tests {
 
     #[test]
     fn prompt_with_one_option_names_that_number() {
-        let question = Select::new("Kind of change", ["Added"]);
+        let question = Select::builder()
+            .question("Kind of change")
+            .options(["Added"])
+            .build();
 
         let prompt = question.prompt();
 

@@ -31,7 +31,6 @@ use clawless_core::process::Stream;
 use super::Presenter;
 use super::line_question;
 use super::line_reader::LineReader;
-use crate::error::CommandResult;
 use crate::output::OutputMode;
 use crate::output::Verbosity;
 
@@ -85,8 +84,8 @@ pub struct TerminalPresenter {
 
 /// Reports whether an event of a run belongs on the error stream
 ///
-/// A program separates its result from its diagnostics, and the presenter keeps that separation:
-/// what a program wrote to its standard error is written to the standard error of the
+/// A program separates its result from its diagnostics, and the presenter keeps that separation.
+/// What a program wrote to its standard error is written to the standard error of the
 /// application. A reader that redirects one of the two streams therefore sees the same split that
 /// running the program by hand would give.
 ///
@@ -114,9 +113,9 @@ fn is_diagnostic(event: &ProcessEvent) -> bool {
 /// In JSON mode, messages and details go to `stderr` instead. `stdout` then carries only JSON
 /// artifacts, which a caller can pipe into another tool.
 ///
-/// The output of an external program is supplementary, so it follows the same rule as a detail
-/// and appears only when the user asks for verbose output. A command that wants a program to be
-/// visible at the default verbosity says so itself with a message.
+/// The output of an external program is supplementary. It therefore follows the same rule as a
+/// detail and appears only when the user asks for verbose output. A command that wants a
+/// program to be visible at the default verbosity says so itself with a message.
 ///
 /// The presenter handles a prompt before it renders an event. This function drops a prompt that
 /// reaches it.
@@ -125,10 +124,10 @@ fn is_diagnostic(event: &ProcessEvent) -> bool {
 ///
 /// Panics if the process cannot write to the output stream. A reader that closes the pipe
 /// causes this panic.
-// Writing to the process output stream fails only when the stream itself is gone, such as a
-// pipe the reader has closed. A presenter whose output stream has vanished has nowhere left
-// to report the failure, so it fails loudly rather than dropping output silently.
-#[allow(clippy::expect_used)]
+#[allow(
+    clippy::expect_used,
+    reason = "Writing to the process output stream fails only when the stream itself is gone, such as a pipe the reader has closed. A presenter whose output stream has vanished has nowhere left to report the failure, so it fails loudly rather than dropping output silently."
+)]
 fn render_event(
     event: Event,
     verbosity: Verbosity,
@@ -225,13 +224,16 @@ impl TerminalPresenter {
     /// # Panics
     ///
     /// Panics if the command panicked, and if a stream cannot be written.
-    async fn present_on(
+    async fn present_on<E>(
         self,
-        command: Pin<Box<dyn Future<Output = CommandResult<Exit>> + Send>>,
+        command: Pin<Box<dyn Future<Output = Result<Exit, E>> + Send>>,
         stdout: &mut impl Write,
         stderr: &mut impl Write,
         mut input: Option<LineReader>,
-    ) -> CommandResult<Exit> {
+    ) -> Result<Exit, E>
+    where
+        E: Send + 'static,
+    {
         let Self {
             verbosity,
             mode,
@@ -253,19 +255,23 @@ impl TerminalPresenter {
             }
         }
 
-        // The join fails only if the command task panicked or was aborted. Resuming the
-        // panic on this thread preserves the original panic message for the user.
-        #[allow(clippy::expect_used)]
+        #[allow(
+            clippy::expect_used,
+            reason = "The join fails only if the command task panicked or was aborted. Resuming the panic on this thread preserves the original panic message for the user."
+        )]
         command_handle.await.expect("command task panicked")
     }
 }
 
 #[async_trait(?Send)]
 impl Presenter for TerminalPresenter {
-    async fn present(
+    async fn present<E>(
         self,
-        command: Pin<Box<dyn Future<Output = CommandResult<Exit>> + Send>>,
-    ) -> CommandResult<Exit> {
+        command: Pin<Box<dyn Future<Output = Result<Exit, E>> + Send>>,
+    ) -> Result<Exit, E>
+    where
+        E: Send + 'static,
+    {
         let input = match self.interactivity {
             Interactivity::Interactive => Some(LineReader::stdin()),
             Interactivity::NonInteractive => None,
@@ -283,9 +289,10 @@ impl Presenter for TerminalPresenter {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use std::collections::VecDeque;
     use std::process::ExitCode;
@@ -335,7 +342,7 @@ mod tests {
     /// Returns a command that says what it is about to do, asks, and reports the answer
     fn confirming(
         sender: EventSender,
-    ) -> Pin<Box<dyn Future<Output = CommandResult<Exit>> + Send>> {
+    ) -> Pin<Box<dyn Future<Output = Result<Exit, anyhow::Error>> + Send>> {
         Box::pin(async move {
             let output = Output::new(sender);
             let prompt = Prompt::builder()
@@ -368,13 +375,21 @@ mod tests {
     }
 
     #[test]
-    fn builder_with_defaults_uses_default_verbosity_and_mode() {
+    fn builder_with_defaults_uses_default_mode() {
+        let (_sender, receiver) = event_channel();
+
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+
+        assert_eq!(presenter.mode, OutputMode::Text);
+    }
+
+    #[test]
+    fn builder_with_defaults_uses_default_verbosity() {
         let (_sender, receiver) = event_channel();
 
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
 
         assert_eq!(presenter.verbosity, Verbosity::Default);
-        assert_eq!(presenter.mode, OutputMode::Text);
     }
 
     #[test]
@@ -464,7 +479,7 @@ mod tests {
                         .send(Event::Message("consumed".to_string()))
                         .await
                         .expect("should send");
-                    Ok(Exit::from(()))
+                    Ok::<_, anyhow::Error>(Exit::from(()))
                 }))
                 .await
                 .expect("should succeed"),
@@ -583,7 +598,7 @@ mod tests {
                         let kind = prompt.select("Kind", ["Added", "Fixed"]).await?;
                         output.message(format!("The kind is {kind}.")).await?;
 
-                        Ok(Exit::from(()))
+                        Ok::<_, anyhow::Error>(Exit::from(()))
                     }),
                     &mut transcript.clone(),
                     &mut transcript.clone(),
@@ -609,11 +624,13 @@ mod tests {
             .present_on(
                 Box::pin(async move {
                     let options: [&str; 0] = [];
-                    let (request, pending) = PromptRequest::select(Select::new("Kind", options));
+                    let (request, pending) = PromptRequest::select(
+                        Select::builder().question("Kind").options(options).build(),
+                    );
                     Output::new(sender).prompt(request).await?;
                     pending.wait().await?;
 
-                    Ok(Exit::from(()))
+                    Ok::<_, anyhow::Error>(Exit::from(()))
                 }),
                 &mut stdout,
                 &mut stderr,
@@ -647,7 +664,7 @@ mod tests {
                         let title = prompt.text("Title").await?;
                         output.message(format!("The title is {title}.")).await?;
 
-                        Ok(Exit::from(()))
+                        Ok::<_, anyhow::Error>(Exit::from(()))
                     }),
                     &mut transcript.clone(),
                     &mut transcript.clone(),
@@ -691,7 +708,7 @@ mod tests {
                             .send(Event::Message("hello".to_owned()))
                             .await
                             .expect("should send");
-                        Ok(Exit::from(()))
+                        Ok::<_, anyhow::Error>(Exit::from(()))
                     }),
                     &mut stdout,
                     &mut stderr,
@@ -717,7 +734,7 @@ mod tests {
                     .await
                     .expect("should send");
                 pending.wait().await?;
-                Ok(Exit::from(()))
+                Ok::<_, anyhow::Error>(Exit::from(()))
             }))
             .await
             .expect_err("should fail");
@@ -736,7 +753,7 @@ mod tests {
         let exit = presenter
             .present(Box::pin(async move {
                 drop(sender);
-                Ok(Exit::builder().code(ExitCode::from(3)).build())
+                Ok::<_, anyhow::Error>(Exit::builder().code(ExitCode::from(3)).build())
             }))
             .await
             .expect("should succeed");
@@ -772,7 +789,7 @@ mod tests {
                         .send(clawless_core::event::Event::Message("hello".to_string()))
                         .await
                         .expect("should send while presenter holds receiver");
-                    Ok(Exit::from(()))
+                    Ok::<_, anyhow::Error>(Exit::from(()))
                 }))
                 .await
                 .expect("should succeed"),
@@ -891,6 +908,12 @@ mod tests {
     fn trait_send() {
         fn assert_send<T: Send>() {}
         assert_send::<TerminalPresenter>();
+    }
+
+    #[test]
+    fn trait_sync() {
+        fn assert_sync<T: Sync>() {}
+        assert_sync::<TerminalPresenter>();
     }
 
     #[test]

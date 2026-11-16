@@ -103,7 +103,7 @@ impl Cancellation {
         self.token.cancel();
     }
 
-    /// Check if the token has been cancelled
+    /// Returns whether the token has been cancelled
     ///
     /// Returns `true` if the token has been cancelled. This is a synchronous, non-blocking,
     /// allocation-free check.
@@ -150,9 +150,10 @@ impl Cancellation {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
 
@@ -163,7 +164,13 @@ mod tests {
         cancellation.cancel();
 
         assert!(cancellation.is_cancelled());
+    }
 
+    #[test]
+    fn cancel_twice_keeps_token_cancelled() {
+        let cancellation = Cancellation::new();
+
+        cancellation.cancel();
         cancellation.cancel();
 
         assert!(cancellation.is_cancelled());
@@ -184,8 +191,17 @@ mod tests {
 
         child.cancel();
 
-        assert!(child.is_cancelled());
         assert!(!parent.is_cancelled());
+    }
+
+    #[test]
+    fn child_cancel_marks_child_as_cancelled() {
+        let parent = Cancellation::new();
+        let child = parent.child();
+
+        child.cancel();
+
+        assert!(child.is_cancelled());
     }
 
     #[test]
@@ -195,8 +211,17 @@ mod tests {
 
         parent.cancel();
 
-        assert!(parent.is_cancelled());
         assert!(child.is_cancelled());
+    }
+
+    #[test]
+    fn child_cancelled_by_parent_leaves_parent_cancelled() {
+        let parent = Cancellation::new();
+        let _child = parent.child();
+
+        parent.cancel();
+
+        assert!(parent.is_cancelled());
     }
 
     #[test]
@@ -212,18 +237,43 @@ mod tests {
     }
 
     #[test]
-    fn deeply_nested_children_propagate() {
+    fn deeply_nested_level1_is_cancelled_by_root() {
         let root = Cancellation::new();
         let level1 = root.child();
-        let level2 = level1.child();
-        let level3 = level2.child();
+
+        root.cancel();
+
+        assert!(level1.is_cancelled());
+    }
+
+    #[test]
+    fn deeply_nested_level2_is_cancelled_by_root() {
+        let root = Cancellation::new();
+        let level2 = root.child().child();
+
+        root.cancel();
+
+        assert!(level2.is_cancelled());
+    }
+
+    #[test]
+    fn deeply_nested_level3_is_cancelled_by_root() {
+        let root = Cancellation::new();
+        let level3 = root.child().child().child();
+
+        root.cancel();
+
+        assert!(level3.is_cancelled());
+    }
+
+    #[test]
+    fn deeply_nested_root_is_cancelled_by_cancel() {
+        let root = Cancellation::new();
+        let _level3 = root.child().child().child();
 
         root.cancel();
 
         assert!(root.is_cancelled());
-        assert!(level1.is_cancelled());
-        assert!(level2.is_cancelled());
-        assert!(level3.is_cancelled());
     }
 
     #[test]

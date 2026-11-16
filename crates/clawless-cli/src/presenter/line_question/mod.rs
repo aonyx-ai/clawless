@@ -145,9 +145,10 @@ fn unusable(source: io::Error) -> AnswerPromptError {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use std::collections::VecDeque;
     use std::sync::mpsc;
@@ -226,8 +227,12 @@ mod tests {
 
     #[tokio::test]
     async fn ask_with_a_selection_shows_the_options_once() {
-        let (request, _pending) =
-            PromptRequest::select(Select::new("Kind of change", ["Added", "Fixed"]));
+        let (request, _pending) = PromptRequest::select(
+            Select::builder()
+                .question("Kind of change")
+                .options(["Added", "Fixed"])
+                .build(),
+        );
         let mut display = Vec::new();
 
         match request {

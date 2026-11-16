@@ -2,13 +2,14 @@
 //!
 //! A command that runs an external program reports what the program does as it
 //! does it. This module defines [`ProcessEvent`], the event that carries that
-//! report, and the types that describe a run: [`RunId`] identifies it, and
-//! [`Outcome`] says how it ended.
+//! report. It also defines the types that describe a run: [`RunId`] identifies
+//! it, and [`Outcome`] says how it ended.
 //!
 //! A run produces one [`Started`] event, one [`Line`] event per line that the
 //! program writes to either of its output streams, and one [`Finished`] event.
-//! A consumer can therefore show the program while it runs, keep the last few
-//! lines of its output, and drop the whole group when the program ends.
+//! A consumer can therefore show the program while it runs and keep the last
+//! few lines of its output. It can also drop the whole group when the program
+//! ends.
 //!
 //! [`Finished`]: ProcessEvent::Finished
 //! [`Line`]: ProcessEvent::Line
@@ -23,23 +24,21 @@ use kawauso_process::{Invocation, ProcessId};
 pub use self::outcome::Outcome;
 pub use self::run_id::RunId;
 
-/// The way in which a run ended
 mod outcome;
-/// The identity that ties the events of one run together
 mod run_id;
 
 /// One step in the run of an external program
 ///
 /// Clawless sends these events while a program runs, so that a presenter can
-/// render the output of the program as it arrives instead of after the program
-/// ends. A build that takes two minutes therefore shows two minutes of
+/// render the output as it arrives. The presenter does not wait until the
+/// program ends. A build that takes two minutes therefore shows two minutes of
 /// progress.
 ///
 /// Every run sends [`Started`] first and [`Finished`] last, with one [`Line`]
 /// in between for each line that the program wrote. Two things end a run
-/// without a [`Finished`]: a consumer that stopped listening, which cannot be
-/// told anything, and a caller that dropped the run instead of cancelling it,
-/// which leaves no code to send the event.
+/// without a [`Finished`]. One is a consumer that stopped listening, which
+/// cannot be told anything. The other is a caller that dropped the run instead
+/// of cancelling it, which leaves no code to send the event.
 ///
 /// Each variant carries the [`RunId`] of its run. Two programs that run at
 /// the same time interleave their lines in the channel, and the identity is
@@ -94,9 +93,9 @@ pub enum ProcessEvent {
 
     /// The program wrote one line
     ///
-    /// The line carries the stream that produced it, so that a consumer can
-    /// show a diagnostic apart from a result, or drop one of the two. It holds
-    /// no characters that end a line.
+    /// The line carries the stream that produced it. A consumer can therefore
+    /// show a diagnostic apart from a result, or drop one of the two. The line
+    /// holds no characters that end a line.
     Line {
         /// The run that wrote the line
         id: RunId,
@@ -156,10 +155,9 @@ impl ProcessEvent {
 
 /// Renders the event as one line of a transcript
 ///
-/// The start of a run reads as a shell prompt, a line of output reads as the
-/// program wrote it, and the end of a run states what became of the command.
-/// A consumer that wants another shape matches on the variant and builds its
-/// own.
+/// The start of a run reads as a shell prompt. A line of output reads as the
+/// program wrote it. The end of a run states what became of the command. A
+/// consumer that wants another shape matches on the variant and builds its own.
 ///
 /// The text never names the stream that produced a line. A presenter that
 /// separates the two writes them to different places instead of labelling them,
@@ -180,9 +178,10 @@ impl Display for ProcessEvent {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use kawauso_process::run::Stream;
 

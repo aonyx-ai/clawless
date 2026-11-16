@@ -22,7 +22,7 @@ pub struct GreetArgs {
     name: String,
 }
 
-/// Greet the user
+/// Greets the user
 ///
 /// This command prints a greeting message to the console.
 #[command]
@@ -92,7 +92,7 @@ The arguments must come before context. This order cannot be changed.
 ### 3. Doc comments
 
 ```rust
-/// Greet the user
+/// Greets the user
 ///
 /// This command prints a greeting message to the console.
 ```

@@ -1,3 +1,5 @@
+//! Compile-time code that links a subcommand to its parent module
+
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Ident;
@@ -9,10 +11,11 @@ const INVENTORY_NAME: &str = "ClawlessSubcommands";
 
 /// Generates the `inventory` crate glue that connects subcommands to their parents at compile time
 ///
-/// Each `#[command]` or `#[application]` expansion emits two pieces of inventory code: a
-/// `ClawlessSubcommands` struct definition (via `inventory`) and a `submit!` call that registers
-/// the leaf's `_init` and `_resolve` functions with the parent module's collector. This generator
-/// is generic over `Generator` so it works identically for both commands and applications.
+/// Each `#[command]` or `#[application]` expansion emits two pieces of inventory code. One is a
+/// `ClawlessSubcommands` struct definition (via `inventory`). The other is a `submit!` call that
+/// registers the leaf's `_init` and `_resolve` functions with the parent module's collector. This
+/// generator is generic over `Generator`, so it works identically for both commands and
+/// applications.
 pub(crate) struct InventoryGenerator<'a> {
     /// Gives the identifier of the leaf and the names of its generated functions
     generator: &'a dyn Generator,
@@ -27,7 +30,7 @@ impl<'a> InventoryGenerator<'a> {
     /// Generates the `ClawlessSubcommands` struct that the `inventory` crate collects at link time
     ///
     /// Every module that uses `#[command]` or `#[application]` gets its own copy of this struct.
-    /// The struct carries three function pointers — `name`, `init`, and `resolve` — forming the
+    /// The struct carries three function pointers: `name`, `init`, and `resolve`. They form the
     /// uniform interface that the `_init` and `_resolve` functions iterate over to build the clap
     /// tree and walk subcommands.
     pub(crate) fn inventory(&self) -> TokenStream {
@@ -78,4 +81,32 @@ impl<'a> InventoryGenerator<'a> {
 /// reference the same name.
 pub(crate) fn inventory_name() -> Ident {
     format_ident!("{}", INVENTORY_NAME)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::generator::auto_traits::{AmbiguousIfSend, AmbiguousIfSync};
+
+    #[test]
+    fn inventory_generator_is_unpin() {
+        fn assert_unpin<T: Unpin>() {}
+        assert_unpin::<InventoryGenerator<'_>>();
+    }
+
+    /// `InventoryGenerator` is not `Send`
+    ///
+    /// It borrows a `Generator`, which owns a parsed function that no other thread may use.
+    #[test]
+    fn trait_not_send_inventory_generator() {
+        <InventoryGenerator<'_> as AmbiguousIfSend<_>>::compiles_only_without_send();
+    }
+
+    /// `InventoryGenerator` is not `Sync`
+    ///
+    /// It borrows a `Generator`, which owns a parsed function that no other thread may use.
+    #[test]
+    fn trait_not_sync_inventory_generator() {
+        <InventoryGenerator<'_> as AmbiguousIfSync<_>>::compiles_only_without_sync();
+    }
 }

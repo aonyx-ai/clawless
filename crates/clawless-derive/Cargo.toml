@@ -15,6 +15,7 @@ keywords = ["cli", "framework"]
 proc-macro = true
 
 [dependencies]
+bon = { workspace = true }
 darling = { workspace = true }
 proc-macro2 = { workspace = true }
 quote = { workspace = true }

@@ -1,3 +1,5 @@
+//! Asks the user for one line of text
+
 use clawless::prelude::*;
 use clawless::prompt::PromptUserError;
 
@@ -5,14 +7,15 @@ use clawless::prompt::PromptUserError;
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Args)]
 pub struct TextArgs {}
 
-/// Ask the user for one line of text
+/// Asks the user for one line of text
 ///
 /// The command asks for the title of a change. An empty line is an answer too, so the command
 /// asks again until the title has a character that is not a space.
 #[command]
-// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
-// raw Markdown heading in the terminal rather than documenting an API.
-#[allow(clippy::missing_errors_doc)]
+#[allow(
+    clippy::missing_errors_doc,
+    reason = "a command's doc comment is its `--help` text, so an `# Errors` section would render as a raw Markdown heading in the terminal"
+)]
 pub async fn text(_args: TextArgs, context: Context) -> CommandResult {
     match ask(&context).await {
         Ok(title) => message!("The title is \"{title}\"."),
@@ -50,14 +53,17 @@ async fn ask(context: &Context) -> Result<String, PromptUserError> {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use clawless::event::event_channel;
     use clawless::prompt::{ScriptedAnswer, ScriptedUser};
 
     use super::*;
+
+    fn assert_auto_traits<T: Send + Sync + Unpin>() {}
 
     #[tokio::test]
     async fn ask_with_an_empty_answer_asks_again() {
@@ -76,5 +82,10 @@ mod tests {
         let title = ask(&context).await.expect("should answer");
 
         assert_eq!(title, "Fix the race");
+    }
+
+    #[test]
+    fn text_args_is_send_sync_and_unpin() {
+        assert_auto_traits::<TextArgs>();
     }
 }

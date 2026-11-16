@@ -1,4 +1,5 @@
-/// Waits until the process is cancelled
+//! The commands of this example
+
 mod wait;
 
 clawless::commands!();

@@ -24,8 +24,8 @@ use crate::cancellation::Cancellation;
 ///
 /// On Unix, signal handlers are registered synchronously when this function is called, not when
 /// the returned future is first polled. This is important because `main!()` spawns the future as
-/// a background task, and without eager registration a signal could arrive before the runtime
-/// polls the task, bypassing the handler entirely.
+/// a background task. Without eager registration, a signal could arrive before the runtime polls
+/// the task, bypassing the handler entirely.
 ///
 /// This function is designed to be spawned as a background Tokio task by `main!()`.
 ///
@@ -33,10 +33,26 @@ use crate::cancellation::Cancellation;
 ///
 /// Panics if the OS signal handler cannot be registered, which indicates system resource
 /// exhaustion.
-// Registering an OS signal handler fails only when the process has exhausted its resources.
-// The process cannot honor a shutdown request it is unable to observe, so there is nothing to
-// recover to. The `# Panics` section documents this for callers.
-#[allow(clippy::expect_used)]
+///
+/// # Examples
+///
+/// ```no_run
+/// use clawless_core::cancellation::Cancellation;
+/// use clawless_core::signal::wait_for_shutdown;
+///
+/// # #[tokio::main]
+/// # async fn main() {
+/// let cancellation = Cancellation::new();
+///
+/// wait_for_shutdown(cancellation.clone()).await;
+///
+/// assert!(cancellation.is_cancelled());
+/// # }
+/// ```
+#[allow(
+    clippy::expect_used,
+    reason = "Registering an OS signal handler fails only when the process has exhausted its resources. The process cannot honor a shutdown request it is unable to observe, so there is nothing to recover to. The `# Panics` section documents this for callers."
+)]
 pub fn wait_for_shutdown(cancellation: Cancellation) -> impl Future<Output = ()> + Send {
     let first_signal = first_signal_listener();
 
@@ -61,11 +77,11 @@ pub fn wait_for_shutdown(cancellation: Cancellation) -> impl Future<Output = ()>
 ///
 /// Panics if the operating system cannot register the signal handler. This occurs when the
 /// system has no resources left.
-// Registering an OS signal handler fails only when the process has exhausted its resources.
-// The process cannot honor a shutdown request it is unable to observe, so there is nothing to
-// recover to. The `# Panics` section documents this for callers.
 #[cfg(unix)]
-#[allow(clippy::expect_used)]
+#[allow(
+    clippy::expect_used,
+    reason = "Registering an OS signal handler fails only when the process has exhausted its resources. The process cannot honor a shutdown request it is unable to observe, so there is nothing to recover to. The `# Panics` section documents this for callers."
+)]
 fn first_signal_listener() -> impl Future<Output = ()> + Send {
     use tokio::signal::unix::SignalKind;
 
@@ -91,11 +107,11 @@ fn first_signal_listener() -> impl Future<Output = ()> + Send {
 ///
 /// Panics if the operating system cannot register the signal handler. This occurs when the
 /// system has no resources left.
-// Registering an OS signal handler fails only when the process has exhausted its resources.
-// The process cannot honor a shutdown request it is unable to observe, so there is nothing to
-// recover to. The `# Panics` section documents this for callers.
 #[cfg(not(unix))]
-#[allow(clippy::expect_used)]
+#[allow(
+    clippy::expect_used,
+    reason = "Registering an OS signal handler fails only when the process has exhausted its resources. The process cannot honor a shutdown request it is unable to observe, so there is nothing to recover to. The `# Panics` section documents this for callers."
+)]
 fn first_signal_listener() -> impl Future<Output = ()> + Send {
     async {
         tokio::signal::ctrl_c()

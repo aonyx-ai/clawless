@@ -1,17 +1,30 @@
+//! The state that the projection lock protects
+
 use super::Entry;
 
 /// Internal mutable state shared between the drain task and query methods
 ///
-/// `ProjectionState` holds the accumulated entries and a completion flag. The drain task writes
-/// to this state behind a write lock; query methods read behind a read lock.
+/// `ProjectionState` holds the accumulated entries and whether the drain has completed. The drain
+/// task writes to this state behind a write lock; query methods read behind a read lock.
 ///
 /// [`Projection`]: super::Projection
 #[derive(Debug, Default)]
 pub(super) struct ProjectionState {
     /// The entries so far, in the order that the drain task received them
     entries: Vec<Entry>,
-    /// True after the event channel closes and the drain task processes every event
-    complete: bool,
+    /// Whether the event channel has closed and the drain task has processed every event
+    completion: Completion,
+}
+
+/// Whether the drain task has processed every event
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Default)]
+enum Completion {
+    /// The event channel is open, or the drain task still has events to process
+    #[default]
+    Incomplete,
+
+    /// The event channel closed and the drain task processed every event
+    Complete,
 }
 
 impl ProjectionState {
@@ -24,12 +37,15 @@ impl ProjectionState {
     ///
     /// Called by the drain task when the event channel closes.
     pub(super) fn set_complete(&mut self) {
-        self.complete = true;
+        self.completion = Completion::Complete;
     }
 
     /// Returns whether the event stream has closed and all events have been drained
     pub(super) fn is_complete(&self) -> bool {
-        self.complete
+        match self.completion {
+            Completion::Incomplete => false,
+            Completion::Complete => true,
+        }
     }
 
     /// Returns a clone of all accumulated entries in receive order
@@ -96,9 +112,10 @@ impl ProjectionState {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use std::fmt;
     use std::sync::Arc;
@@ -116,6 +133,19 @@ mod tests {
         }
     }
 
+    /// Returns the kind and the text of each entry, in order
+    fn describe(entries: &[Entry]) -> Vec<String> {
+        entries
+            .iter()
+            .map(|entry| match entry {
+                Entry::Message(text) => format!("message: {text}"),
+                Entry::Detail(text) => format!("detail: {text}"),
+                Entry::Artifact(artifact) => format!("artifact: {artifact}"),
+                Entry::Process(event) => format!("process: {event}"),
+            })
+            .collect()
+    }
+
     #[test]
     fn artifacts_filters_to_artifact_entries_only() {
         let mut state = ProjectionState::default();
@@ -124,18 +154,26 @@ mod tests {
 
         let artifacts = state.artifacts();
 
-        assert_eq!(artifacts.len(), 1);
-        let Entry::Artifact(a) = &artifacts[0] else {
-            panic!("expected Entry::Artifact");
-        };
-        assert_eq!(a.to_string(), "art");
+        assert_eq!(describe(&artifacts), ["artifact: art"]);
     }
 
     #[test]
-    fn default_is_empty_and_incomplete() {
+    fn completion_is_send_sync_and_unpin() {
+        fn assert_auto_traits<T: Send + Sync + Unpin>() {}
+        assert_auto_traits::<Completion>();
+    }
+
+    #[test]
+    fn default_is_empty() {
         let state = ProjectionState::default();
 
         assert!(state.entries().is_empty());
+    }
+
+    #[test]
+    fn default_is_incomplete() {
+        let state = ProjectionState::default();
+
         assert!(!state.is_complete());
     }
 
@@ -148,15 +186,7 @@ mod tests {
 
         let details = state.details();
 
-        assert_eq!(details.len(), 2);
-        let Entry::Detail(s) = &details[0] else {
-            panic!("expected Entry::Detail");
-        };
-        assert_eq!(s, "dtl");
-        let Entry::Detail(s) = &details[1] else {
-            panic!("expected Entry::Detail");
-        };
-        assert_eq!(s, "dtl2");
+        assert_eq!(describe(&details), ["detail: dtl", "detail: dtl2"]);
     }
 
     #[test]
@@ -168,15 +198,7 @@ mod tests {
 
         let messages = state.messages();
 
-        assert_eq!(messages.len(), 2);
-        let Entry::Message(s) = &messages[0] else {
-            panic!("expected Entry::Message");
-        };
-        assert_eq!(s, "msg");
-        let Entry::Message(s) = &messages[1] else {
-            panic!("expected Entry::Message");
-        };
-        assert_eq!(s, "msg2");
+        assert_eq!(describe(&messages), ["message: msg", "message: msg2"]);
     }
 
     #[test]
@@ -186,11 +208,7 @@ mod tests {
         state.push(Entry::Message("hello".to_string()));
 
         let entries = state.entries();
-        assert_eq!(entries.len(), 1);
-        let Entry::Message(s) = &entries[0] else {
-            panic!("expected Entry::Message");
-        };
-        assert_eq!(s, "hello");
+        assert_eq!(describe(&entries), ["message: hello"]);
     }
 
     #[test]
@@ -202,19 +220,10 @@ mod tests {
         state.push(Entry::Message("third".to_string()));
 
         let entries = state.entries();
-        assert_eq!(entries.len(), 3);
-        let Entry::Message(s) = &entries[0] else {
-            panic!("expected Entry::Message");
-        };
-        assert_eq!(s, "first");
-        let Entry::Detail(s) = &entries[1] else {
-            panic!("expected Entry::Detail");
-        };
-        assert_eq!(s, "second");
-        let Entry::Message(s) = &entries[2] else {
-            panic!("expected Entry::Message");
-        };
-        assert_eq!(s, "third");
+        assert_eq!(
+            describe(&entries),
+            ["message: first", "detail: second", "message: third"]
+        );
     }
 
     #[test]

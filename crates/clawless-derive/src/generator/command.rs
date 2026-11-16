@@ -1,3 +1,6 @@
+//! Generator for `#[command]` functions
+
+use bon::bon;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Error, FnArg, Ident, ItemFn, PatType, Result, Type};
@@ -43,9 +46,10 @@ impl Generator for CommandGenerator {
         &self.input
     }
 
-    // `CommandGenerator::new` rejects any function whose signature does not match, so by the
-    // time this runs the extraction cannot fail.
-    #[allow(clippy::expect_used)]
+    #[allow(
+        clippy::expect_used,
+        reason = "`CommandGenerator::new` rejects any function whose signature does not match, so by the time this runs the extraction cannot fail."
+    )]
     fn args_type(&self) -> Box<Type> {
         extract_command_argument_type(&self.input)
             .expect("function arguments must be validated in CommandGenerator::new()")
@@ -71,17 +75,19 @@ impl Generator for CommandGenerator {
     }
 }
 
+#[bon]
 impl CommandGenerator {
     /// Validates the function signature and parses macro attributes
     ///
-    /// Signature validation happens eagerly here so that users get a clear compile error pointing
-    /// at the function definition rather than a cryptic error from generated code.
+    /// Signature validation happens eagerly here. Users therefore get a clear compile error
+    /// pointing at the function definition, rather than a cryptic error from generated code.
     ///
     /// # Errors
     ///
     /// Returns a compile error if the function does not accept exactly two parameters (args and
-    /// context), if the macro attributes are invalid, or if the name of the function does not
-    /// translate into a command name.
+    /// context). Returns a compile error if the macro attributes are invalid. Returns one as
+    /// well if the name of the function does not translate into a command name.
+    #[builder]
     pub(crate) fn new(attrs: TokenStream, input: ItemFn) -> Result<Self> {
         let attrs = parse_attributes(attrs, "command")?;
         let ident = input.sig.ident.clone();
@@ -161,13 +167,15 @@ fn extract_command_argument_type(input_fn: &ItemFn) -> Result<Box<Type>> {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use quote::ToTokens;
 
     use super::*;
+    use crate::generator::auto_traits::{AmbiguousIfSend, AmbiguousIfSync};
 
     fn generator_with_args() -> CommandGenerator {
         let input = quote! {
@@ -176,7 +184,11 @@ mod tests {
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
 
-        CommandGenerator::new(TokenStream::new(), input_function).unwrap()
+        CommandGenerator::builder()
+            .attrs(TokenStream::new())
+            .input(input_function)
+            .build()
+            .unwrap()
     }
 
     fn generator_with_require_subcommand() -> CommandGenerator {
@@ -190,7 +202,11 @@ mod tests {
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
 
-        CommandGenerator::new(attrs, input_function).unwrap()
+        CommandGenerator::builder()
+            .attrs(attrs)
+            .input(input_function)
+            .build()
+            .unwrap()
     }
 
     fn generator_with_single_alias() -> CommandGenerator {
@@ -204,7 +220,11 @@ mod tests {
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
 
-        CommandGenerator::new(attrs, input_function).unwrap()
+        CommandGenerator::builder()
+            .attrs(attrs)
+            .input(input_function)
+            .build()
+            .unwrap()
     }
 
     fn generator_with_multiple_aliases() -> CommandGenerator {
@@ -218,7 +238,11 @@ mod tests {
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
 
-        CommandGenerator::new(attrs, input_function).unwrap()
+        CommandGenerator::builder()
+            .attrs(attrs)
+            .input(input_function)
+            .build()
+            .unwrap()
     }
 
     fn generator_with_require_subcommand_and_alias() -> CommandGenerator {
@@ -232,7 +256,17 @@ mod tests {
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
 
-        CommandGenerator::new(attrs, input_function).unwrap()
+        CommandGenerator::builder()
+            .attrs(attrs)
+            .input(input_function)
+            .build()
+            .unwrap()
+    }
+
+    #[test]
+    fn command_generator_is_unpin() {
+        fn assert_unpin<T: Unpin>() {}
+        assert_unpin::<CommandGenerator>();
     }
 
     #[test]
@@ -242,11 +276,17 @@ mod tests {
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
-        let result = CommandGenerator::new(TokenStream::new(), input_function);
+        let error = CommandGenerator::builder()
+            .attrs(TokenStream::new())
+            .input(input_function)
+            .build()
+            .expect_err("should fail");
 
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(err.to_string().contains("missing the `context` parameter"));
+        assert!(
+            error
+                .to_string()
+                .contains("missing the `context` parameter")
+        );
     }
 
     #[test]
@@ -256,11 +296,73 @@ mod tests {
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
-        let result = CommandGenerator::new(TokenStream::new(), input_function);
+        let error = CommandGenerator::builder()
+            .attrs(TokenStream::new())
+            .input(input_function)
+            .build()
+            .expect_err("should fail");
 
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(err.to_string().contains("too many parameters"));
+        assert!(error.to_string().contains("too many parameters"));
+    }
+
+    #[test]
+    fn command_new_with_args() {
+        let generator = generator_with_args();
+
+        let actual = generator.command_new();
+        let expected = quote! {
+            Args::augment_args(clawless::clap::Command::new("foo"))
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn command_new_with_multiple_aliases() {
+        let generator = generator_with_multiple_aliases();
+
+        let actual = generator.command_new();
+        let expected = quote! {
+            Args::augment_args(clawless::clap::Command::new("foo")).visible_aliases(["f", "fo"])
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn command_new_with_require_subcommand() {
+        let generator = generator_with_require_subcommand();
+
+        let actual = generator.command_new();
+        let expected = quote! {
+            Args::augment_args(clawless::clap::Command::new("foo")).arg_required_else_help(true)
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn command_new_with_require_subcommand_and_alias() {
+        let generator = generator_with_require_subcommand_and_alias();
+
+        let actual = generator.command_new();
+        let expected = quote! {
+            Args::augment_args(clawless::clap::Command::new("foo")).arg_required_else_help(true).visible_aliases(["f"])
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn command_new_with_single_alias() {
+        let generator = generator_with_single_alias();
+
+        let actual = generator.command_new();
+        let expected = quote! {
+            Args::augment_args(clawless::clap::Command::new("foo")).visible_aliases(["f"])
+        };
+
+        assert_eq!(actual.to_string(), expected.to_string());
     }
 
     #[test]
@@ -282,11 +384,13 @@ mod tests {
         };
 
         let input_fn = syn::parse2(input).unwrap();
-        let result = extract_command_argument_type(&input_fn);
+        let error = extract_command_argument_type(&input_fn).expect_err("should fail");
 
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(err.to_string().contains("missing the `context` parameter"));
+        assert!(
+            error
+                .to_string()
+                .contains("missing the `context` parameter")
+        );
     }
 
     #[test]
@@ -296,11 +400,9 @@ mod tests {
         };
 
         let input_fn = syn::parse2(input).unwrap();
-        let result = extract_command_argument_type(&input_fn);
+        let error = extract_command_argument_type(&input_fn).expect_err("should fail");
 
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(err.to_string().contains("too many parameters"));
+        assert!(error.to_string().contains("too many parameters"));
     }
 
     #[test]
@@ -310,71 +412,9 @@ mod tests {
         };
 
         let input_fn = syn::parse2(input).unwrap();
-        let result = extract_command_argument_type(&input_fn);
+        let error = extract_command_argument_type(&input_fn).expect_err("should fail");
 
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(err.to_string().contains("missing required parameters"));
-    }
-
-    #[test]
-    fn command_new_with_args() {
-        let generator = generator_with_args();
-
-        let actual = generator.command_new();
-        let expected = quote! {
-            Args::augment_args(clawless::clap::Command::new("foo"))
-        };
-
-        assert_eq!(actual.to_string(), expected.to_string());
-    }
-
-    #[test]
-    fn command_new_with_require_subcommand() {
-        let generator = generator_with_require_subcommand();
-
-        let actual = generator.command_new();
-        let expected = quote! {
-            Args::augment_args(clawless::clap::Command::new("foo")).arg_required_else_help(true)
-        };
-
-        assert_eq!(actual.to_string(), expected.to_string());
-    }
-
-    #[test]
-    fn command_new_with_single_alias() {
-        let generator = generator_with_single_alias();
-
-        let actual = generator.command_new();
-        let expected = quote! {
-            Args::augment_args(clawless::clap::Command::new("foo")).visible_aliases(["f"])
-        };
-
-        assert_eq!(actual.to_string(), expected.to_string());
-    }
-
-    #[test]
-    fn command_new_with_multiple_aliases() {
-        let generator = generator_with_multiple_aliases();
-
-        let actual = generator.command_new();
-        let expected = quote! {
-            Args::augment_args(clawless::clap::Command::new("foo")).visible_aliases(["f", "fo"])
-        };
-
-        assert_eq!(actual.to_string(), expected.to_string());
-    }
-
-    #[test]
-    fn command_new_with_require_subcommand_and_alias() {
-        let generator = generator_with_require_subcommand_and_alias();
-
-        let actual = generator.command_new();
-        let expected = quote! {
-            Args::augment_args(clawless::clap::Command::new("foo")).arg_required_else_help(true).visible_aliases(["f"])
-        };
-
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert!(error.to_string().contains("missing required parameters"));
     }
 
     #[test]
@@ -396,5 +436,23 @@ mod tests {
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    /// `CommandGenerator` is not `Send`
+    ///
+    /// It owns a parsed function, and the syntax tree of the compiler holds handles that no other
+    /// thread may use.
+    #[test]
+    fn trait_not_send_command_generator() {
+        <CommandGenerator as AmbiguousIfSend<_>>::compiles_only_without_send();
+    }
+
+    /// `CommandGenerator` is not `Sync`
+    ///
+    /// It owns a parsed function, and the syntax tree of the compiler holds handles that no other
+    /// thread may use.
+    #[test]
+    fn trait_not_sync_command_generator() {
+        <CommandGenerator as AmbiguousIfSync<_>>::compiles_only_without_sync();
     }
 }

@@ -1,3 +1,5 @@
+//! The error that ends a prompt without an answer from the user
+
 use thiserror::Error;
 
 /// The error that ends a prompt without an answer from the user
@@ -6,6 +8,16 @@ use thiserror::Error;
 /// answer, so a command must not treat one as a yes, a no, or a default.
 ///
 /// A later release can add variants. Match with a wildcard arm.
+///
+/// # Examples
+///
+/// ```
+/// use clawless_core::prompt::AnswerPromptError;
+///
+/// let error = AnswerPromptError::ClosedInput;
+///
+/// assert_eq!(error.to_string(), "the input ended before the user answered");
+/// ```
 ///
 /// [`Reply`]: crate::event::prompt::Reply
 #[derive(Debug, Error)]
@@ -42,9 +54,10 @@ pub enum AnswerPromptError {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
 

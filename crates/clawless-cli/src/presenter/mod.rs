@@ -2,7 +2,7 @@
 //!
 //! This module defines the [`Presenter`] trait, the output port in the hexagonal architecture. A
 //! `Presenter` wraps command execution and controls the output lifecycle. The framework calls
-//! [`present`] with the command future, and the presenter runs the command, optionally consuming
+//! [`present`] with the command future. The presenter runs the command, optionally consuming
 //! events from its event channel, and returns the command's result.
 //!
 //! Presenter adapters implement this trait to provide different rendering strategies. A stateless
@@ -18,7 +18,6 @@ use async_trait::async_trait;
 use clawless_core::exit::Exit;
 
 pub use self::terminal::TerminalPresenter;
-use crate::error::CommandResult;
 
 mod line_question;
 mod line_reader;
@@ -68,12 +67,15 @@ pub trait Presenter {
     /// # Errors
     ///
     /// Returns the command's error if the command fails. Implementations propagate the
-    /// command's [`CommandResult`] without modification.
+    /// command's result without modification, so the error type `E` is the one that the caller
+    /// chose for its command.
     ///
     /// [`EventReceiver`]: clawless_core::event::EventReceiver
     /// [`Exit`]: clawless_core::exit::Exit
-    async fn present(
+    async fn present<E>(
         self,
-        command: Pin<Box<dyn Future<Output = CommandResult<Exit>> + Send>>,
-    ) -> CommandResult<Exit>;
+        command: Pin<Box<dyn Future<Output = Result<Exit, E>> + Send>>,
+    ) -> Result<Exit, E>
+    where
+        E: Send + 'static;
 }

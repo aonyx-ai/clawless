@@ -257,9 +257,10 @@ impl Output {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use std::fmt;
 
@@ -325,57 +326,23 @@ mod tests {
         cloned.message("from clone").await.expect("should send");
 
         let first = receiver.recv().await.expect("should receive first");
-        let second = receiver.recv().await.expect("should receive second");
 
         assert!(matches!(first, Event::Message(ref s) if s == "from original"));
+    }
+
+    #[tokio::test]
+    async fn clone_sends_into_the_same_channel() {
+        let (sender, mut receiver) = event_channel();
+        let output = Output::new(sender);
+        let cloned = output.clone();
+
+        output.message("from original").await.expect("should send");
+        cloned.message("from clone").await.expect("should send");
+
+        let _first = receiver.recv().await.expect("should receive first");
+        let second = receiver.recv().await.expect("should receive second");
+
         assert!(matches!(second, Event::Message(ref s) if s == "from clone"));
-    }
-
-    #[tokio::test]
-    async fn process_event_sends_process_event() {
-        let (sender, mut receiver) = event_channel();
-        let output = Output::new(sender);
-        let invocation = Invocation::new("git").arg("status");
-
-        output
-            .process_event(ProcessEvent::Started {
-                id: RunId::next(),
-                invocation: invocation.clone(),
-                process_id: None,
-            })
-            .await
-            .expect("should send");
-
-        assert_eq!(
-            receiver.recv().await.map(|event| match event {
-                Event::Process(event) => event.to_string(),
-                Event::Message(text) => text,
-                Event::Detail(text) => text,
-                Event::Artifact(artifact) => artifact.to_string(),
-                Event::Prompt(request) => format!("{request:?}"),
-            }),
-            Some(format!("$ {invocation}"))
-        );
-    }
-
-    #[tokio::test]
-    async fn prompt_sends_prompt_event() {
-        let (sender, mut receiver) = event_channel();
-        let output = Output::new(sender);
-        let (request, _pending) = PromptRequest::confirm(Confirm::new("Release?"));
-
-        output.prompt(request).await.expect("should send");
-
-        assert_eq!(
-            receiver.recv().await.map(|event| match event {
-                Event::Prompt(request) => request.question().to_owned(),
-                Event::Process(event) => event.to_string(),
-                Event::Message(text) => text,
-                Event::Detail(text) => text,
-                Event::Artifact(artifact) => artifact.to_string(),
-            }),
-            Some("Release?".to_owned())
-        );
     }
 
     #[tokio::test]
@@ -440,6 +407,53 @@ mod tests {
         let event = receiver.recv().await.expect("should receive");
 
         assert!(matches!(event, Event::Message(ref s) if s == "count: 42"));
+    }
+
+    #[tokio::test]
+    async fn process_event_sends_process_event() {
+        let (sender, mut receiver) = event_channel();
+        let output = Output::new(sender);
+        let invocation = Invocation::new("git").arg("status");
+
+        output
+            .process_event(ProcessEvent::Started {
+                id: RunId::next(),
+                invocation: invocation.clone(),
+                process_id: None,
+            })
+            .await
+            .expect("should send");
+
+        assert_eq!(
+            receiver.recv().await.map(|event| match event {
+                Event::Process(event) => event.to_string(),
+                Event::Message(text) => text,
+                Event::Detail(text) => text,
+                Event::Artifact(artifact) => artifact.to_string(),
+                Event::Prompt(request) => format!("{request:?}"),
+            }),
+            Some(format!("$ {invocation}"))
+        );
+    }
+
+    #[tokio::test]
+    async fn prompt_sends_prompt_event() {
+        let (sender, mut receiver) = event_channel();
+        let output = Output::new(sender);
+        let (request, _pending) = PromptRequest::confirm(Confirm::new("Release?"));
+
+        output.prompt(request).await.expect("should send");
+
+        assert_eq!(
+            receiver.recv().await.map(|event| match event {
+                Event::Prompt(request) => request.question().to_owned(),
+                Event::Process(event) => event.to_string(),
+                Event::Message(text) => text,
+                Event::Detail(text) => text,
+                Event::Artifact(artifact) => artifact.to_string(),
+            }),
+            Some("Release?".to_owned())
+        );
     }
 
     #[test]

@@ -1,14 +1,14 @@
 //! Event types for structured command output
 //!
 //! This module defines [`Event`], the structured message type that commands produce and the
-//! Presenter consumes. Events decouple output production from rendering: a command emits events
+//! Presenter consumes. Events decouple output production from rendering. A command emits events
 //! through Output, and the Presenter decides how to render them based on its output mode and
 //! verbosity settings.
 //!
 //! The [`Artifact`] trait enables the [`Event::Artifact`] variant to carry a type-erased value that
 //! supports both text rendering ([`Display`]) and JSON serialization ([`Serialize`]). A blanket
-//! implementation covers any type satisfying the required bounds, so command authors derive the
-//! usual traits and pass values to Output without manual trait implementation.
+//! implementation covers any type satisfying the required bounds. Command authors therefore derive
+//! the usual traits and pass values to Output without manual trait implementation.
 //!
 //! The [`Event::Process`] variant carries the [`ProcessEvent`] of an external program that a
 //! command runs. Those events arrive while the program runs, which lets a presenter show progress
@@ -33,11 +33,8 @@ pub use self::sender::EventSender;
 pub mod process;
 pub mod prompt;
 
-/// Bounded channel that carries events from a command to its presenter
 mod channel;
-/// The half of the event channel that reads events
 mod receiver;
-/// The half of the event channel that sends events
 mod sender;
 
 /// Trait for artifact values that can be rendered as text or JSON
@@ -84,16 +81,33 @@ erased_serde::serialize_trait_object!(Artifact);
 ///
 /// Five variants:
 ///
-/// - [`Message`] — informational text (shown at default verbosity and above).
-/// - [`Detail`] — supplementary text (shown only at verbose verbosity).
-/// - [`Event::Artifact`] — the primary data a command produces, carried as a trait object that the
+/// - [`Message`]: informational text (shown at default verbosity and above).
+/// - [`Detail`]: supplementary text (shown only at verbose verbosity).
+/// - [`Event::Artifact`]: the primary data a command produces, carried as a trait object that the
 ///   Presenter can render via [`Display`] or [`Serialize`].
-/// - [`Event::Process`] — one step in the run of an external program that the command started.
-/// - [`Event::Prompt`] — a question for the user, with the reply that answers it.
+/// - [`Event::Process`]: one step in the run of an external program that the command started.
+/// - [`Event::Prompt`]: a question for the user, with the reply that answers it.
 ///
 /// The Presenter decides which events to render based on its verbosity setting. Verbosity does
 /// not apply to a prompt, because the command waits for the answer. A presenter that cannot ask
 /// the user drops the request.
+///
+/// # Examples
+///
+/// ```
+/// use clawless_core::event::{Event, event_channel};
+///
+/// # #[tokio::main(flavor = "current_thread")]
+/// # async fn main() {
+/// let (sender, mut receiver) = event_channel();
+///
+/// sender.send(Event::Message("compiling".to_string())).await.expect("the receiver is alive");
+/// sender.send(Event::Detail("3 crates".to_string())).await.expect("the receiver is alive");
+///
+/// assert!(matches!(receiver.recv().await, Some(Event::Message(text)) if text == "compiling"));
+/// assert!(matches!(receiver.recv().await, Some(Event::Detail(text)) if text == "3 crates"));
+/// # }
+/// ```
 ///
 /// [`Detail`]: Event::Detail
 /// [`Message`]: Event::Message
@@ -108,7 +122,7 @@ pub enum Event {
     /// One step in the run of an external program
     ///
     /// The event is boxed so that the size of an `Event` stays that of its text variants. A run
-    /// names its command in the events that start and end it, and an unboxed variant would make
+    /// names its command in the events that start and end it. An unboxed variant would make
     /// every message in the channel as large as that name.
     Process(Box<ProcessEvent>),
     /// A question for the user
@@ -119,9 +133,10 @@ pub enum Event {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use std::fmt;
 

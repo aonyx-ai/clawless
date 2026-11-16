@@ -1,3 +1,6 @@
+//! A question that a user answers with one of several options
+
+use bon::bon;
 use getset::Getters;
 
 /// A question that a user answers with one of several options
@@ -13,7 +16,10 @@ use getset::Getters;
 /// ```
 /// use clawless_core::prompt::Select;
 ///
-/// let question = Select::new("Kind of change", ["Added", "Changed", "Fixed"]);
+/// let question = Select::builder()
+///     .question("Kind of change")
+///     .options(["Added", "Changed", "Fixed"])
+///     .build();
 ///
 /// assert_eq!(question.options().len(), 3);
 /// ```
@@ -30,6 +36,7 @@ pub struct Select {
     options: Vec<String>,
 }
 
+#[bon]
 impl Select {
     /// Creates a question over the texts of its options
     ///
@@ -38,14 +45,18 @@ impl Select {
     /// ```
     /// use clawless_core::prompt::Select;
     ///
-    /// let question = Select::new("Kind of change", ["Added", "Changed", "Fixed"]);
+    /// let question = Select::builder()
+    ///     .question("Kind of change")
+    ///     .options(["Added", "Changed", "Fixed"])
+    ///     .build();
     /// ```
+    #[builder]
     pub fn new(
-        question: impl Into<String>,
+        #[builder(into)] question: String,
         options: impl IntoIterator<Item = impl Into<String>>,
     ) -> Self {
         Self {
-            question: question.into(),
+            question,
             options: options.into_iter().map(Into::into).collect(),
         }
     }
@@ -53,15 +64,19 @@ impl Select {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
 
     #[test]
     fn new_keeps_the_options_in_their_order() {
-        let question = Select::new("Kind of change", ["Added", "Fixed"]);
+        let question = Select::builder()
+            .question("Kind of change")
+            .options(["Added", "Fixed"])
+            .build();
 
         assert_eq!(
             question.options(),

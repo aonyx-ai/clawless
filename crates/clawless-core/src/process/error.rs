@@ -9,16 +9,37 @@ use crate::event::SendError;
 /// The error returned when a command cannot run an external program
 ///
 /// The variants separate what a caller does about the failure. A command that
-/// was cancelled stops, a command whose program never ran reports the program,
-/// and a command whose output can no longer be reported has lost its presenter
-/// and ends.
+/// was cancelled stops. A command whose program never ran reports the program.
+/// A command whose output can no longer be reported has lost its presenter and
+/// ends.
 ///
 /// A program that ran and ended without success is no failure of the run. The
-/// [`Execution`] then carries the status, and [`require_success`][success] turns
-/// a status that the caller cannot accept into an error of its own.
+/// [`Execution`] then carries the status, and [`require_success`][success]
+/// turns a status that the caller cannot accept into an error of its own.
 ///
 /// A later release can add variants, and it can add fields to a variant. Match
 /// with a wildcard arm, and bind the fields of a variant with `..`.
+///
+/// # Examples
+///
+/// ```
+/// use clawless_core::event::event_channel;
+/// use clawless_core::output::Output;
+/// use clawless_core::process::{Invocation, Process, RunProcessError};
+///
+/// # #[tokio::main]
+/// # async fn main() {
+/// let (sender, _receiver) = event_channel();
+/// let process = Process::builder().output(Output::new(sender)).build();
+///
+/// let error = process
+///     .run(Invocation::new("clawless-no-such-program"))
+///     .await
+///     .expect_err("no program has this name");
+///
+/// assert!(matches!(error, RunProcessError::UnrunnableCommand { .. }));
+/// # }
+/// ```
 ///
 /// [`Execution`]: kawauso_process::Execution
 /// [success]: kawauso_process::Execution::require_success
@@ -39,11 +60,11 @@ pub enum RunProcessError {
 
     /// The program could not be run
     ///
-    /// No program answers to the name, the working directory does not exist,
-    /// the operating system refused to start the program, or the run started
-    /// and its result could not be collected. The message is the one of the
-    /// underlying failure, because this layer knows nothing that the run does
-    /// not already state.
+    /// This variant has four causes. No program answers to the name, or the
+    /// working directory does not exist. The operating system refused to start
+    /// the program, or the run started and its result could not be collected.
+    /// The message is the one of the underlying failure, because this layer
+    /// knows nothing that the run does not already state.
     #[error(transparent)]
     #[non_exhaustive]
     UnrunnableCommand {
@@ -68,9 +89,10 @@ pub enum RunProcessError {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
 
@@ -92,7 +114,7 @@ mod tests {
     fn display_with_unreportable_output_names_the_command() {
         let error = RunProcessError::UnreportableOutput {
             invocation: Invocation::new("git").arg("status"),
-            source: SendError(crate::event::Event::Message("lost".to_owned())),
+            source: SendError::new(crate::event::Event::Message("lost".to_owned())),
         };
 
         let message = error.to_string();

@@ -1,4 +1,5 @@
-/// Greets the user by name
+//! The commands of this example
+
 mod greet;
 
 clawless::commands!();

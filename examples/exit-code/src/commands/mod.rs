@@ -1,4 +1,5 @@
-/// Checks that a version is a stable release
+//! The commands of this example
+
 mod check;
 
 clawless::commands!();

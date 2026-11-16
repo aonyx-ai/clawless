@@ -16,9 +16,9 @@ static NEXT_RUN_ID: AtomicU64 = AtomicU64::new(0);
 ///
 /// A command can run several programs at the same time, and the lines of those
 /// programs then reach the presenter interleaved. Every [`ProcessEvent`]
-/// carries this value so that a consumer can put a line back with the run that
-/// produced it, group the output of one program, and know when that program
-/// ended.
+/// carries this value. A consumer can therefore put a line back with the run
+/// that produced it and group the output of one program. It also knows when
+/// that program ended.
 ///
 /// The identity is Clawless's own, and it counts runs. It is not the
 /// [`ProcessId`] that the operating system assigns, which names the program
@@ -52,7 +52,7 @@ impl RunId {
     ///
     /// The counter wraps after `2^64` runs. An application that started a
     /// program every nanosecond would reach that point after more than five
-    /// hundred years, so the wrap is not a case that callers handle.
+    /// hundred years. The wrap is therefore not a case that callers handle.
     ///
     /// # Examples
     ///
@@ -99,9 +99,10 @@ impl Display for RunId {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
 

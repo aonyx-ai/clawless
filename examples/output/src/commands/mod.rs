@@ -1,4 +1,5 @@
-/// Counts words and emits the result as an artifact
+//! The commands of this example
+
 mod count;
 
 clawless::commands!();

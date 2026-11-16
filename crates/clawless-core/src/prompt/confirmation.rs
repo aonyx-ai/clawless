@@ -1,3 +1,5 @@
+//! The answer of a user to a confirmation
+
 /// The answer of a user to a [`Confirm`] prompt
 ///
 /// The answer is an enum and not a `bool`, so that a `match` on it names both answers.

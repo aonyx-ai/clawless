@@ -4,9 +4,10 @@
 //! different output flags. The case then asserts the exit code, the stdout, and the stderr of the
 //! run.
 
-// An assertion in a test panics by design. A `# Panics` section on every test
-// would repeat that and give the reader no information.
-#![allow(clippy::missing_panics_doc)]
+#![allow(
+    clippy::missing_panics_doc,
+    reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+)]
 
 #[test]
 fn exit_code() {

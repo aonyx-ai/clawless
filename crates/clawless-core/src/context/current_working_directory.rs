@@ -1,3 +1,5 @@
+//! Newtype for the directory that a command runs in
+
 use typed_fields::path;
 
 use crate::context::ContextError;
@@ -24,6 +26,17 @@ impl CurrentWorkingDirectory {
     ///
     /// Returns [`std::io::Error`] if the current directory cannot be determined from the
     /// environment.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::context::CurrentWorkingDirectory;
+    ///
+    /// let directory =
+    ///     CurrentWorkingDirectory::try_from_env().expect("the process has a directory");
+    ///
+    /// assert!(directory.get().is_absolute());
+    /// ```
     pub fn try_from_env() -> Result<CurrentWorkingDirectory, ContextError> {
         let cwd = std::env::current_dir()?;
         Ok(CurrentWorkingDirectory::new(cwd))

@@ -302,6 +302,7 @@ dependencies = [
 name = "clawless-derive"
 version = "0.8.0"
 dependencies = [
+ "bon",
  "darling",
  "indoc",
  "proc-macro2",

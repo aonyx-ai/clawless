@@ -1,16 +1,18 @@
-/// Generator for `#[application]` functions
+//! Code generators shared by the `#[command]` and `#[application]` macros
+
 pub(crate) mod application;
-/// Generator for `#[command]` functions
+#[cfg(test)]
+pub(crate) mod auto_traits;
 pub(crate) mod command;
 
-pub(crate) use application::ApplicationGenerator;
-pub(crate) use command::CommandGenerator;
 use darling::FromMeta;
 use darling::ast::NestedMeta;
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, format_ident, quote, quote_spanned};
 use syn::{Error, Expr, Ident, ItemFn, Lit, Meta, Result, ReturnType, Type};
 
+pub(crate) use self::application::ApplicationGenerator;
+pub(crate) use self::command::CommandGenerator;
 use crate::command_name::CommandName;
 use crate::inventory::inventory_name;
 
@@ -51,15 +53,15 @@ pub(crate) trait Generator {
 
     /// Returns the method call that turns the success value of the leaf into an `Exit`
     ///
-    /// The call carries the location of the first token of the return type. A leaf that returns
-    /// an unsupported success type, such as `CommandResult<u8>`, therefore gets its compiler error
-    /// on the return type and not on the attribute. The first token is the whole location, because
-    /// only a nightly compiler joins the spans of several tokens, and the error must read the same
-    /// on every toolchain.
+    /// The call carries the location of the first token of the return type. A leaf that returns an
+    /// unsupported success type, such as `CommandResult<u8>`, therefore gets its compiler error on
+    /// the return type. The error does not land on the attribute. The first token is the whole
+    /// location, because only a nightly compiler joins the spans of several tokens. The error must
+    /// read the same on every toolchain.
     ///
     /// The call keeps the hygiene of the macro, so lints still see it as generated code. With the
-    /// full span of the return type, Clippy would report the conversion of an `Exit` into itself
-    /// as a useless conversion in the code of the user.
+    /// full span of the return type, Clippy would report the conversion of an `Exit` into itself.
+    /// It would call that a useless conversion in the code of the user.
     fn map_into_exit(&self) -> TokenStream {
         let first_token = match &self.input().sig.output {
             ReturnType::Default => None,
@@ -137,38 +139,111 @@ pub(crate) trait Generator {
     }
 }
 
+/// Whether a command needs a subcommand
+///
+/// The attribute `require_subcommand` stands for [`Required`], and `require_subcommand = false`
+/// for [`Optional`]. A command without the attribute is [`Optional`].
+///
+/// [`Optional`]: SubcommandRequirement::Optional
+/// [`Required`]: SubcommandRequirement::Required
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+pub(crate) enum SubcommandRequirement {
+    /// The command body runs when the user gives no subcommand
+    #[default]
+    Optional,
+
+    /// Clap shows help instead of running the command body when the user gives no subcommand
+    Required,
+}
+
+impl FromMeta for SubcommandRequirement {
+    fn from_word() -> darling::Result<Self> {
+        Ok(Self::Required)
+    }
+
+    fn from_value(value: &Lit) -> darling::Result<Self> {
+        match value {
+            Lit::Bool(literal) => match literal.value() {
+                true => Ok(Self::Required),
+                false => Ok(Self::Optional),
+            },
+            _ => Err(darling::Error::unexpected_lit_type(value)),
+        }
+    }
+}
+
+/// The place of a command in the command tree
+///
+/// The attribute `root` stands for [`Root`], and `root = false` for [`Subcommand`]. A command
+/// without the attribute is a [`Subcommand`].
+///
+/// [`Root`]: Role::Root
+/// [`Subcommand`]: Role::Subcommand
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+pub(crate) enum Role {
+    /// A subcommand of another command, which registers itself with its parent
+    #[default]
+    Subcommand,
+
+    /// The entry point of the application, which registers with no parent
+    Root,
+}
+
+impl FromMeta for Role {
+    fn from_word() -> darling::Result<Self> {
+        Ok(Self::Root)
+    }
+
+    fn from_value(value: &Lit) -> darling::Result<Self> {
+        match value {
+            Lit::Bool(literal) => match literal.value() {
+                true => Ok(Self::Root),
+                false => Ok(Self::Subcommand),
+            },
+            _ => Err(darling::Error::unexpected_lit_type(value)),
+        }
+    }
+}
+
 /// Macro attributes parsed by darling from `#[command(...)]` and `#[application(...)]`
 ///
 /// Both macro flavors share the same attribute surface (`alias`, `require_subcommand`, `root`).
 /// The `Generator` trait's default methods read these values to configure the generated clap
-/// `Command`: aliases become `.visible_aliases(...)`, `require_subcommand` becomes
+/// `Command`. Aliases become `.visible_aliases(...)`, `require_subcommand` becomes
 /// `.arg_required_else_help(true)`, and `root` switches the about text to
 /// `clap::crate_description!()`.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, FromMeta)]
 pub(crate) struct Attributes {
     /// Shows help instead of the command body when the user gives no subcommand
     #[darling(default)]
-    require_subcommand: bool,
+    require_subcommand: SubcommandRequirement,
     /// Marks the entry point, which takes its about text from the crate description
     #[darling(default)]
-    root: bool,
+    root: Role,
     /// Alternative names that clap accepts for this command
     #[darling(default, multiple)]
     alias: Vec<String>,
 }
 
 impl Attributes {
-    /// When true, `build_command` adds `.arg_required_else_help(true)` so clap shows help instead
-    /// of running the command body when no subcommand is provided
+    /// Returns whether `build_command` adds `.arg_required_else_help(true)`, so that clap shows
+    /// help instead of running the command body when no subcommand is provided
     pub(crate) fn require_subcommand(&self) -> bool {
-        self.require_subcommand
+        match self.require_subcommand {
+            SubcommandRequirement::Optional => false,
+            SubcommandRequirement::Required => true,
+        }
     }
 
-    /// When true, `build_command` uses `clap::crate_description!()` for the about text instead of
-    /// the function's doc comment, and `InventoryGenerator::submit` skips registration since the
-    /// root is the entry point, not a subcommand
+    /// Returns whether this command is the root. `build_command` then uses
+    /// `clap::crate_description!()` for the about text instead of the function's doc comment.
+    /// `InventoryGenerator::submit` also skips registration, since the root is the entry point and
+    /// not a subcommand
     pub(crate) fn root(&self) -> bool {
-        self.root
+        match self.root {
+            Role::Subcommand => false,
+            Role::Root => true,
+        }
     }
 
     /// Aliases that `build_command` passes to `.visible_aliases(...)` on the clap `Command`
@@ -192,12 +267,14 @@ pub(crate) struct Documentation {
 }
 
 impl Documentation {
-    /// First line of the doc comment, used as clap's `.about()` text in subcommand listings
+    /// Returns the first line of the doc comment, which clap uses as `.about()` text in subcommand
+    /// listings
     pub(crate) fn short(&self) -> &str {
         &self.short
     }
 
-    /// All lines joined by newlines, used as clap's `.long_about()` text in `--help` output
+    /// Returns all lines joined by newlines, which clap uses as `.long_about()` text in `--help`
+    /// output
     pub(crate) fn long(&self) -> &str {
         &self.long
     }
@@ -240,9 +317,9 @@ pub(crate) fn parse_attributes(attrs: TokenStream, macro_name: &str) -> Result<A
 
 /// Extracts `///` doc comments from a function's attributes
 ///
-/// Walks the function's `#[doc = "..."]` attributes (which is how the compiler represents `///`
-/// comments) and collects them into a `Documentation` with separate short and long forms for
-/// clap's `.about()` and `.long_about()`.
+/// Walks the function's `#[doc = "..."]` attributes, which is how the compiler represents `///`
+/// comments. The function collects them into a `Documentation` with separate short and long
+/// forms for clap's `.about()` and `.long_about()`.
 pub(crate) fn extract_function_documentation(input_fn: &ItemFn) -> Option<Documentation> {
     let mut docs = Vec::new();
 
@@ -320,27 +397,25 @@ fn build_command(
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use indoc::indoc;
 
     use super::*;
 
+    fn assert_auto_traits<T: Send + Sync + Unpin>() {}
+
     #[test]
-    fn extract_function_documentation_with_single_line_comment() {
-        let input = quote! {
-            /// This is a test function
-            fn foo() {}
-        };
+    fn attributes_is_send_sync_and_unpin() {
+        assert_auto_traits::<Attributes>();
+    }
 
-        let input_fn = syn::parse2(input).unwrap();
-        let documentation = extract_function_documentation(&input_fn);
-
-        let documentation = documentation.expect("should have documentation");
-        assert_eq!("This is a test function", documentation.short());
-        assert_eq!("This is a test function", documentation.long());
+    #[test]
+    fn documentation_is_send_sync_and_unpin() {
+        assert_auto_traits::<Documentation>();
     }
 
     #[test]
@@ -360,7 +435,59 @@ mod tests {
         let documentation = extract_function_documentation(&input_fn);
 
         let documentation = documentation.expect("should have documentation");
-        assert_eq!("This is a test comment", documentation.short());
         assert_eq!(comment, documentation.long());
+    }
+
+    #[test]
+    fn extract_function_documentation_with_multiple_line_comment_has_first_line_as_short_form() {
+        let input = quote! {
+            /// This is a test comment
+            /// with multiple lines
+            fn foo() {}
+        };
+
+        let input_fn = syn::parse2(input).unwrap();
+        let documentation = extract_function_documentation(&input_fn);
+
+        let documentation = documentation.expect("should have documentation");
+        assert_eq!("This is a test comment", documentation.short());
+    }
+
+    #[test]
+    fn extract_function_documentation_with_single_line_comment() {
+        let input = quote! {
+            /// This is a test function
+            fn foo() {}
+        };
+
+        let input_fn = syn::parse2(input).unwrap();
+        let documentation = extract_function_documentation(&input_fn);
+
+        let documentation = documentation.expect("should have documentation");
+        assert_eq!("This is a test function", documentation.short());
+    }
+
+    #[test]
+    fn extract_function_documentation_with_single_line_comment_has_that_line_as_long_form() {
+        let input = quote! {
+            /// This is a test function
+            fn foo() {}
+        };
+
+        let input_fn = syn::parse2(input).unwrap();
+        let documentation = extract_function_documentation(&input_fn);
+
+        let documentation = documentation.expect("should have documentation");
+        assert_eq!("This is a test function", documentation.long());
+    }
+
+    #[test]
+    fn role_is_send_sync_and_unpin() {
+        assert_auto_traits::<Role>();
+    }
+
+    #[test]
+    fn subcommand_requirement_is_send_sync_and_unpin() {
+        assert_auto_traits::<SubcommandRequirement>();
     }
 }

@@ -1,14 +1,15 @@
 //! TUI application runner
 //!
 //! This module defines [`ApplicationRunner`], which encapsulates the full lifecycle of a TUI
-//! application: event channel creation, context construction, projection setup, signal handling,
-//! application execution, and the drain of the events that the application emitted. The `main!()`
-//! macro dispatches to `ApplicationRunner::run` when the resolved leaf is an application.
+//! application. The lifecycle covers event channel creation, context construction, projection
+//! setup, signal handling, application execution, and the drain of the events that the
+//! application emitted. The `main!()` macro dispatches to `ApplicationRunner::run` when the
+//! resolved leaf is an application.
 //!
 //! Application authors do not interact with this module directly. The `main!()` macro calls
 //! [`ApplicationRunner::run`] with the resolved matches and the leaf's exec function. The runner
-//! takes any callable, so a caller that builds its command tree at run time can dispatch to a
-//! closure that owns the application it resolved.
+//! takes any callable. A caller that builds its command tree at run time can therefore dispatch
+//! to a closure that owns the application it resolved.
 
 use std::future::Future;
 
@@ -24,11 +25,11 @@ use crate::projection::Projection;
 
 /// TUI application runner
 ///
-/// Encapsulates the lifecycle of running a TUI application: creating the event channel,
-/// constructing the [`Context`], building a [`Projection`] inside a Tokio runtime, registering
-/// signal handlers, and calling the application function. Unlike `CommandRunner`, there is no
-/// presenter — the application owns its own render loop and queries the projection for accumulated
-/// state.
+/// Encapsulates the lifecycle of running a TUI application. The runner creates the event
+/// channel, constructs the [`Context`], builds a [`Projection`] inside a Tokio runtime,
+/// registers signal handlers, and calls the application function. Unlike `CommandRunner`,
+/// there is no presenter. The application owns its own render loop and queries the projection
+/// for accumulated state.
 ///
 /// # Examples
 ///
@@ -60,30 +61,57 @@ impl ApplicationRunner {
     /// `tokio::spawn` to start the background event drain.
     ///
     /// Step 6 keeps shutdown whole. Dropping the runtime stops the drain wherever it happens to
-    /// be, so a runner that returned the moment the application did would leave the events of the
-    /// final moments unread. Awaiting the drain instead means the projection accounts for every
-    /// event that the application emitted.
+    /// be. A runner that returned the moment the application did would therefore leave the events
+    /// of the final moments unread. Awaiting the drain instead means the projection accounts for
+    /// every event that the application emitted.
     ///
     /// The drain ends because the application's [`Context`] carries the only [`EventSender`], and
-    /// returning drops it. An application that gives a clone of its [`Output`] to a task that it
-    /// never awaits holds the channel open, and this runner then waits for a drain that cannot
-    /// end. `CommandRunner` expects the same of a command.
+    /// returning drops it. The runner drops the future of the application as soon as it returns,
+    /// whatever the future still holds. The channel therefore closes before the runner awaits the
+    /// drain. An application that gives a clone of its [`Output`] to a task that it never awaits
+    /// holds the channel open. This runner then waits for a drain that cannot end.
+    /// `CommandRunner` expects the same of a command.
     ///
     /// The runner returns the [`Exit`] of the application. If the application fails, or if the
-    /// runner cannot build the [`Context`] or the Tokio runtime, the [`Exit`] has the exit code 1
-    /// and the text of the error. The `main` function returns the [`Exit`] in a `ProcessExit`, and
-    /// the process writes its text only after the application has returned and the drain has
-    /// ended.
+    /// runner cannot build the [`Context`] or the Tokio runtime, the [`Exit`] has the exit code 1.
+    /// Its text is the text of the error. The `main` function returns the [`Exit`] in a
+    /// `ProcessExit`. The process writes its text only after the application has returned and the
+    /// drain has ended.
+    ///
+    /// A drain that panicked does not change the [`Exit`]. A join fails only when the drain task
+    /// panicked, and the drain panics only on a poisoned lock, which takes a panic elsewhere to
+    /// cause. The result of the application is already in hand, and reporting the join failure
+    /// in its place would bury the failure that started it.
     ///
     /// # Arguments
     ///
-    /// * `matches` — The parsed [`ArgMatches`] for this application leaf, as resolved by the
+    /// * `matches`: The parsed [`ArgMatches`] for this application leaf, as resolved by the
     ///   subcommand tree walk.
-    /// * `exec` — Executes the application with the given matches, context, and projection. The
+    /// * `exec`: Executes the application with the given matches, context, and projection. The
     ///   `#[application]` macro generates a function for this, and any other callable works. A
     ///   caller that builds its command tree at run time passes a closure that owns the
     ///   application it resolved. The application returns `()` for the exit code 0, or an
     ///   [`Exit`] to choose the exit code and the text.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::exit::Exit;
+    /// use clawless_tui::runner::ApplicationRunner;
+    ///
+    /// let matches = clap::Command::new("dashboard").get_matches_from(["dashboard"]);
+    ///
+    /// let exit = ApplicationRunner::run(matches, |_matches, context, projection| async move {
+    ///     context.output().message("ready").await?;
+    ///     drop(context);
+    ///     projection.wait_until_complete().await;
+    ///
+    ///     assert_eq!(projection.entries().len(), 1);
+    ///     Ok(())
+    /// });
+    ///
+    /// assert_eq!(exit, Exit::from(()));
+    /// ```
     ///
     /// [`ArgMatches`]: clap::ArgMatches
     /// [`Cancellation`]: clawless_core::cancellation::Cancellation
@@ -106,7 +134,8 @@ impl ApplicationRunner {
     /// # Errors
     ///
     /// Returns an error if context construction fails (e.g., the current working directory cannot
-    /// be determined), if the Tokio runtime cannot be created, or if the application itself fails.
+    /// be determined). Returns an error if the Tokio runtime cannot be created, or if the
+    /// application itself fails.
     fn try_run<E, F, T>(matches: clap::ArgMatches, exec: E) -> anyhow::Result<Exit>
     where
         E: FnOnce(clap::ArgMatches, Context, Projection) -> F,
@@ -130,17 +159,9 @@ impl ApplicationRunner {
 
             tokio::spawn(wait_for_shutdown(cancellation));
 
-            // Binding the result ends the statement that owns the application's future, so the
-            // future is dropped here whatever it still holds, and with it the `Context` that
-            // carries the only `EventSender`. That closes the channel, which is what lets the
-            // drain below finish rather than wait for an event that can no longer arrive.
             let result = exec(matches, context, projection).await;
 
             if let Some(drain) = drain {
-                // A join fails when the task panicked, and the drain panics only on a poisoned
-                // lock, which takes a panic elsewhere to cause. The application's own result is
-                // already in hand, and reporting a consequence in its place would bury the
-                // failure that started it.
                 drop(drain.await);
             }
 
@@ -151,9 +172,10 @@ impl ApplicationRunner {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use std::process::ExitCode;
     use std::sync::Arc;
@@ -161,13 +183,15 @@ mod tests {
 
     use super::*;
 
-    // The count travels out through an atomic because the runner owns the projection and moves it
-    // into the application, which leaves a caller nothing to read afterwards. The application is
-    // also the only place worth asserting from: a closing frame is drawn before the application
-    // returns, so that is where completeness has to hold.
-    //
-    // Three hundred events overrun the 256-slot channel, so the run also covers a drain that has
-    // to keep pace with a producer the channel is holding back.
+    /// Shows that an application reads a complete final frame
+    ///
+    /// The runner owns the projection and moves it into the application, which leaves a caller
+    /// nothing to read afterwards. The count therefore travels out through an atomic. The
+    /// application is also the only place worth asserting from. A closing frame is drawn before
+    /// the application returns, so that is where completeness has to hold.
+    ///
+    /// Three hundred events overrun the 256-slot channel. The run therefore also covers a drain
+    /// that has to keep pace with a producer the channel is holding back.
     #[test]
     fn run_lets_an_application_read_a_complete_final_frame() {
         let matches = clap::Command::new("test").get_matches_from(["test"]);

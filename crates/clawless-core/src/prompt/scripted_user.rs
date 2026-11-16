@@ -1,3 +1,5 @@
+//! A user for tests, who answers every prompt from a script
+
 use std::collections::VecDeque;
 
 use super::{AnswerPromptError, ScriptedAnswer};
@@ -74,6 +76,24 @@ impl ScriptedUser {
     /// output. It returns every event that was not a prompt, in the order of arrival.
     ///
     /// Run this in a task of its own, because the command waits for each answer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::{Event, event_channel};
+    /// use clawless_core::prompt::ScriptedUser;
+    ///
+    /// # #[tokio::main(flavor = "current_thread")]
+    /// # async fn main() {
+    /// let (sender, receiver) = event_channel();
+    /// sender.send(Event::Message("compiling".to_string())).await.expect("the receiver is alive");
+    /// drop(sender);
+    ///
+    /// let events = ScriptedUser::new([]).attend(receiver).await;
+    ///
+    /// assert!(matches!(events.as_slice(), [Event::Message(text)] if text == "compiling"));
+    /// # }
+    /// ```
     pub async fn attend(mut self, mut receiver: EventReceiver) -> Vec<Event> {
         let mut events = Vec::new();
 
@@ -119,9 +139,10 @@ impl ScriptedUser {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
     use crate::context::Interactivity;
@@ -170,19 +191,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn attend_answers_in_the_order_of_the_script() {
-        let (prompt, _user) = scripted([
-            ScriptedAnswer::Confirm(Confirmation::Yes),
-            ScriptedAnswer::Confirm(Confirmation::No),
-        ]);
-        drop(prompt.confirm("Release?").await);
-
-        let answer = prompt.confirm("Publish?").await.expect("should answer");
-
-        assert_eq!(answer, Confirmation::No);
-    }
-
-    #[tokio::test]
     async fn attend_answers_a_selection_from_the_script() {
         let (prompt, _user) = scripted([ScriptedAnswer::Select(1)]);
 
@@ -201,6 +209,19 @@ mod tests {
         let answer = prompt.text("Title").await.expect("should answer");
 
         assert_eq!(answer, "Fix the race");
+    }
+
+    #[tokio::test]
+    async fn attend_answers_in_the_order_of_the_script() {
+        let (prompt, _user) = scripted([
+            ScriptedAnswer::Confirm(Confirmation::Yes),
+            ScriptedAnswer::Confirm(Confirmation::No),
+        ]);
+        drop(prompt.confirm("Release?").await);
+
+        let answer = prompt.confirm("Publish?").await.expect("should answer");
+
+        assert_eq!(answer, Confirmation::No);
     }
 
     #[tokio::test]

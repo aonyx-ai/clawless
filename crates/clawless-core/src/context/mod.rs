@@ -1,11 +1,11 @@
 //! Context for Clawless commands
 //!
-//! This module defines the [`Context`] struct, which provides information about the environment
+//! This module defines the [`Context`] struct. It provides information about the environment
 //! that Clawless commands are executed in, access to shared resources like loggers, and
 //! configuration settings.
 //!
-//! For information on the context that is available to commands, see the fields and methods of the
-//! [`Context`] struct as well as the types defined in this module.
+//! The fields and methods of the [`Context`] struct, and the types defined in this module,
+//! describe the context that is available to commands.
 
 use bon::bon;
 use getset::{CopyGetters, Getters};
@@ -18,11 +18,8 @@ use crate::output::Output;
 use crate::process::Process;
 use crate::prompt::Prompt;
 
-/// Newtype for the directory that a command runs in
 mod current_working_directory;
-/// Errors that occur when Clawless builds a [`Context`]
 mod error;
-/// Whether a user is present who can answer the application
 mod interactivity;
 
 /// Context for Clawless commands
@@ -120,8 +117,8 @@ impl Context {
     /// run when the cancellation token of this context is cancelled. A command therefore gets live
     /// output and cooperative shutdown without wiring either of them itself.
     ///
-    /// Each call builds a handle over the same channel and the same token, so a command can call
-    /// this method wherever it runs a program instead of holding the handle.
+    /// Each call builds a handle over the same channel and the same token. A command can
+    /// therefore call this method wherever it runs a program, instead of holding the handle.
     ///
     /// The handle takes the default grace period, which is the time a program gets to end itself
     /// before Clawless kills it. A command that drives a program needing longer builds its own
@@ -178,9 +175,10 @@ impl Context {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use std::path::Path;
 
