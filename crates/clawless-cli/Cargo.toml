@@ -12,6 +12,7 @@ categories = ["command-line-interface"]
 keywords = ["cli", "framework"]
 
 [dependencies]
+anstyle-query = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 bon = { workspace = true }

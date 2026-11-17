@@ -169,6 +169,34 @@ fn detect_styling(destination: Destination, preference: ColorPreference) -> Styl
     }
 }
 
+/// Keeps a styling only if the terminal of the standard output can show escape sequences
+///
+/// A Windows console shows escape sequences as styles only after the process enables their
+/// processing on it, and a legacy console refuses. `enable` asks the console to process them.
+/// It returns [`None`] where no console needs to be asked, which is every platform other than
+/// Windows, and whether the console agreed otherwise. A refusal makes the text plain, so that
+/// the console does not print the escape sequences as text.
+///
+/// A plain styling needs no console, and text for a destination other than a terminal reaches
+/// no console, so neither asks. Such styled text exists only where the environment forces
+/// colors, and then the escape sequences belong in the file or the pipe.
+fn enable_escape_sequences(
+    styling: Styling,
+    destination: Destination,
+    enable: impl FnOnce() -> Option<bool>,
+) -> Styling {
+    match (styling, destination) {
+        (Styling::Plain, Destination::Terminal) => Styling::Plain,
+        (Styling::Plain, Destination::Other) => Styling::Plain,
+        (Styling::Styled, Destination::Other) => Styling::Styled,
+        (Styling::Styled, Destination::Terminal) => match enable() {
+            None => Styling::Styled,
+            Some(true) => Styling::Styled,
+            Some(false) => Styling::Plain,
+        },
+    }
+}
+
 /// CLI command runner
 ///
 /// Encapsulates the lifecycle of running a CLI command: creating the event channel, constructing
@@ -211,6 +239,11 @@ impl CommandRunner {
     /// make it plain, and a `CLICOLOR` other than `0` keeps a dumb terminal styled. The command
     /// does not see the [`Styling`]: a value offers its forms, and the presenter chooses one.
     ///
+    /// On Windows, the runner enables the processing of escape sequences on the console before
+    /// it chooses styled text for a terminal. The call asks the consoles of the standard output
+    /// and of the standard error, and the text is plain if either of them refuses, such as a
+    /// legacy console.
+    ///
     /// Output flags (`--quiet`, `--verbose`, `--json`) are augmented at the root level by
     /// `main!()` with `.global(true)`, so they are available in every leaf's [`ArgMatches`].
     ///
@@ -245,7 +278,13 @@ impl CommandRunner {
     {
         let interactivity = detect_interactivity(&std::io::stdin(), &std::io::stderr());
         let preference = ColorPreference::from_variables(&ColorVariables::from_env());
-        let styling = detect_styling(Destination::of(&std::io::stdout()), preference);
+        let destination = Destination::of(&std::io::stdout());
+        let styling = detect_styling(destination, preference);
+        let styling = enable_escape_sequences(
+            styling,
+            destination,
+            anstyle_query::windows::enable_ansi_colors,
+        );
 
         Self::run_with(matches, exec, interactivity, styling)
     }
@@ -606,6 +645,47 @@ mod tests {
         let styling = detect_styling(Destination::Other, ColorPreference::Unstated);
 
         assert_eq!(styling, Styling::Plain);
+    }
+
+    #[test]
+    fn enable_escape_sequences_with_a_console_that_agrees_returns_styled() {
+        let styling =
+            enable_escape_sequences(Styling::Styled, Destination::Terminal, || Some(true));
+
+        assert_eq!(styling, Styling::Styled);
+    }
+
+    #[test]
+    fn enable_escape_sequences_with_a_console_that_refuses_returns_plain() {
+        let styling =
+            enable_escape_sequences(Styling::Styled, Destination::Terminal, || Some(false));
+
+        assert_eq!(styling, Styling::Plain);
+    }
+
+    #[test]
+    fn enable_escape_sequences_with_plain_styling_does_not_ask_the_console() {
+        let styling = enable_escape_sequences(Styling::Plain, Destination::Terminal, || {
+            panic!("should not ask the console")
+        });
+
+        assert_eq!(styling, Styling::Plain);
+    }
+
+    #[test]
+    fn enable_escape_sequences_without_a_console_to_ask_returns_styled() {
+        let styling = enable_escape_sequences(Styling::Styled, Destination::Terminal, || None);
+
+        assert_eq!(styling, Styling::Styled);
+    }
+
+    #[test]
+    fn enable_escape_sequences_without_a_terminal_does_not_ask_the_console() {
+        let styling = enable_escape_sequences(Styling::Styled, Destination::Other, || {
+            panic!("should not ask the console")
+        });
+
+        assert_eq!(styling, Styling::Styled);
     }
 
     #[test]
