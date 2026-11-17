@@ -20,6 +20,9 @@ use crate::event::SendError;
 /// A later release can add variants, and it can add fields to a variant. Match
 /// with a wildcard arm, and bind the fields of a variant with `..`.
 ///
+/// A variant holds its command in a [`Box`]. A [`Result`] that carries the
+/// error therefore stays small, whatever the size of the command.
+///
 /// [`Execution`]: kawauso_process::Execution
 /// [success]: kawauso_process::Execution::require_success
 #[derive(Debug, Error)]
@@ -34,7 +37,7 @@ pub enum RunProcessError {
     #[non_exhaustive]
     CancelledRun {
         /// The command that was cancelled
-        invocation: Invocation,
+        invocation: Box<Invocation>,
     },
 
     /// The program could not be run
@@ -59,7 +62,7 @@ pub enum RunProcessError {
     #[non_exhaustive]
     UnreportableOutput {
         /// The command whose output could not be reported
-        invocation: Invocation,
+        invocation: Box<Invocation>,
 
         /// The cause of the failure
         source: SendError,
@@ -77,7 +80,7 @@ mod tests {
     #[test]
     fn display_with_a_cancelled_run_names_the_command() {
         let error = RunProcessError::CancelledRun {
-            invocation: Invocation::new("git").arg("status"),
+            invocation: Box::new(Invocation::new("git").arg("status")),
         };
 
         let message = error.to_string();
@@ -91,7 +94,7 @@ mod tests {
     #[test]
     fn display_with_unreportable_output_names_the_command() {
         let error = RunProcessError::UnreportableOutput {
-            invocation: Invocation::new("git").arg("status"),
+            invocation: Box::new(Invocation::new("git").arg("status")),
             source: SendError(crate::event::Event::Message("lost".to_owned())),
         };
 
