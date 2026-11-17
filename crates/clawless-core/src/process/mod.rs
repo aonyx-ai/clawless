@@ -252,7 +252,9 @@ impl Process {
         drop(run.stop(self.grace_period).await);
         drop(self.end(id, &invocation, Outcome::Cancelled, started).await);
 
-        RunProcessError::CancelledRun { invocation }
+        RunProcessError::CancelledRun {
+            invocation: Box::new(invocation),
+        }
     }
 
     /// Reports every line of the program until it stops writing
@@ -357,7 +359,10 @@ impl Process {
 
         self.end(id, &invocation, outcome, started)
             .await
-            .map_err(|source| RunProcessError::UnreportableOutput { invocation, source })?;
+            .map_err(|source| RunProcessError::UnreportableOutput {
+                invocation: Box::new(invocation),
+                source,
+            })?;
 
         Ok(execution)
     }
@@ -404,7 +409,7 @@ impl Process {
     ) -> Result<(), RunProcessError> {
         self.output.process_event(event).await.map_err(|source| {
             RunProcessError::UnreportableOutput {
-                invocation: invocation.clone(),
+                invocation: Box::new(invocation.clone()),
                 source,
             }
         })
