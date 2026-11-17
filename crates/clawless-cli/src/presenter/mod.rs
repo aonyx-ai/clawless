@@ -22,6 +22,7 @@ use crate::error::CommandResult;
 
 mod line_question;
 mod line_reader;
+mod screen;
 mod terminal;
 
 /// Output port for rendering command output
