@@ -463,7 +463,11 @@ mod tests {
         while let Some(event) = receiver.recv().await {
             match event {
                 Event::Process(event) => events.push(*event),
-                Event::Message(_) | Event::Detail(_) | Event::Artifact(_) | Event::Prompt(_) => {}
+                Event::Message(_)
+                | Event::Detail(_)
+                | Event::Artifact(_)
+                | Event::Prompt(_)
+                | Event::Terminal(_) => {}
             }
         }
 
@@ -705,9 +709,11 @@ mod tests {
                     ProcessEvent::Started { .. } => false,
                     ProcessEvent::Finished { .. } => false,
                 },
-                Event::Message(_) | Event::Detail(_) | Event::Artifact(_) | Event::Prompt(_) => {
-                    false
-                }
+                Event::Message(_)
+                | Event::Detail(_)
+                | Event::Artifact(_)
+                | Event::Prompt(_)
+                | Event::Terminal(_) => false,
             };
 
             if ready {
@@ -931,9 +937,11 @@ mod tests {
                     ProcessEvent::Started { .. } => false,
                     ProcessEvent::Finished { .. } => false,
                 },
-                Event::Message(_) | Event::Detail(_) | Event::Artifact(_) | Event::Prompt(_) => {
-                    false
-                }
+                Event::Message(_)
+                | Event::Detail(_)
+                | Event::Artifact(_)
+                | Event::Prompt(_)
+                | Event::Terminal(_) => false,
             };
 
             if ready {
