@@ -22,6 +22,9 @@ tokio = { workspace = true }
 tokio-util = { workspace = true }
 typed-fields = { workspace = true }
 
+[features]
+test-support = []
+
 [dev-dependencies]
 serde_json = { workspace = true }
 tempfile = { workspace = true }
