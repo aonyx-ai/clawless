@@ -90,6 +90,12 @@ reader already knows from the [output behavior matrix][output]:
 - `--json` redirects messages to stderr and serializes artifacts as JSON to
   stdout
 
+`TerminalPresenter` also lends the terminal to a program that takes it over,
+such as an editor that a command starts with
+[`run_interactive`][external-programs]. It writes the output that came before
+the request, lets the program draw on stderr, and writes nothing more until the
+program ends.
+
 [`CommandRunner`][command-runner] wires all of this automatically for
 `#[command]` functions. It creates the event channel, wraps the sender in
 `Output`, configures a `TerminalPresenter` from the CLI flags, and runs the
@@ -118,6 +124,11 @@ The key query methods are:
 
 Query results are cloned snapshots, so the render loop never blocks the
 background drain task.
+
+A projection cannot ask the user a question, and it cannot lend the terminal to
+a program that takes it over, because the application draws on the terminal
+itself. It drops both kinds of request, so a prompt and an interactive run fail
+inside a TUI application.
 
 [`ApplicationRunner`][application-runner] wires this for `#[application]`
 functions. It creates the event channel, builds the context, creates the
@@ -154,6 +165,7 @@ later embed them in a TUI dashboard without changing any command code.
 [entry]: https://docs.rs/clawless-tui/latest/clawless_tui/projection/enum.Entry.html
 [event-receiver]: https://docs.rs/clawless-core/latest/clawless_core/event/struct.EventReceiver.html
 [event-sender]: https://docs.rs/clawless-core/latest/clawless_core/event/struct.EventSender.html
+[external-programs]: ./external-programs#programs-that-take-over-the-terminal
 [macros]: ./macros
 [output]: ./output
 [output-type]: https://docs.rs/clawless/latest/clawless/output/struct.Output.html

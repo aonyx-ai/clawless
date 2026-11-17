@@ -164,6 +164,83 @@ treat them differently:
 A command that treats cancellation as an orderly end matches `CancelledRun` and
 returns `Ok(())`.
 
+## Programs That Take Over the Terminal
+
+An editor, a pager, or `ssh` draws on the terminal and reads the keys of the
+user. Capturing its output would break it, so run such a program with
+`run_interactive`:
+
+```rust
+let status = context
+    .process()
+    .run_interactive(Invocation::new("vi").arg("CHANGELOG.md"))
+    .await
+    .context("edit the changelog")?;
+
+if !status.success() {
+    message!("the edit was abandoned");
+}
+```
+
+The run borrows the terminal from the presenter. The presenter first writes
+everything your command sent before the request, and then it writes nothing
+until the program ends. Events that other tasks send in the meantime wait in the
+channel and appear after the program.
+
+The program reads the standard input and writes its errors to the standard
+error of your application. Its standard output goes to the standard error as
+well, because the standard output of your application carries the result of the
+command. A user who runs `mycli edit > result.json` therefore still sees the
+editor, and the file holds only the result. When the standard error is not a
+terminal, as with `2>/dev/null`, the program draws on the standard output
+instead.
+
+Clawless captures nothing, so the run returns the exit status of the program
+and no `Execution`. The start and the end of the run reach the presenter once
+the program has ended, so `--verbose` shows the command after the editor
+closes.
+
+On Unix, the program runs in a process group of its own and holds the
+foreground of the terminal. Ctrl+C, Ctrl+\\, and Ctrl+Z reach the program
+alone. Ctrl+C in a pager such as `less` therefore reaches only the pager, and
+it does not cancel your command. On Windows, every program on the console
+receives Ctrl+C, so there it cancels your command as well.
+
+Cancellation from another source, such as `SIGTERM`, ends the program as it
+ends any other run. Clawless asks the whole process group to end and kills it
+after the grace period, so a wrapper such as `sh -c` leaves nothing behind. A
+program that Clawless kills cannot restore the terminal, which can leave the
+terminal of the user in a state that needs a `reset`.
+
+The presenter lends the terminal only when there is one. It refuses when the
+standard input is not a terminal, or when neither output stream is one, as in CI
+or in a pipe. The run then fails with `UnlentTerminal`, and the program does not
+start. A test that runs your command without a terminal therefore sees the
+refusal, even with `EDITOR=true`. Test the refusal there, and try the editor in
+a real terminal.
+
+Only the terminal presenter lends the terminal. A [TUI application][rendering]
+draws on the terminal itself, so its projection drops the request, and so does
+the `ScriptedUser` of a test.
+
+`run_interactive` fails in these ways:
+
+| Variant                        | Meaning                                                           |
+| ------------------------------ | ----------------------------------------------------------------- |
+| `CancelledRun`                 | Cancellation stopped the run, before or after the start           |
+| `UnlentTerminal`               | The presenter refused the terminal, so the program did not run    |
+| `UnrunnableCommand`            | The program did not start, or its end could not be waited for     |
+| `UndeliverableTerminalRequest` | The presenter stopped listening before the program started        |
+| `UnreportableRun`              | The presenter stopped listening, and the error carries the status |
+
+`UnlentTerminal` carries a `Refusal` that names the reason:
+
+| Refusal           | Meaning                                                         |
+| ----------------- | --------------------------------------------------------------- |
+| `DroppedRequest`  | The presenter does not lend the terminal, as in a TUI or a test |
+| `MissingTerminal` | The application has no terminal for the program                 |
+| `PendingRead`     | A prompt that your command abandoned still reads the terminal   |
+
 ## Why it works this way
 
 **Pipes never fill.** A program that writes more than a pipe holds stops until
@@ -180,6 +257,8 @@ terminal, into a TUI panel, or into a test harness. That is the same property
 
 **Standard input is null.** A program that asks for a password sees the end of
 its input at once and ends, instead of hanging while nobody types an answer.
+A program that needs the user runs through `run_interactive` instead, which
+makes that choice visible in the code.
 
 ## What's next
 

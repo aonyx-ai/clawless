@@ -1,0 +1,13 @@
+bin.name = "process"
+args = ["edit", "notes.md"]
+env.add.EDITOR = "true"
+status.code = 1
+stdout = """
+opening notes.md
+"""
+stderr = """
+Error: run the editor
+
+Caused by:
+    the terminal was not lent to the command `sh -c [..] sh notes.md`: the application has no terminal for the program
+"""

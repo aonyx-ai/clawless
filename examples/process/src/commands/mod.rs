@@ -1,3 +1,4 @@
+mod edit;
 /// Runs another program and reports what it produced
 mod run;
 
