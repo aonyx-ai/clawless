@@ -9,12 +9,15 @@
 //! any callable, so a caller that builds its command tree at run time can dispatch to a closure
 //! that owns the command it resolved.
 
+use std::env;
+use std::ffi::{OsStr, OsString};
 use std::future::Future;
 use std::io::IsTerminal;
 
+use bon::Builder;
 use clawless_core::cancellation::Cancellation;
 use clawless_core::context::{Context, Interactivity};
-use clawless_core::event::event_channel;
+use clawless_core::event::{Styling, event_channel};
 use clawless_core::exit::Exit;
 use clawless_core::output::Output;
 use clawless_core::signal::wait_for_shutdown;
@@ -34,6 +37,135 @@ fn detect_interactivity(input: &impl IsTerminal, display: &impl IsTerminal) -> I
         (true, false) => Interactivity::NonInteractive,
         (false, true) => Interactivity::NonInteractive,
         (false, false) => Interactivity::NonInteractive,
+    }
+}
+
+/// The variables of the environment that state a preference for the colors of the output
+///
+/// Each field holds the value of one variable, or [`None`] when the variable is not set.
+/// [`CommandRunner::run`] reads them from the environment of the process, and a test builds
+/// them.
+#[derive(Clone, Eq, PartialEq, Debug, Builder)]
+struct ColorVariables {
+    /// The value of `NO_COLOR`, which turns colors off
+    #[builder(into)]
+    no_color: Option<OsString>,
+
+    /// The value of `CLICOLOR_FORCE`, which turns colors on whatever the stream is
+    #[builder(into)]
+    clicolor_force: Option<OsString>,
+
+    /// The value of `CLICOLOR`, which turns colors off with `0` and asserts support otherwise
+    #[builder(into)]
+    clicolor: Option<OsString>,
+
+    /// The value of `TERM`, the kind of terminal, which is `dumb` for one without colors
+    #[builder(into)]
+    term: Option<OsString>,
+}
+
+impl ColorVariables {
+    /// Reads the variables from the environment of the process
+    fn from_env() -> Self {
+        Self {
+            no_color: env::var_os("NO_COLOR"),
+            clicolor_force: env::var_os("CLICOLOR_FORCE"),
+            clicolor: env::var_os("CLICOLOR"),
+            term: env::var_os("TERM"),
+        }
+    }
+}
+
+/// What the environment of the process asks for the colors of the output
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+enum ColorPreference {
+    /// The environment turns colors off, and the text is plain whatever the stream is
+    Disabled,
+    /// `CLICOLOR_FORCE` turns colors on, and the text is styled whatever the stream is
+    Forced,
+    /// The environment states nothing that decides, and the stream decides
+    Unstated,
+}
+
+impl ColorPreference {
+    /// Reads the preference from the variables of the environment
+    ///
+    /// A variable that is not set, or is set to the empty string, states nothing. The rules
+    /// follow `NO_COLOR` and the `CLICOLOR` convention, in this order:
+    ///
+    /// 1. `NO_COLOR` turns colors off with any value. It wins over every other variable, so that
+    ///    turning colors off always works.
+    /// 2. `CLICOLOR_FORCE` turns colors on with any value except `0`.
+    /// 3. `CLICOLOR` turns colors off with `0`. Any other value states that the terminal supports
+    ///    colors, and the stream decides.
+    /// 4. `TERM=dumb` turns colors off, because such a terminal shows escape sequences as text.
+    fn from_variables(variables: &ColorVariables) -> Self {
+        let ColorVariables {
+            no_color,
+            clicolor_force,
+            clicolor,
+            term,
+        } = variables;
+
+        if stated(no_color).is_some() {
+            return Self::Disabled;
+        }
+        if stated(clicolor_force).is_some_and(|value| value != "0") {
+            return Self::Forced;
+        }
+
+        let Some(clicolor) = stated(clicolor) else {
+            return match stated(term).is_some_and(|term| term == "dumb") {
+                true => Self::Disabled,
+                false => Self::Unstated,
+            };
+        };
+
+        match clicolor == "0" {
+            true => Self::Disabled,
+            false => Self::Unstated,
+        }
+    }
+}
+
+/// Returns the value of a variable, or [`None`] if the variable is not set or is empty
+fn stated(value: &Option<OsString>) -> Option<&OsStr> {
+    value.as_deref().filter(|value| !value.is_empty())
+}
+
+/// Where the standard output of the process goes
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+enum Destination {
+    /// A terminal, which shows escape sequences as styles
+    Terminal,
+    /// A file, a pipe, or another stream that is not a terminal
+    Other,
+}
+
+impl Destination {
+    /// Reports where the given stream goes
+    fn of(stream: &impl IsTerminal) -> Self {
+        match stream.is_terminal() {
+            true => Self::Terminal,
+            false => Self::Other,
+        }
+    }
+}
+
+/// Chooses the styling of the text that the presenter writes to the standard output
+///
+/// The presenter writes artifacts, messages, and details to the standard output in text mode.
+/// Styled text belongs on a terminal. A file or a pipe gets plain text, so that a reader or a
+/// tool does not have to remove escape sequences. The preference of the environment overrides
+/// the destination.
+fn detect_styling(destination: Destination, preference: ColorPreference) -> Styling {
+    match preference {
+        ColorPreference::Disabled => Styling::Plain,
+        ColorPreference::Forced => Styling::Styled,
+        ColorPreference::Unstated => match destination {
+            Destination::Terminal => Styling::Styled,
+            Destination::Other => Styling::Plain,
+        },
     }
 }
 
@@ -60,7 +192,8 @@ impl CommandRunner {
     ///
     /// Sets up the command lifecycle:
     ///
-    /// 1. Detects whether a user is present who can answer the application
+    /// 1. Detects whether a user is present who can answer the application, and whether the
+    ///    text of the command is styled
     /// 2. Creates a [`Cancellation`] token for cooperative shutdown
     /// 3. Extracts output flags from the pre-parsed argument matches
     /// 4. Creates an event channel and builds the [`Context`]
@@ -70,6 +203,13 @@ impl CommandRunner {
     ///
     /// A user is present when the standard input and the standard error are both terminals. The
     /// [`Context`] carries the result as its [`Interactivity`].
+    ///
+    /// In text mode, the presenter writes artifacts, messages, and details styled when the
+    /// standard output is a terminal, and plain otherwise. The environment overrides the stream.
+    /// A non-empty `NO_COLOR` makes the text plain and wins over every other variable. A
+    /// non-empty `CLICOLOR_FORCE` other than `0` makes it styled. `CLICOLOR=0` and `TERM=dumb`
+    /// make it plain, and a `CLICOLOR` other than `0` keeps a dumb terminal styled. The command
+    /// does not see the [`Styling`]: a value offers its forms, and the presenter chooses one.
     ///
     /// Output flags (`--quiet`, `--verbose`, `--json`) are augmented at the root level by
     /// `main!()` with `.global(true)`, so they are available in every leaf's [`ArgMatches`].
@@ -95,6 +235,7 @@ impl CommandRunner {
     /// [`Context`]: clawless_core::context::Context
     /// [`Exit`]: clawless_core::exit::Exit
     /// [`Interactivity`]: clawless_core::context::Interactivity
+    /// [`Styling`]: clawless_core::event::Styling
     /// [`TerminalPresenter`]: crate::presenter::TerminalPresenter
     pub fn run<E, F, T>(matches: clap::ArgMatches, exec: E) -> Exit
     where
@@ -103,21 +244,29 @@ impl CommandRunner {
         T: Into<Exit>,
     {
         let interactivity = detect_interactivity(&std::io::stdin(), &std::io::stderr());
+        let preference = ColorPreference::from_variables(&ColorVariables::from_env());
+        let styling = detect_styling(Destination::of(&std::io::stdout()), preference);
 
-        Self::run_with(matches, exec, interactivity)
+        Self::run_with(matches, exec, interactivity, styling)
     }
 
-    /// Runs a CLI command to completion for the given interactivity
+    /// Runs a CLI command to completion for the given interactivity and styling
     ///
-    /// [`CommandRunner::run`] detects the interactivity and calls this function. A test calls
-    /// this function directly, because the streams of a test are never terminals.
-    fn run_with<E, F, T>(matches: clap::ArgMatches, exec: E, interactivity: Interactivity) -> Exit
+    /// [`CommandRunner::run`] detects the interactivity and the styling, and calls this function.
+    /// A test calls this function directly, because the streams of a test are never terminals.
+    fn run_with<E, F, T>(
+        matches: clap::ArgMatches,
+        exec: E,
+        interactivity: Interactivity,
+        styling: Styling,
+    ) -> Exit
     where
         E: FnOnce(clap::ArgMatches, Context) -> F,
         F: Future<Output = CommandResult<T>> + Send + 'static,
         T: Into<Exit>,
     {
-        Self::try_run(matches, exec, interactivity).unwrap_or_else(|error| Exit::from_error(&error))
+        Self::try_run(matches, exec, interactivity, styling)
+            .unwrap_or_else(|error| Exit::from_error(&error))
     }
 
     /// Runs a CLI command to completion and returns its exit, or the error that ended it
@@ -130,6 +279,7 @@ impl CommandRunner {
         matches: clap::ArgMatches,
         exec: E,
         interactivity: Interactivity,
+        styling: Styling,
     ) -> CommandResult<Exit>
     where
         E: FnOnce(clap::ArgMatches, Context) -> F,
@@ -154,6 +304,7 @@ impl CommandRunner {
             .verbosity(output_flags.verbosity())
             .mode(output_flags.mode())
             .interactivity(interactivity)
+            .styling(styling)
             .build();
 
         let rt = tokio::runtime::Runtime::new().context("start the async runtime")?;
@@ -182,20 +333,279 @@ mod tests {
 
     use super::*;
 
+    /// Returns a file that is not a terminal
+    fn file() -> File {
+        let manifest = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+
+        File::open(manifest).expect("should open the manifest")
+    }
+
     /// Returns the matches of a command line without arguments
     fn matches() -> clap::ArgMatches {
         OutputFlags::augment_command(clap::Command::new("test")).get_matches_from(["test"])
     }
 
     #[test]
+    fn color_preference_from_variables_with_a_dumb_terminal_returns_disabled() {
+        let variables = ColorVariables::builder().term("dumb").build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Disabled);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_a_terminal_with_colors_returns_unstated() {
+        let variables = ColorVariables::builder().term("xterm-256color").build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Unstated);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_clicolor_and_a_dumb_terminal_returns_unstated() {
+        let variables = ColorVariables::builder().clicolor("1").term("dumb").build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Unstated);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_clicolor_empty_returns_unstated() {
+        let variables = ColorVariables::builder().clicolor("").build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Unstated);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_clicolor_force_and_a_dumb_terminal_returns_forced() {
+        let variables = ColorVariables::builder()
+            .clicolor_force("1")
+            .term("dumb")
+            .build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Forced);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_clicolor_force_and_clicolor_zero_returns_forced() {
+        let variables = ColorVariables::builder()
+            .clicolor_force("1")
+            .clicolor("0")
+            .build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Forced);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_clicolor_force_empty_returns_unstated() {
+        let variables = ColorVariables::builder().clicolor_force("").build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Unstated);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_clicolor_force_returns_forced() {
+        let variables = ColorVariables::builder().clicolor_force("1").build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Forced);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_clicolor_force_zero_returns_unstated() {
+        let variables = ColorVariables::builder().clicolor_force("0").build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Unstated);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_clicolor_returns_unstated() {
+        let variables = ColorVariables::builder().clicolor("1").build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Unstated);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_clicolor_zero_returns_disabled() {
+        let variables = ColorVariables::builder().clicolor("0").build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Disabled);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_no_color_and_clicolor_force_returns_disabled() {
+        let variables = ColorVariables::builder()
+            .no_color("1")
+            .clicolor_force("1")
+            .build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Disabled);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_no_color_and_clicolor_returns_disabled() {
+        let variables = ColorVariables::builder()
+            .no_color("1")
+            .clicolor("1")
+            .build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Disabled);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_no_color_empty_returns_unstated() {
+        let variables = ColorVariables::builder().no_color("").build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Unstated);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_no_color_returns_disabled() {
+        let variables = ColorVariables::builder().no_color("1").build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Disabled);
+    }
+
+    #[test]
+    fn color_preference_from_variables_with_no_color_zero_returns_disabled() {
+        let variables = ColorVariables::builder().no_color("0").build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Disabled);
+    }
+
+    #[test]
+    fn color_preference_from_variables_without_variables_returns_unstated() {
+        let variables = ColorVariables::builder().build();
+
+        let preference = ColorPreference::from_variables(&variables);
+
+        assert_eq!(preference, ColorPreference::Unstated);
+    }
+
+    #[test]
+    fn color_preference_trait_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<ColorPreference>();
+    }
+
+    #[test]
+    fn color_preference_trait_sync() {
+        fn assert_sync<T: Sync>() {}
+        assert_sync::<ColorPreference>();
+    }
+
+    #[test]
+    fn color_preference_trait_unpin() {
+        fn assert_unpin<T: Unpin>() {}
+        assert_unpin::<ColorPreference>();
+    }
+
+    #[test]
+    fn color_variables_trait_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<ColorVariables>();
+    }
+
+    #[test]
+    fn color_variables_trait_sync() {
+        fn assert_sync<T: Sync>() {}
+        assert_sync::<ColorVariables>();
+    }
+
+    #[test]
+    fn color_variables_trait_unpin() {
+        fn assert_unpin<T: Unpin>() {}
+        assert_unpin::<ColorVariables>();
+    }
+
+    #[test]
     fn detect_interactivity_without_a_terminal_returns_non_interactive() {
-        let manifest = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
-        let input = File::open(&manifest).expect("should open the manifest");
-        let display = File::open(&manifest).expect("should open the manifest");
+        let (input, display) = (file(), file());
 
         let interactivity = detect_interactivity(&input, &display);
 
         assert_eq!(interactivity, Interactivity::NonInteractive);
+    }
+
+    #[test]
+    fn destination_of_a_file_returns_other() {
+        let destination = Destination::of(&file());
+
+        assert_eq!(destination, Destination::Other);
+    }
+
+    #[test]
+    fn destination_trait_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<Destination>();
+    }
+
+    #[test]
+    fn destination_trait_sync() {
+        fn assert_sync<T: Sync>() {}
+        assert_sync::<Destination>();
+    }
+
+    #[test]
+    fn destination_trait_unpin() {
+        fn assert_unpin<T: Unpin>() {}
+        assert_unpin::<Destination>();
+    }
+
+    #[test]
+    fn detect_styling_with_a_disabled_preference_on_a_terminal_returns_plain() {
+        let styling = detect_styling(Destination::Terminal, ColorPreference::Disabled);
+
+        assert_eq!(styling, Styling::Plain);
+    }
+
+    #[test]
+    fn detect_styling_with_a_forced_preference_without_a_terminal_returns_styled() {
+        let styling = detect_styling(Destination::Other, ColorPreference::Forced);
+
+        assert_eq!(styling, Styling::Styled);
+    }
+
+    #[test]
+    fn detect_styling_with_an_unstated_preference_on_a_terminal_returns_styled() {
+        let styling = detect_styling(Destination::Terminal, ColorPreference::Unstated);
+
+        assert_eq!(styling, Styling::Styled);
+    }
+
+    #[test]
+    fn detect_styling_with_an_unstated_preference_without_a_terminal_returns_plain() {
+        let styling = detect_styling(Destination::Other, ColorPreference::Unstated);
+
+        assert_eq!(styling, Styling::Plain);
     }
 
     #[test]
@@ -226,6 +636,7 @@ mod tests {
             matches(),
             move |_matches, _context| async move { Ok(returned) },
             Interactivity::NonInteractive,
+            Styling::Plain,
         );
 
         assert_eq!(exit, chosen);
@@ -237,6 +648,7 @@ mod tests {
             matches(),
             |_matches, _context| async { Err::<(), _>(anyhow::anyhow!("the file is missing")) },
             Interactivity::NonInteractive,
+            Styling::Plain,
         );
 
         assert_eq!(
@@ -254,6 +666,7 @@ mod tests {
             matches(),
             |_matches, _context| async { Ok(()) },
             Interactivity::NonInteractive,
+            Styling::Plain,
         );
 
         assert_eq!(exit, Exit::from(()));
@@ -271,6 +684,7 @@ mod tests {
                 Ok(())
             },
             Interactivity::Interactive,
+            Styling::Plain,
         ));
 
         assert_eq!(

@@ -166,6 +166,23 @@ The macro borrows the value, as `format!` borrows its arguments.
 `Output::message` writes both forms of the value when the command sends it,
 and the presenter chooses one.
 
+### Choosing the Styling
+
+The terminal presenter writes the styled form of artifacts, messages, and
+details when stdout is a terminal, and the plain form when stdout is a file or
+a pipe. The environment overrides that choice, in this order:
+
+1. A non-empty `NO_COLOR` selects the plain form. It wins over every other
+   variable.
+2. A non-empty `CLICOLOR_FORCE` other than `0` selects the styled form, whatever
+   stdout is.
+3. `CLICOLOR=0` selects the plain form. Another value of `CLICOLOR` states that
+   the terminal supports colors.
+4. `TERM=dumb` selects the plain form, unless `CLICOLOR` states support.
+
+JSON mode serializes artifacts and writes messages and details to stderr in
+their plain form.
+
 ## Behavior matrix
 
 The interaction of method, verbosity, and mode:
