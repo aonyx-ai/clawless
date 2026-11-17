@@ -380,9 +380,9 @@ mod tests {
 
     use std::fmt;
 
-    use clawless_core::event::event_channel;
     use clawless_core::event::process::{ProcessEvent, RunId};
     use clawless_core::event::prompt::PromptRequest;
+    use clawless_core::event::{Styling, event_channel};
     use clawless_core::process::{Line, Stream};
     use clawless_core::prompt::Confirm;
     use serde::Serialize;
@@ -424,7 +424,7 @@ mod tests {
         let Entry::Artifact(a) = &artifacts[0] else {
             panic!("expected Entry::Artifact");
         };
-        assert_eq!(a.to_string(), "art");
+        assert_eq!(a.to_text(Styling::Plain), "art");
     }
 
     #[tokio::test]
@@ -520,7 +520,7 @@ mod tests {
         let Entry::Artifact(a) = &entries[0] else {
             panic!("expected Entry::Artifact");
         };
-        assert_eq!(a.to_string(), "result");
+        assert_eq!(a.to_text(Styling::Plain), "result");
     }
 
     #[tokio::test]

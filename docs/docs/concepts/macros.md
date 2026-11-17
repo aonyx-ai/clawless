@@ -167,7 +167,8 @@ detail!("connection established");
 Writes the primary data output of a command. This is the machine-readable
 payload: the thing a script would pipe to `jq`, or the structured result a
 user specifically asked for. When `--json` is active, `artifact!` emits JSON;
-otherwise it uses the type's `Display` implementation.
+otherwise it uses the type's `Display` implementation, or the styled or plain
+form of a type that implements `TextForm` itself.
 
 ```rust
 artifact!(BuildResult { success: true });

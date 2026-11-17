@@ -6,9 +6,13 @@
 //! verbosity settings.
 //!
 //! The [`Artifact`] trait enables the [`Event::Artifact`] variant to carry a type-erased value that
-//! supports both text rendering ([`Display`]) and JSON serialization ([`Serialize`]). A blanket
+//! supports both text rendering ([`TextForm`]) and JSON serialization ([`Serialize`]). A blanket
 //! implementation covers any type satisfying the required bounds, so command authors derive the
 //! usual traits and pass values to Output without manual trait implementation.
+//!
+//! The [`TextForm`] trait lets a value offer a styled text form next to its plain one. Every type
+//! with [`Display`] has one form. The presenter chooses the [`Styling`] of the text that it
+//! writes, because only the presenter knows whether that text reaches a terminal.
 //!
 //! The [`Event::Process`] variant carries the [`ProcessEvent`] of an external program that a
 //! command runs. Those events arrive while the program runs, which lets a presenter show progress
@@ -17,10 +21,11 @@
 //! The [`Event::Prompt`] variant carries a [`PromptRequest`], which is a question for the user.
 //! The request arrives after the events that the command sent before it.
 //!
+//! [`Display`]: std::fmt::Display
 //! [`ProcessEvent`]: process::ProcessEvent
 //! [`PromptRequest`]: prompt::PromptRequest
 
-use std::fmt::{Debug, Display};
+use std::fmt::{self, Debug};
 
 use serde::Serialize;
 
@@ -48,17 +53,32 @@ mod text_form;
 
 /// Trait for artifact values that can be rendered as text or JSON
 ///
-/// `Artifact` combines [`Display`] (for text rendering), [`Serialize`] (for JSON rendering), and
-/// [`Debug`] (for diagnostics). The Presenter uses the appropriate trait based on its output mode.
+/// `Artifact` combines a [`TextForm`] (for text rendering), [`Serialize`] (for JSON rendering),
+/// and [`Debug`] (for diagnostics). The Presenter uses the appropriate form based on its output
+/// mode, and it chooses the [`Styling`] of the text form.
 ///
 /// Command authors do not implement this trait directly. A blanket implementation covers any type
-/// that satisfies the required bounds.
+/// that implements [`TextForm`], [`Serialize`], [`Debug`], [`Send`], and [`Sync`]. Every type
+/// with [`Display`] has a [`TextForm`], so such a type is an artifact with one text form. A type
+/// with a styled form implements [`TextForm`] itself and becomes an artifact the same way.
+///
+/// A trait object of `Artifact` does not implement [`Display`], so a consumer of an
+/// [`Event::Artifact`] chooses a styling with [`TextForm::to_text`] or [`TextForm::fmt_text`].
+/// If the trait object implemented [`Display`], a box of it would get its [`TextForm`] from
+/// [`Display`], write the plain form for every styling, and hide the styled form of the value in
+/// it. `Box<dyn Artifact>` instead forwards [`TextForm`] to the value in it, so a command can
+/// pass on an artifact that it received as a box. `Arc<dyn Artifact>` is not an artifact. The
+/// coherence rules of Rust reject a forwarding impl for `Arc` next to the blanket implementation
+/// of [`TextForm`] for [`Display`] types, because [`Arc`] is not a fundamental type.
 ///
 /// # Examples
+///
+/// An artifact with one text form:
 ///
 /// ```
 /// use std::fmt;
 ///
+/// use clawless_core::event::{Artifact, Styling, TextForm};
 /// use serde::Serialize;
 ///
 /// #[derive(Clone, Debug, Serialize)]
@@ -73,15 +93,56 @@ mod text_form;
 /// }
 ///
 /// // UserCount automatically implements Artifact — no manual impl needed.
-/// let artifact: Box<dyn clawless_core::event::Artifact> = Box::new(UserCount { count: 42 });
-/// assert_eq!(artifact.to_string(), "42 users");
+/// let artifact: Box<dyn Artifact> = Box::new(UserCount { count: 42 });
+/// assert_eq!(artifact.to_text(Styling::Plain), "42 users");
 /// ```
 ///
-pub trait Artifact: Display + Debug + Send + Sync + erased_serde::Serialize {}
+/// An artifact with a styled form and a plain form:
+///
+/// ```
+/// use std::fmt;
+///
+/// use clawless_core::event::{Artifact, Styling, TextForm};
+/// use serde::Serialize;
+///
+/// #[derive(Clone, Debug, Serialize)]
+/// struct Verdict {
+///     passed: bool,
+/// }
+///
+/// impl TextForm for Verdict {
+///     fn fmt_text(&self, f: &mut fmt::Formatter<'_>, styling: Styling) -> fmt::Result {
+///         let word = match self.passed {
+///             true => "passed",
+///             false => "failed",
+///         };
+///
+///         match styling {
+///             Styling::Styled => write!(f, "\x1b[1m{word}\x1b[0m"),
+///             Styling::Plain => f.write_str(word),
+///         }
+///     }
+/// }
+///
+/// // Verdict implements Artifact through its TextForm.
+/// let artifact: Box<dyn Artifact> = Box::new(Verdict { passed: true });
+/// assert_eq!(artifact.to_text(Styling::Styled), "\x1b[1mpassed\x1b[0m");
+/// ```
+///
+/// [`Arc`]: std::sync::Arc
+/// [`Display`]: std::fmt::Display
+pub trait Artifact: TextForm + Debug + Send + Sync + erased_serde::Serialize {}
 
-impl<T> Artifact for T where T: Display + Serialize + Debug + Send + Sync + 'static {}
+impl<T> Artifact for T where T: TextForm + Serialize + Debug + Send + Sync + 'static {}
 
 erased_serde::serialize_trait_object!(Artifact);
+
+/// Writes the text form of the artifact in the box, in the styling that the presenter chose
+impl TextForm for Box<dyn Artifact> {
+    fn fmt_text(&self, f: &mut fmt::Formatter<'_>, styling: Styling) -> fmt::Result {
+        (**self).fmt_text(f, styling)
+    }
+}
 
 /// Structured output event produced by commands
 ///
@@ -93,7 +154,7 @@ erased_serde::serialize_trait_object!(Artifact);
 /// - [`Message`] — informational text (shown at default verbosity and above).
 /// - [`Detail`] — supplementary text (shown only at verbose verbosity).
 /// - [`Event::Artifact`] — the primary data a command produces, carried as a trait object that the
-///   Presenter can render via [`Display`] or [`Serialize`].
+///   Presenter can render via [`TextForm`] or [`Serialize`].
 /// - [`Event::Process`] — one step in the run of an external program that the command started.
 /// - [`Event::Prompt`] — a question for the user, with the reply that answers it.
 ///
@@ -137,6 +198,7 @@ mod tests {
     use crate::event::process::RunId;
     use crate::process::Invocation;
     use crate::prompt::Confirm;
+    use crate::test_support::Bold;
 
     #[derive(Clone, Debug, Serialize)]
     struct TestArtifact {
@@ -162,15 +224,6 @@ mod tests {
         let debug = format!("{event:?}");
 
         assert!(debug.contains("hello"));
-    }
-
-    #[test]
-    fn artifact_display_renders_via_display_trait() {
-        let boxed: Box<dyn Artifact> = Box::new(test_artifact());
-
-        let display = boxed.to_string();
-
-        assert_eq!(display, "hello");
     }
 
     #[test]
@@ -238,6 +291,34 @@ mod tests {
             },
             Some("Release?".to_owned())
         );
+    }
+
+    #[test]
+    fn to_text_of_a_box_in_a_box_returns_the_styled_form_of_the_value() {
+        let inner: Box<dyn Artifact> = Box::new(Bold::new("hello"));
+        let boxed: Box<dyn Artifact> = Box::new(inner);
+
+        let text = boxed.to_text(Styling::Styled);
+
+        assert_eq!(text, "\x1b[1mhello\x1b[0m");
+    }
+
+    #[test]
+    fn to_text_of_a_boxed_artifact_returns_the_styled_form_of_the_value() {
+        let boxed: Box<dyn Artifact> = Box::new(Bold::new("hello"));
+
+        let text = boxed.to_text(Styling::Styled);
+
+        assert_eq!(text, "\x1b[1mhello\x1b[0m");
+    }
+
+    #[test]
+    fn to_text_of_a_boxed_display_artifact_returns_its_display_output() {
+        let boxed: Box<dyn Artifact> = Box::new(test_artifact());
+
+        let text = boxed.to_text(Styling::Plain);
+
+        assert_eq!(text, "hello");
     }
 
     #[test]

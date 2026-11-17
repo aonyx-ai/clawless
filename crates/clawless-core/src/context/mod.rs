@@ -185,8 +185,7 @@ mod tests {
     use std::path::Path;
 
     use super::*;
-    use crate::event::Event;
-    use crate::event::event_channel;
+    use crate::event::{Event, Styling, TextForm, event_channel};
     use crate::process::Invocation;
 
     fn test_output() -> Output {
@@ -287,7 +286,7 @@ mod tests {
                 Event::Process(event) => event.to_string(),
                 Event::Message(text) => text,
                 Event::Detail(text) => text,
-                Event::Artifact(artifact) => artifact.to_string(),
+                Event::Artifact(artifact) => artifact.to_text(Styling::Plain),
                 Event::Prompt(request) => format!("{request:?}"),
             }),
             Some(format!("$ {invocation}"))
@@ -354,7 +353,7 @@ mod tests {
                 Event::Process(event) => event.to_string(),
                 Event::Message(text) => text,
                 Event::Detail(text) => text,
-                Event::Artifact(artifact) => artifact.to_string(),
+                Event::Artifact(artifact) => artifact.to_text(Styling::Plain),
             }),
             Some("Release?".to_owned())
         );

@@ -125,7 +125,7 @@ mod tests {
 
     use super::*;
     use crate::context::Interactivity;
-    use crate::event::event_channel;
+    use crate::event::{Styling, TextForm, event_channel};
     use crate::output::Output;
     use crate::prompt::{Confirmation, Prompt, PromptUserError};
 
@@ -219,7 +219,7 @@ mod tests {
                 .map(|event| match event {
                     Event::Message(text) => text,
                     Event::Detail(text) => text,
-                    Event::Artifact(artifact) => artifact.to_string(),
+                    Event::Artifact(artifact) => artifact.to_text(Styling::Plain),
                     Event::Process(event) => event.to_string(),
                     Event::Prompt(request) => format!("{request:?}"),
                 })
