@@ -18,7 +18,7 @@ use clawless_core::context::Context;
 use clawless_core::event::event_channel;
 use clawless_core::exit::Exit;
 use clawless_core::output::Output;
-use clawless_core::signal::wait_for_shutdown;
+use clawless_core::signal::run_until_interrupted;
 
 use crate::projection::Projection;
 
@@ -53,7 +53,7 @@ impl ApplicationRunner {
     /// 2. Creates an event channel and builds the [`Context`]
     /// 3. Creates a Tokio runtime
     /// 4. Inside the runtime, creates a [`Projection`] (which spawns a background drain task)
-    /// 5. Spawns the signal handler and calls the application function
+    /// 5. Calls the application function, until it returns or the user interrupts it twice
     /// 6. Awaits the drain task once the application returns
     ///
     /// The [`Projection`] must be created inside the Tokio runtime because its constructor calls
@@ -74,6 +74,11 @@ impl ApplicationRunner {
     /// and the text of the error. The `main` function returns the [`Exit`] in a `ProcessExit`, and
     /// the process writes its text only after the application has returned and the drain has
     /// ended.
+    ///
+    /// The first Ctrl+C cancels the [`Cancellation`] token of the application. A second Ctrl+C
+    /// drops the application without a wait for the drain, and the runner returns an [`Exit`]
+    /// with the code 130. The destructors of the application run, so it can restore the terminal
+    /// that it drew on.
     ///
     /// # Arguments
     ///
@@ -124,11 +129,9 @@ impl ApplicationRunner {
             .context("build the context of the application")?;
 
         let rt = tokio::runtime::Runtime::new().context("start the async runtime")?;
-        rt.block_on(async {
+        let completed = run_until_interrupted(rt, cancellation, async {
             let mut projection = Projection::new(receiver);
             let drain = projection.take_drain();
-
-            tokio::spawn(wait_for_shutdown(cancellation));
 
             // Binding the result ends the statement that owns the application's future, so the
             // future is dropped here whatever it still holds, and with it the `Context` that
@@ -145,7 +148,12 @@ impl ApplicationRunner {
             }
 
             result.map(Into::into)
-        })
+        });
+
+        match completed {
+            Ok(result) => result,
+            Err(interrupted) => Ok(interrupted),
+        }
     }
 }
 
