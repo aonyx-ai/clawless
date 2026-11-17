@@ -17,6 +17,7 @@ repository = "https://github.com/aonyx-ai/clawless.git"
 rust-version = "1.88.0"
 
 [workspace.dependencies]
+anstyle-query = "1.0.0"
 anyhow = "1.0.47"
 assert_cmd = "2.1.1"
 async-trait = "0.1.7"

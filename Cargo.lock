@@ -269,6 +269,7 @@ dependencies = [
 name = "clawless-cli"
 version = "0.8.0"
 dependencies = [
+ "anstyle-query",
  "anyhow",
  "async-trait",
  "bon",
