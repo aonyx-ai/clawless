@@ -1,0 +1,10 @@
+# CLICOLOR_FORCE styles the text even though stdout is a pipe.
+bin.name = "styling"
+args = ["check", "level"]
+env.inherit = false
+env.add.CLICOLOR_FORCE = "1"
+status.code = 0
+stdout = """
+checking \u001b[1mlevel\u001b[0m
+\u001b[32myes\u001b[0m
+"""

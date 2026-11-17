@@ -1,0 +1,13 @@
+# In JSON mode, the artifact is JSON and the message goes to stderr in its
+# plain form, even when CLICOLOR_FORCE styles stdout.
+bin.name = "styling"
+args = ["--json", "check", "levels"]
+env.inherit = false
+env.add.CLICOLOR_FORCE = "1"
+status.code = 0
+stdout = """
+{"palindrome":false}
+"""
+stderr = """
+checking levels
+"""
