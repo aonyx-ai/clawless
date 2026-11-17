@@ -1,0 +1,9 @@
+# Stdout of the case is a pipe, so the text is plain.
+bin.name = "styling"
+args = ["check", "level"]
+env.inherit = false
+status.code = 0
+stdout = """
+checking level
+yes
+"""

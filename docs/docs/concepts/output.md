@@ -183,6 +183,10 @@ a pipe. The environment overrides that choice, in this order:
 JSON mode serializes artifacts and writes messages and details to stderr in
 their plain form.
 
+The [`styling` example][styling-example] has a command with a styled message
+and a styled artifact. Its tests show how `NO_COLOR` and `CLICOLOR_FORCE`
+change its output.
+
 ## Behavior matrix
 
 The interaction of method, verbosity, and mode:
@@ -255,4 +259,5 @@ Most commands only need `message`. Commands that produce structured data use
 [display]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 [serialize]: https://docs.rs/serde/latest/serde/trait.Serialize.html
 [styling]: https://docs.rs/clawless-core/latest/clawless_core/event/enum.Styling.html
+[styling-example]: https://github.com/aonyx-ai/clawless/tree/main/examples/styling
 [text-form]: https://docs.rs/clawless-core/latest/clawless_core/event/trait.TextForm.html

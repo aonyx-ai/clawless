@@ -106,7 +106,8 @@ examples/
   ├── hello-world/           # Reference example project
   ├── output/                # Messages, details, and artifacts
   ├── process/               # Running external programs
-  └── prompt/                # Asking the user a question
+  ├── prompt/                # Asking the user a question
+  └── styling/               # Styled text for a terminal
 docs/                        # Docusaurus documentation site
 tools/
   └── rakko/                 # Harness of the maintenance commands
