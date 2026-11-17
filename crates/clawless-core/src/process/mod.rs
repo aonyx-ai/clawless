@@ -63,6 +63,7 @@ const DEFAULT_GRACE_PERIOD: Duration = Duration::from_secs(5);
 
 /// The error of running an external program from a command
 mod error;
+mod interactive;
 mod run_interactive_process_error;
 
 /// The way in which the reading of the output of a program ended

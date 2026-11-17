@@ -23,6 +23,7 @@ use serde::Serialize;
 
 use crate::event::process::ProcessEvent;
 use crate::event::prompt::PromptRequest;
+use crate::event::terminal::TerminalRequest;
 use crate::event::{Event, EventSender, SendError};
 
 /// Command output interface that wraps an event channel sender
@@ -253,6 +254,21 @@ impl Output {
     pub async fn prompt(&self, request: PromptRequest) -> Result<(), SendError> {
         self.sender.send(Event::Prompt(Box::new(request))).await
     }
+
+    /// Sends a request for the terminal
+    ///
+    /// The request arrives after every event that this output sent before it. The answer arrives
+    /// at the [`PendingLoan`] that was created together with the request.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SendError`] if the [`EventReceiver`] has been dropped.
+    ///
+    /// [`EventReceiver`]: crate::event::EventReceiver
+    /// [`PendingLoan`]: crate::event::terminal::PendingLoan
+    pub(crate) async fn request_terminal(&self, request: TerminalRequest) -> Result<(), SendError> {
+        self.sender.send(Event::Terminal(Box::new(request))).await
+    }
 }
 
 #[cfg(test)]
@@ -442,6 +458,27 @@ mod tests {
         let event = receiver.recv().await.expect("should receive");
 
         assert!(matches!(event, Event::Message(ref s) if s == "count: 42"));
+    }
+
+    #[tokio::test]
+    async fn request_terminal_sends_terminal_event() {
+        let (sender, mut receiver) = event_channel();
+        let output = Output::new(sender);
+        let (request, _pending) = TerminalRequest::new(Invocation::new("vi"));
+
+        output.request_terminal(request).await.expect("should send");
+
+        assert_eq!(
+            receiver.recv().await.map(|event| match event {
+                Event::Terminal(request) => request.invocation().to_string(),
+                Event::Prompt(request) => request.question().to_owned(),
+                Event::Process(event) => event.to_string(),
+                Event::Message(text) => text,
+                Event::Detail(text) => text,
+                Event::Artifact(artifact) => artifact.to_string(),
+            }),
+            Some("vi".to_owned())
+        );
     }
 
     #[test]

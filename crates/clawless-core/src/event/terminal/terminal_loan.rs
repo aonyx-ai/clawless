@@ -62,10 +62,6 @@ impl TerminalLoan {
     ///
     /// Starting the program consumes the stream, while the command holds the terminal until the
     /// program ends. Dropping the second value gives the terminal back.
-    #[expect(
-        dead_code,
-        reason = "the run of an interactive program takes the loan apart, and it is not there yet"
-    )]
     pub(crate) fn into_parts(self) -> (Stdio, oneshot::Sender<Infallible>) {
         let Self { stdout, hold } = self;
 
