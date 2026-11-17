@@ -32,6 +32,7 @@ pub use self::sender::EventSender;
 
 pub mod process;
 pub mod prompt;
+pub mod terminal;
 
 /// Bounded channel that carries events from a command to its presenter
 mod channel;

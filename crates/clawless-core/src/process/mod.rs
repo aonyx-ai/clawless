@@ -45,6 +45,7 @@ pub use kawauso_process::run::{Line, Stream, Text};
 pub use kawauso_process::{Execution, Invocation, ProcessId, Run};
 
 pub use self::error::RunProcessError;
+pub use self::run_interactive_process_error::RunInteractiveProcessError;
 use crate::cancellation::Cancellation;
 use crate::event::SendError;
 use crate::event::process::{Outcome, ProcessEvent, RunId};
@@ -62,6 +63,7 @@ const DEFAULT_GRACE_PERIOD: Duration = Duration::from_secs(5);
 
 /// The error of running an external program from a command
 mod error;
+mod run_interactive_process_error;
 
 /// The way in which the reading of the output of a program ended
 ///
