@@ -284,8 +284,8 @@ mod tests {
         assert_eq!(
             receiver.recv().await.map(|event| match event {
                 Event::Process(event) => event.to_string(),
-                Event::Message(text) => text,
-                Event::Detail(text) => text,
+                Event::Message(text) => text.into_form(Styling::Plain),
+                Event::Detail(text) => text.into_form(Styling::Plain),
                 Event::Artifact(artifact) => artifact.to_text(Styling::Plain),
                 Event::Prompt(request) => format!("{request:?}"),
             }),
@@ -351,8 +351,8 @@ mod tests {
             event.map(|event| match event {
                 Event::Prompt(request) => request.question().to_owned(),
                 Event::Process(event) => event.to_string(),
-                Event::Message(text) => text,
-                Event::Detail(text) => text,
+                Event::Message(text) => text.into_form(Styling::Plain),
+                Event::Detail(text) => text.into_form(Styling::Plain),
                 Event::Artifact(artifact) => artifact.to_text(Styling::Plain),
             }),
             Some("Release?".to_owned())

@@ -217,8 +217,8 @@ mod tests {
             events
                 .into_iter()
                 .map(|event| match event {
-                    Event::Message(text) => text,
-                    Event::Detail(text) => text,
+                    Event::Message(text) => text.into_form(Styling::Plain),
+                    Event::Detail(text) => text.into_form(Styling::Plain),
                     Event::Artifact(artifact) => artifact.to_text(Styling::Plain),
                     Event::Process(event) => event.to_string(),
                     Event::Prompt(request) => format!("{request:?}"),

@@ -2,7 +2,7 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{ItemFn, parse_macro_input};
+use syn::{Expr, ExprLit, ItemFn, Lit, parse_macro_input};
 
 use crate::generator::{ApplicationGenerator, CommandGenerator, Generator};
 use crate::inventory::InventoryGenerator;
@@ -20,6 +20,11 @@ mod inventory;
 /// where `context` resolves to the local variable in the calling function's scope. This is the
 /// macro equivalent of `Output::message`.
 ///
+/// The macro takes a format string and its arguments, or one expression whose value implements
+/// `TextForm`. A value with a styled form uses the second shape, because it has no `Display` and
+/// so cannot be an argument of a format string. The presenter then chooses which form it writes.
+/// The macro borrows the value and does not move it.
+///
 /// The macro must be called from an async function because the core `Output` methods are async.
 ///
 /// # Examples
@@ -30,6 +35,7 @@ mod inventory;
 /// #[command]
 /// pub async fn deploy(args: DeployArgs, context: Context) -> CommandResult {
 ///     message!("deploying to {}", args.target);
+///     message!(Verdict { passed: true });
 ///     Ok(())
 /// }
 /// ```
@@ -43,6 +49,9 @@ pub fn message(input: TokenStream) -> TokenStream {
 /// Expands to `context.output().detail(format!(...)).await.expect("event channel closed")`,
 /// where `context` resolves to the local variable in the calling function's scope. Detail is only
 /// shown when the user passes `--verbose`. This is the macro equivalent of `Output::detail`.
+///
+/// Like `message!`, the macro takes a format string and its arguments, or one expression whose
+/// value implements `TextForm`.
 ///
 /// The macro must be called from an async function because the core `Output` methods are async.
 ///
@@ -99,8 +108,15 @@ pub fn artifact(input: TokenStream) -> TokenStream {
 
 /// Expands one of the output macros into a call on the local `context`
 ///
-/// The `message!`, `detail!`, and `artifact!` macros differ only in the `Output` method that
-/// they call. They therefore share one expansion.
+/// The `message!` and `detail!` macros differ only in the `Output` method that they call. They
+/// therefore share one expansion.
+///
+/// An input that is one expression, other than a string literal, is a value with a text form.
+/// The expansion writes the forms of that value through a borrow, so the macro does not move the
+/// value, just as `format!` does not move its arguments. Every other input is the arguments of
+/// `format!`. A string literal alone stays a format string, so that `message!("{{}}")` still
+/// writes `{}`. An input of several arguments whose first one is not a string literal goes to
+/// `format!` as before, which reports the error.
 ///
 /// This function builds the `context` identifier with [`Span::call_site`]. The identifier then
 /// resolves to the local variable of the caller, not to a hygienic name.
@@ -110,8 +126,15 @@ fn output_format_macro(input: TokenStream, method: &str) -> TokenStream {
     let input = proc_macro2::TokenStream::from(input);
     let context = proc_macro2::Ident::new("context", proc_macro2::Span::call_site());
     let method = proc_macro2::Ident::new(method, proc_macro2::Span::call_site());
+    let argument = match syn::parse2::<Expr>(input.clone()) {
+        Ok(Expr::Lit(ExprLit {
+            lit: Lit::Str(_), ..
+        })) => quote! { format!(#input) },
+        Ok(_) => quote! { ::clawless::event::FormattedText::new(&(#input)) },
+        Err(_) => quote! { format!(#input) },
+    };
     quote! {
-        #context.output().#method(format!(#input))
+        #context.output().#method(#argument)
             .await
             .expect("event channel closed")
     }

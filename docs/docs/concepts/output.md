@@ -150,6 +150,22 @@ That same rule limits the wrappers of a styled type:
 - A styled value cannot be an argument of `format!`, because it has no
   `Display`. Pass the value on whole, or call `to_text` with a styling.
 
+### Styled Messages
+
+A message or a detail can carry a styled form as well. `message` and `detail`
+take any value with a [`TextForm`][text-form], and every value with
+[`Display`][display] has one. Pass a styled value on its own, because a styled
+value cannot be an argument of a format string:
+
+```rust
+message!("checking the build");
+message!(Verdict { passed: true });
+```
+
+The macro borrows the value, as `format!` borrows its arguments.
+`Output::message` writes both forms of the value when the command sends it,
+and the presenter chooses one.
+
 ## Behavior matrix
 
 The interaction of method, verbosity, and mode:

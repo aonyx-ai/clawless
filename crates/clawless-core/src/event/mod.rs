@@ -170,9 +170,9 @@ impl TextForm for Box<dyn Artifact> {
 #[derive(Debug)]
 pub enum Event {
     /// Informational message
-    Message(String),
+    Message(FormattedText),
     /// Supplementary detail
-    Detail(String),
+    Detail(FormattedText),
     /// Primary command output
     Artifact(Box<dyn Artifact>),
     /// One step in the run of an external program
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn detail_with_empty_string_is_valid() {
-        let event = Event::Detail(String::new());
+        let event = Event::Detail(FormattedText::default());
 
         let debug = format!("{event:?}");
 
@@ -249,7 +249,7 @@ mod tests {
 
     #[test]
     fn message_with_empty_string_is_valid() {
-        let event = Event::Message(String::new());
+        let event = Event::Message(FormattedText::default());
 
         let debug = format!("{event:?}");
 

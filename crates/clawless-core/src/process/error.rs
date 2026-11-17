@@ -92,7 +92,7 @@ mod tests {
     fn display_with_unreportable_output_names_the_command() {
         let error = RunProcessError::UnreportableOutput {
             invocation: Invocation::new("git").arg("status"),
-            source: SendError(crate::event::Event::Message("lost".to_owned())),
+            source: SendError(crate::event::Event::Message("lost".into())),
         };
 
         let message = error.to_string();
