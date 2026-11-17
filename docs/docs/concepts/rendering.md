@@ -90,6 +90,10 @@ reader already knows from the [output behavior matrix][output]:
 - `--json` redirects messages to stderr and serializes artifacts as JSON to
   stdout
 
+In text mode, it also writes the [styled form][styled-text] of artifacts,
+messages, and details when `CommandRunner` asks for it. The runner asks for it
+when stdout is a terminal, and the environment can override that choice.
+
 [`CommandRunner`][command-runner] wires all of this automatically for
 `#[command]` functions. It creates the event channel, wraps the sender in
 `Output`, configures a `TerminalPresenter` from the CLI flags, and runs the
@@ -166,4 +170,5 @@ later embed them in a TUI dashboard without changing any command code.
 [projection]: https://docs.rs/clawless-tui/latest/clawless_tui/projection/struct.Projection.html
 [styled-artifacts]: ./output#styled-artifacts
 [styled-messages]: ./output#styled-messages
+[styled-text]: ./output#choosing-the-styling
 [terminal-presenter]: https://docs.rs/clawless-cli/latest/clawless_cli/presenter/struct.TerminalPresenter.html
