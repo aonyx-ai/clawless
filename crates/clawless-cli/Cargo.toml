@@ -23,5 +23,8 @@ serde_json = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
 
+[dev-dependencies]
+clawless-core = { workspace = true, features = ["test-support"] }
+
 [lints]
 workspace = true

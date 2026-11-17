@@ -6,12 +6,14 @@
 //!
 //! `TerminalPresenter` is constructed once via its builder, consumed by a single call to
 //! [`present`], and dropped when the command completes. The builder requires an [`EventReceiver`]
-//! and defaults [`Verbosity`] to [`Verbosity::Default`] and [`OutputMode`] to
-//! [`OutputMode::Text`].
+//! and defaults [`Verbosity`] to [`Verbosity::Default`], [`OutputMode`] to [`OutputMode::Text`],
+//! and [`Styling`] to [`Styling::Plain`].
 //!
 //! [`EventReceiver`]: clawless_core::event::EventReceiver
 //! [`OutputMode`]: crate::output::OutputMode
 //! [`Presenter`]: super::Presenter
+//! [`Styling`]: clawless_core::event::Styling
+//! [`Styling::Plain`]: clawless_core::event::Styling::Plain
 //! [`Verbosity`]: crate::output::Verbosity
 //! [`present`]: super::Presenter::present
 
@@ -40,6 +42,12 @@ use crate::output::Verbosity;
 /// Renders command output to the terminal. In text mode, all output goes to stdout. In JSON
 /// mode, messages go to stderr and artifacts are serialized as JSON to stdout. This follows the
 /// convention used by `gh`, `kubectl`, and `jq`.
+///
+/// In text mode, the presenter writes artifacts, messages, and details to stdout in the
+/// [`Styling`] that it was built with. The builder defaults to [`Styling::Plain`], because only
+/// the code that builds the presenter knows whether stdout is a terminal and whether the user
+/// turned colors off. In JSON mode, the presenter serializes artifacts, and it writes messages and
+/// details to stderr in their plain form, because the styling describes stdout and not stderr.
 ///
 /// The presenter also asks the user the questions of the command. It writes a question to
 /// stderr in both modes, and the user answers with one line on stdin. Verbosity and output mode
@@ -79,6 +87,10 @@ pub struct TerminalPresenter {
     #[builder(default)]
     interactivity: Interactivity,
 
+    /// Whether the text that goes to stdout in text mode may carry terminal styles
+    #[builder(default)]
+    styling: Styling,
+
     /// Stream of events that the command produces
     receiver: EventReceiver,
 }
@@ -103,7 +115,7 @@ fn is_diagnostic(event: &ProcessEvent) -> bool {
     }
 }
 
-/// Renders one event for the given verbosity and output mode
+/// Renders one event for the given verbosity, output mode, and styling
 ///
 /// `stdout` and `stderr` are the standard output and the standard error of the application. A
 /// test passes buffers.
@@ -113,6 +125,10 @@ fn is_diagnostic(event: &ProcessEvent) -> bool {
 ///
 /// In JSON mode, messages and details go to `stderr` instead. `stdout` then carries only JSON
 /// artifacts, which a caller can pipe into another tool.
+///
+/// The styling applies to the text that goes to `stdout` in text mode. Messages and details in
+/// JSON mode use their plain form, because the styling describes `stdout`, and JSON has no
+/// styles.
 ///
 /// The output of an external program is supplementary, so it follows the same rule as a detail
 /// and appears only when the user asks for verbose output. A command that wants a program to be
@@ -133,6 +149,7 @@ fn render_event(
     event: Event,
     verbosity: Verbosity,
     mode: OutputMode,
+    styling: Styling,
     stdout: &mut impl Write,
     stderr: &mut impl Write,
 ) {
@@ -141,8 +158,7 @@ fn render_event(
             Verbosity::Quiet => {}
             Verbosity::Default | Verbosity::Verbose => match mode {
                 OutputMode::Text => {
-                    writeln!(stdout, "{}", text.form(Styling::Plain))
-                        .expect("should write message");
+                    writeln!(stdout, "{}", text.form(styling)).expect("should write message");
                 }
                 OutputMode::Json => {
                     writeln!(stderr, "{}", text.form(Styling::Plain))
@@ -154,7 +170,7 @@ fn render_event(
             Verbosity::Quiet | Verbosity::Default => {}
             Verbosity::Verbose => match mode {
                 OutputMode::Text => {
-                    writeln!(stdout, "{}", text.form(Styling::Plain)).expect("should write detail");
+                    writeln!(stdout, "{}", text.form(styling)).expect("should write detail");
                 }
                 OutputMode::Json => {
                     writeln!(stderr, "{}", text.form(Styling::Plain)).expect("should write detail");
@@ -163,7 +179,7 @@ fn render_event(
         },
         Event::Artifact(artifact) => {
             let line = match mode {
-                OutputMode::Text => artifact.to_text(Styling::Plain),
+                OutputMode::Text => artifact.to_text(styling),
                 OutputMode::Json => {
                     serde_json::to_string(&artifact).expect("should serialize artifact to JSON")
                 }
@@ -246,6 +262,7 @@ impl TerminalPresenter {
             verbosity,
             mode,
             interactivity: _,
+            styling,
             mut receiver,
         } = self;
 
@@ -258,7 +275,7 @@ impl TerminalPresenter {
                     None => drop(request),
                 },
                 Event::Message(_) | Event::Detail(_) | Event::Artifact(_) | Event::Process(_) => {
-                    render_event(event, verbosity, mode, stdout, stderr);
+                    render_event(event, verbosity, mode, styling, stdout, stderr);
                 }
             }
         }
@@ -305,11 +322,12 @@ mod tests {
     use clawless_core::context::Interactivity;
     use clawless_core::event::process::{Outcome, RunId};
     use clawless_core::event::prompt::PromptRequest;
-    use clawless_core::event::{EventSender, event_channel};
+    use clawless_core::event::{EventSender, FormattedText, event_channel};
     use clawless_core::output::Output;
     use clawless_core::process::Invocation;
     use clawless_core::process::Line;
     use clawless_core::prompt::{Confirm, Confirmation, Prompt, Select};
+    use clawless_core::test_support::Bold;
 
     use super::*;
 
@@ -388,6 +406,15 @@ mod tests {
     }
 
     #[test]
+    fn builder_with_defaults_uses_plain_styling() {
+        let (_sender, receiver) = event_channel();
+
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+
+        assert_eq!(presenter.styling, Styling::Plain);
+    }
+
+    #[test]
     fn builder_with_mode_uses_provided_mode() {
         let (_sender, receiver) = event_channel();
 
@@ -397,6 +424,18 @@ mod tests {
             .build();
 
         assert_eq!(presenter.mode, OutputMode::Json);
+    }
+
+    #[test]
+    fn builder_with_styling_uses_provided_styling() {
+        let (_sender, receiver) = event_channel();
+
+        let presenter = TerminalPresenter::builder()
+            .receiver(receiver)
+            .styling(Styling::Styled)
+            .build();
+
+        assert_eq!(presenter.styling, Styling::Styled);
     }
 
     #[test]
@@ -671,6 +710,39 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn present_on_with_styled_styling_writes_the_styled_form_of_an_artifact() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder()
+            .receiver(receiver)
+            .styling(Styling::Styled)
+            .build();
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        drop(
+            presenter
+                .present_on(
+                    Box::pin(async move {
+                        sender
+                            .send(Event::Artifact(Box::new(Bold::new("passed"))))
+                            .await
+                            .expect("should send");
+                        Ok(Exit::from(()))
+                    }),
+                    &mut stdout,
+                    &mut stderr,
+                    None,
+                )
+                .await
+                .expect("should succeed"),
+        );
+
+        assert_eq!(
+            (stdout, stderr),
+            (b"\x1b[1mpassed\x1b[0m\n".to_vec(), Vec::new())
+        );
+    }
+
+    #[tokio::test]
     async fn present_on_without_an_input_drops_the_prompt() {
         let (sender, receiver) = event_channel();
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
@@ -797,6 +869,7 @@ mod tests {
             Event::Detail("reading".into()),
             Verbosity::Default,
             OutputMode::Text,
+            Styling::Plain,
             &mut stdout,
             &mut stderr,
         );
@@ -812,6 +885,7 @@ mod tests {
             Event::Detail("reading".into()),
             Verbosity::Verbose,
             OutputMode::Text,
+            Styling::Plain,
             &mut stdout,
             &mut stderr,
         );
@@ -827,6 +901,7 @@ mod tests {
             Event::Message("hello".into()),
             Verbosity::Quiet,
             OutputMode::Text,
+            Styling::Plain,
             &mut stdout,
             &mut stderr,
         );
@@ -842,6 +917,7 @@ mod tests {
             Event::Message("hello".into()),
             Verbosity::Default,
             OutputMode::Json,
+            Styling::Plain,
             &mut stdout,
             &mut stderr,
         );
@@ -857,6 +933,7 @@ mod tests {
             Event::Message("hello".into()),
             Verbosity::Default,
             OutputMode::Text,
+            Styling::Plain,
             &mut stdout,
             &mut stderr,
         );
@@ -875,11 +952,136 @@ mod tests {
             })),
             Verbosity::Verbose,
             OutputMode::Text,
+            Styling::Plain,
             &mut stdout,
             &mut stderr,
         );
 
         assert_eq!((stdout, stderr), (Vec::new(), b"no such file\n".to_vec()));
+    }
+
+    #[test]
+    fn render_event_with_a_styled_artifact_and_plain_styling_writes_the_plain_form() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Artifact(Box::new(Bold::new("passed"))),
+            Verbosity::Default,
+            OutputMode::Text,
+            Styling::Plain,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!((stdout, stderr), (b"passed\n".to_vec(), Vec::new()));
+    }
+
+    #[test]
+    fn render_event_with_a_styled_artifact_and_styled_styling_writes_the_styled_form() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Artifact(Box::new(Bold::new("passed"))),
+            Verbosity::Default,
+            OutputMode::Text,
+            Styling::Styled,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!(
+            (stdout, stderr),
+            (b"\x1b[1mpassed\x1b[0m\n".to_vec(), Vec::new())
+        );
+    }
+
+    #[test]
+    fn render_event_with_a_styled_artifact_in_json_mode_writes_json() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Artifact(Box::new(Bold::new("passed"))),
+            Verbosity::Default,
+            OutputMode::Json,
+            Styling::Styled,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!(
+            (stdout, stderr),
+            (b"{\"value\":\"passed\"}\n".to_vec(), Vec::new())
+        );
+    }
+
+    #[test]
+    fn render_event_with_a_styled_detail_and_styled_styling_writes_the_styled_form() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Detail(FormattedText::new(&Bold::new("reading"))),
+            Verbosity::Verbose,
+            OutputMode::Text,
+            Styling::Styled,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!(
+            (stdout, stderr),
+            (b"\x1b[1mreading\x1b[0m\n".to_vec(), Vec::new())
+        );
+    }
+
+    #[test]
+    fn render_event_with_a_styled_message_and_plain_styling_writes_the_plain_form() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Message(FormattedText::new(&Bold::new("done"))),
+            Verbosity::Default,
+            OutputMode::Text,
+            Styling::Plain,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!((stdout, stderr), (b"done\n".to_vec(), Vec::new()));
+    }
+
+    #[test]
+    fn render_event_with_a_styled_message_and_styled_styling_writes_the_styled_form() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Message(FormattedText::new(&Bold::new("done"))),
+            Verbosity::Default,
+            OutputMode::Text,
+            Styling::Styled,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!(
+            (stdout, stderr),
+            (b"\x1b[1mdone\x1b[0m\n".to_vec(), Vec::new())
+        );
+    }
+
+    #[test]
+    fn render_event_with_a_styled_message_in_json_mode_writes_the_plain_form_to_stderr() {
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        render_event(
+            Event::Message(FormattedText::new(&Bold::new("done"))),
+            Verbosity::Default,
+            OutputMode::Json,
+            Styling::Styled,
+            &mut stdout,
+            &mut stderr,
+        );
+
+        assert_eq!((stdout, stderr), (Vec::new(), b"done\n".to_vec()));
     }
 
     #[test]
@@ -890,6 +1092,7 @@ mod tests {
             Event::Artifact(Box::new(42)),
             Verbosity::Quiet,
             OutputMode::Json,
+            Styling::Plain,
             &mut stdout,
             &mut stderr,
         );
