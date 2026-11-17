@@ -30,6 +30,7 @@ use std::fmt::{self, Debug};
 use serde::Serialize;
 
 pub use self::channel::{SendError, event_channel};
+pub use self::formatted_text::FormattedText;
 use self::process::ProcessEvent;
 use self::prompt::PromptRequest;
 pub use self::receiver::EventReceiver;
@@ -42,6 +43,8 @@ pub mod prompt;
 
 /// Bounded channel that carries events from a command to its presenter
 mod channel;
+/// The text of a message or a detail, written in every styling
+mod formatted_text;
 /// The half of the event channel that reads events
 mod receiver;
 /// The half of the event channel that sends events
