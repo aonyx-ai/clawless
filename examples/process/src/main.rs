@@ -3,6 +3,9 @@
 //! This example shows how a command runs another program, reports its output while it runs,
 //! and reads what the program produced after it ended. Pass `--verbose` to see the output of
 //! the program itself, which Clawless streams through the event system as it arrives.
+//!
+//! The `edit` command runs a program that takes over the terminal instead: the editor of the
+//! user. Clawless lends the editor the terminal and captures nothing that it writes.
 
 // This crate compiles to a binary, so nothing in it is reachable from outside the crate
 // and `unreachable_pub` would demand `pub(crate)` on every item. The lint earns its keep

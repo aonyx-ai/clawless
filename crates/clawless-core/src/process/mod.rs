@@ -11,6 +11,11 @@
 //! the program in a corner of the screen. The command's own code is the same in
 //! both cases.
 //!
+//! A program that takes over the terminal, such as an editor, a pager, or
+//! `ssh`, runs through [`Process::run_interactive`] instead. The presenter lends
+//! it the terminal and renders nothing until the program ends, and Clawless
+//! captures nothing that the program writes.
+//!
 //! The description of a command is an [`Invocation`], and the result of a run
 //! is an [`Execution`]. Both come from the `kawauso-process` crate, which owns
 //! the mechanics of starting a program and reading its streams. This module
@@ -99,7 +104,12 @@ enum Streamed {
 /// first and killed only if it does not, so a build tool gets the moment it
 /// needs to remove its lock file. The [builder] names how long that moment is.
 ///
+/// A program that takes over the terminal, such as an editor, runs through
+/// [`run_interactive`] instead. That run borrows the terminal from the
+/// presenter, captures nothing, and returns the exit status of the program.
+///
 /// [builder]: Process::builder
+/// [`run_interactive`]: Process::run_interactive
 ///
 /// `Process` is cheaply clonable. Cloning produces another handle to the same
 /// event channel and the same cancellation token.

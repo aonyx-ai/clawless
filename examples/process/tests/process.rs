@@ -2,7 +2,9 @@
 //!
 //! Each `.toml` case in `tests/process/` runs the example against a program that every Unix
 //! machine has. The cases cover what the command reports at each verbosity, in each output
-//! mode, and when the program fails or does not exist at all.
+//! mode, and when the program fails or does not exist at all. A test has no terminal, so the
+//! `edit` case shows the refusal of the presenter. Run `process edit` in a terminal to see the
+//! editor.
 
 // An assertion in a test panics by design. A `# Panics` section on every test
 // would repeat that and give the reader no information.
