@@ -353,6 +353,7 @@ mod tests {
                 Event::Detail(text) => text,
                 Event::Artifact(artifact) => artifact.to_string(),
                 Event::Prompt(request) => format!("{request:?}"),
+                Event::Terminal(request) => request.invocation().to_string(),
             }),
             Some(format!("$ {invocation}"))
         );
@@ -369,6 +370,7 @@ mod tests {
         assert_eq!(
             receiver.recv().await.map(|event| match event {
                 Event::Prompt(request) => request.question().to_owned(),
+                Event::Terminal(request) => request.invocation().to_string(),
                 Event::Process(event) => event.to_string(),
                 Event::Message(text) => text,
                 Event::Detail(text) => text,

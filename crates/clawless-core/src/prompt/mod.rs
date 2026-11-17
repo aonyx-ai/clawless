@@ -304,7 +304,11 @@ mod tests {
         while let Some(event) = receiver.recv().await {
             match event {
                 Event::Prompt(request) => return Some(*request),
-                Event::Message(_) | Event::Detail(_) | Event::Artifact(_) | Event::Process(_) => {}
+                Event::Message(_)
+                | Event::Detail(_)
+                | Event::Artifact(_)
+                | Event::Process(_)
+                | Event::Terminal(_) => {}
             }
         }
 

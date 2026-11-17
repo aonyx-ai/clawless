@@ -17,8 +17,13 @@
 //! The [`Event::Prompt`] variant carries a [`PromptRequest`], which is a question for the user.
 //! The request arrives after the events that the command sent before it.
 //!
+//! The [`Event::Terminal`] variant carries a [`TerminalRequest`], with which a command borrows the
+//! terminal for a program that takes it over, such as an editor. It too arrives after the events
+//! that the command sent before it.
+//!
 //! [`ProcessEvent`]: process::ProcessEvent
 //! [`PromptRequest`]: prompt::PromptRequest
+//! [`TerminalRequest`]: terminal::TerminalRequest
 
 use std::fmt::{Debug, Display};
 
@@ -29,6 +34,7 @@ use self::process::ProcessEvent;
 use self::prompt::PromptRequest;
 pub use self::receiver::EventReceiver;
 pub use self::sender::EventSender;
+use self::terminal::TerminalRequest;
 
 pub mod process;
 pub mod prompt;
@@ -83,7 +89,7 @@ erased_serde::serialize_trait_object!(Artifact);
 /// An `Event` represents a single piece of output that a command has produced. Events travel from
 /// the producer through an async channel to the Presenter, decoupling production from rendering.
 ///
-/// Five variants:
+/// Six variants:
 ///
 /// - [`Message`] — informational text (shown at default verbosity and above).
 /// - [`Detail`] — supplementary text (shown only at verbose verbosity).
@@ -91,10 +97,12 @@ erased_serde::serialize_trait_object!(Artifact);
 ///   Presenter can render via [`Display`] or [`Serialize`].
 /// - [`Event::Process`] — one step in the run of an external program that the command started.
 /// - [`Event::Prompt`] — a question for the user, with the reply that answers it.
+/// - [`Event::Terminal`]: a request for the terminal, for a program that takes it over.
 ///
 /// The Presenter decides which events to render based on its verbosity setting. Verbosity does
 /// not apply to a prompt, because the command waits for the answer. A presenter that cannot ask
-/// the user drops the request.
+/// the user drops the request. Verbosity does not apply to a request for the terminal either. A
+/// presenter that cannot lend the terminal refuses the request or drops it.
 ///
 /// [`Detail`]: Event::Detail
 /// [`Message`]: Event::Message
@@ -116,6 +124,10 @@ pub enum Event {
     ///
     /// The request is boxed so that the size of an `Event` stays that of its text variants.
     Prompt(Box<PromptRequest>),
+    /// A request for the terminal, for a program that takes it over
+    ///
+    /// The request is boxed so that the size of an `Event` stays that of its text variants.
+    Terminal(Box<TerminalRequest>),
 }
 
 #[cfg(test)]
@@ -212,6 +224,7 @@ mod tests {
                 Event::Detail(_) => None,
                 Event::Artifact(_) => None,
                 Event::Prompt(_) => None,
+                Event::Terminal(_) => None,
             },
             Some(id)
         );
@@ -230,8 +243,28 @@ mod tests {
                 Event::Detail(_) => None,
                 Event::Artifact(_) => None,
                 Event::Process(_) => None,
+                Event::Terminal(_) => None,
             },
             Some("Release?".to_owned())
+        );
+    }
+
+    #[test]
+    fn terminal_carries_the_program_that_borrows_the_terminal() {
+        let (request, _pending) = TerminalRequest::new(Invocation::new("vi").arg("notes.md"));
+
+        let event = Event::Terminal(Box::new(request));
+
+        assert_eq!(
+            match event {
+                Event::Terminal(request) => Some(request.invocation().to_string()),
+                Event::Message(_) => None,
+                Event::Detail(_) => None,
+                Event::Artifact(_) => None,
+                Event::Process(_) => None,
+                Event::Prompt(_) => None,
+            },
+            Some("vi notes.md".to_owned())
         );
     }
 

@@ -88,6 +88,12 @@ mod state;
 /// render(&projection.entries());
 /// ```
 ///
+/// # Prompts and the Terminal
+///
+/// The projection cannot ask the user a question. It cannot lend the terminal to a program that
+/// takes it over either, because the application draws on the terminal itself. It drops both
+/// kinds of request. A prompt then fails, and a program that needs the terminal does not start.
+///
 /// # Examples
 ///
 /// ```
@@ -340,9 +346,15 @@ impl Projection {
 /// A prompt is not stored as an entry. The projection cannot ask a user, so it drops the
 /// request. The command then receives an error and does not wait.
 ///
+/// A request for the terminal is not stored either. The application draws on the terminal
+/// itself, and the projection has no way to make it stop, so it drops the request. The command
+/// then receives [`Refusal::DroppedRequest`] and does not start its program.
+///
 /// # Panics
 ///
 /// Panics if the internal lock is poisoned.
+///
+/// [`Refusal::DroppedRequest`]: clawless_core::event::terminal::Refusal::DroppedRequest
 // The lock is poisoned only if another thread panicked while holding it. The drain task has
 // no way to publish events into a state it cannot lock, so it fails loudly instead.
 #[allow(clippy::expect_used)]
@@ -358,6 +370,10 @@ async fn drain(
             Event::Artifact(artifact) => Entry::Artifact(Arc::from(artifact)),
             Event::Process(event) => Entry::Process(Arc::from(event)),
             Event::Prompt(request) => {
+                drop(request);
+                continue;
+            }
+            Event::Terminal(request) => {
                 drop(request);
                 continue;
             }
@@ -383,7 +399,8 @@ mod tests {
     use clawless_core::event::event_channel;
     use clawless_core::event::process::{ProcessEvent, RunId};
     use clawless_core::event::prompt::PromptRequest;
-    use clawless_core::process::{Line, Stream};
+    use clawless_core::event::terminal::{Refusal, TerminalRequest};
+    use clawless_core::process::{Invocation, Line, Stream};
     use clawless_core::prompt::Confirm;
     use serde::Serialize;
 
@@ -476,6 +493,21 @@ mod tests {
             error.to_string(),
             "the prompt was dropped without an answer"
         );
+    }
+
+    #[tokio::test]
+    async fn drain_drops_a_request_for_the_terminal() {
+        let (sender, receiver) = event_channel();
+        let _projection = Projection::new(receiver);
+        let (request, pending) = TerminalRequest::new(Invocation::new("vi"));
+        sender
+            .send(Event::Terminal(Box::new(request)))
+            .await
+            .expect("should send");
+
+        let refusal = pending.wait().await.err();
+
+        assert_eq!(refusal, Some(Refusal::DroppedRequest));
     }
 
     #[tokio::test]
@@ -610,6 +642,22 @@ mod tests {
 
         sender
             .send(Event::Prompt(Box::new(request)))
+            .await
+            .expect("should send");
+        drop(sender);
+        projection.wait_until_complete().await;
+
+        assert!(projection.entries().is_empty());
+    }
+
+    #[tokio::test]
+    async fn entries_with_a_request_for_the_terminal_stores_no_entry() {
+        let (sender, receiver) = event_channel();
+        let projection = Projection::new(receiver);
+        let (request, _pending) = TerminalRequest::new(Invocation::new("vi"));
+
+        sender
+            .send(Event::Terminal(Box::new(request)))
             .await
             .expect("should send");
         drop(sender);

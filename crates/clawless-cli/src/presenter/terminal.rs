@@ -119,7 +119,7 @@ fn is_diagnostic(event: &ProcessEvent) -> bool {
 /// visible at the default verbosity says so itself with a message.
 ///
 /// The presenter handles a prompt before it renders an event. This function drops a prompt that
-/// reaches it.
+/// reaches it, and it drops a request for the terminal as well.
 ///
 /// # Panics
 ///
@@ -176,6 +176,7 @@ fn render_event(
             }
         },
         Event::Prompt(request) => drop(request),
+        Event::Terminal(request) => drop(request),
     }
 }
 
@@ -247,7 +248,11 @@ impl TerminalPresenter {
                     Some(input) => ask_user(*request, input, stderr).await,
                     None => drop(request),
                 },
-                Event::Message(_) | Event::Detail(_) | Event::Artifact(_) | Event::Process(_) => {
+                Event::Message(_)
+                | Event::Detail(_)
+                | Event::Artifact(_)
+                | Event::Process(_)
+                | Event::Terminal(_) => {
                     render_event(event, verbosity, mode, stdout, stderr);
                 }
             }

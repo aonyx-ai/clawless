@@ -71,15 +71,22 @@ impl ScriptedUser {
     /// Reads the events of a command and answers its prompts, until the command is done
     ///
     /// The call returns when the channel closes, which happens when the command drops its
-    /// output. It returns every event that was not a prompt, in the order of arrival.
+    /// output. It returns every event that was not a prompt or a request for the terminal, in
+    /// the order of arrival.
+    ///
+    /// A scripted user has no terminal to lend, so it drops every request for the terminal. The
+    /// command then receives [`Refusal::DroppedRequest`] and does not start its program.
     ///
     /// Run this in a task of its own, because the command waits for each answer.
+    ///
+    /// [`Refusal::DroppedRequest`]: crate::event::terminal::Refusal::DroppedRequest
     pub async fn attend(mut self, mut receiver: EventReceiver) -> Vec<Event> {
         let mut events = Vec::new();
 
         while let Some(event) = receiver.recv().await {
             match event {
                 Event::Prompt(request) => self.answer(*request),
+                Event::Terminal(request) => drop(request),
                 Event::Message(_) | Event::Detail(_) | Event::Artifact(_) | Event::Process(_) => {
                     events.push(event);
                 }
@@ -222,6 +229,7 @@ mod tests {
                     Event::Artifact(artifact) => artifact.to_string(),
                     Event::Process(event) => event.to_string(),
                     Event::Prompt(request) => format!("{request:?}"),
+                    Event::Terminal(request) => request.invocation().to_string(),
                 })
                 .collect::<Vec<_>>(),
             vec!["released".to_owned()]

@@ -289,6 +289,7 @@ mod tests {
                 Event::Detail(text) => text,
                 Event::Artifact(artifact) => artifact.to_string(),
                 Event::Prompt(request) => format!("{request:?}"),
+                Event::Terminal(request) => request.invocation().to_string(),
             }),
             Some(format!("$ {invocation}"))
         );
@@ -355,6 +356,7 @@ mod tests {
                 Event::Message(text) => text,
                 Event::Detail(text) => text,
                 Event::Artifact(artifact) => artifact.to_string(),
+                Event::Terminal(request) => request.invocation().to_string(),
             }),
             Some("Release?".to_owned())
         );
