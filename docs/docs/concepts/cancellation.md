@@ -132,8 +132,10 @@ Clawless follows the standard CLI convention for signal handling:
 
 - **First Ctrl+C** triggers graceful cancellation. The framework sets the
   cancellation token, and your command has a chance to clean up.
-- **Second Ctrl+C** force-exits the process immediately with code 130
-  (128 + SIGINT).
+- **Second Ctrl+C** ends the process at once with code 130 (128 + SIGINT).
+  Clawless stops waiting for your command and drops it. Its destructors run, so
+  a program that your command started ends with it. Work that blocks a thread
+  gets one second to end.
 
 This matches the behavior of cargo, npm, Docker, and other CLI tools that users
 already expect. On Unix, SIGTERM is also handled and triggers the same graceful

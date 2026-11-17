@@ -17,7 +17,7 @@ use clawless_core::context::{Context, Interactivity};
 use clawless_core::event::event_channel;
 use clawless_core::exit::Exit;
 use clawless_core::output::Output;
-use clawless_core::signal::wait_for_shutdown;
+use clawless_core::signal::run_until_interrupted;
 
 use crate::error::{CommandResult, ErrorContext};
 use crate::output::OutputFlags;
@@ -65,8 +65,8 @@ impl CommandRunner {
     /// 3. Extracts output flags from the pre-parsed argument matches
     /// 4. Creates an event channel and builds the [`Context`]
     /// 5. Configures a [`TerminalPresenter`] with the parsed output flags
-    /// 6. Creates a Tokio runtime, spawns the signal handler, and runs the command through the
-    ///    presenter
+    /// 6. Creates a Tokio runtime, and runs the command through the presenter until it ends or the
+    ///    user interrupts it twice
     ///
     /// A user is present when the standard input and the standard error are both terminals. The
     /// [`Context`] carries the result as its [`Interactivity`].
@@ -80,6 +80,10 @@ impl CommandRunner {
     /// error. The `main` function returns the [`Exit`] in a `ProcessExit`, and the process then
     /// writes its text and exits with its code. The text therefore comes after all the output of
     /// the command.
+    ///
+    /// The first Ctrl+C cancels the [`Cancellation`] token of the command. A second Ctrl+C drops
+    /// the command and the presenter, and the runner returns an [`Exit`] with the code 130. The
+    /// destructors of the command run, so a program that the command started ends with it.
     ///
     /// # Arguments
     ///
@@ -157,14 +161,17 @@ impl CommandRunner {
             .build();
 
         let rt = tokio::runtime::Runtime::new().context("start the async runtime")?;
-        rt.block_on(async {
-            tokio::spawn(wait_for_shutdown(cancellation));
-
+        let presented = run_until_interrupted(rt, cancellation, async {
             let command = exec(matches, context);
             presenter
                 .present(Box::pin(async move { command.await.map(Into::into) }))
                 .await
-        })
+        });
+
+        match presented {
+            Ok(result) => result,
+            Err(interrupted) => Ok(interrupted),
+        }
     }
 }
 
