@@ -29,6 +29,8 @@ use self::process::ProcessEvent;
 use self::prompt::PromptRequest;
 pub use self::receiver::EventReceiver;
 pub use self::sender::EventSender;
+pub use self::styling::Styling;
+pub use self::text_form::TextForm;
 
 pub mod process;
 pub mod prompt;
@@ -39,6 +41,10 @@ mod channel;
 mod receiver;
 /// The half of the event channel that sends events
 mod sender;
+/// Whether text may carry terminal styles
+mod styling;
+/// Values that write their text in a styling that the presenter chooses
+mod text_form;
 
 /// Trait for artifact values that can be rendered as text or JSON
 ///

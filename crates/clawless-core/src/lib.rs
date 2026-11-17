@@ -8,6 +8,10 @@ pub mod output;
 pub mod process;
 pub mod prompt;
 
+#[cfg(any(test, feature = "test-support"))]
+#[doc(hidden)]
+pub mod test_support;
+
 // Signal-to-cancellation adapter used by the `main!()` macro expansion
 #[doc(hidden)]
 pub mod signal;
