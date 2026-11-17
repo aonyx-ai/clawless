@@ -103,6 +103,7 @@ mod tests {
     use std::fmt;
     use std::sync::Arc;
 
+    use clawless_core::event::Styling;
     use serde::Serialize;
 
     use super::*;
@@ -128,7 +129,7 @@ mod tests {
         let Entry::Artifact(a) = &artifacts[0] else {
             panic!("expected Entry::Artifact");
         };
-        assert_eq!(a.to_string(), "art");
+        assert_eq!(a.to_text(Styling::Plain), "art");
     }
 
     #[test]

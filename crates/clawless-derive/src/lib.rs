@@ -67,7 +67,9 @@ pub fn detail(input: TokenStream) -> TokenStream {
 /// Expands to `context.output().artifact(...).await.expect("event channel closed")`, where
 /// `context` resolves to the local variable in the calling function's scope. Unlike `message!`
 /// and `detail!`, this macro does not use `format!` — it takes an expression that implements
-/// `Display`, `Serialize`, and `Debug`. This is the macro equivalent of `Output::artifact`.
+/// `Artifact`, as every value with `Display`, `Serialize`, and `Debug` does. A value with a styled
+/// form implements `TextForm` in place of `Display`. This is the macro equivalent of
+/// `Output::artifact`.
 ///
 /// The macro must be called from an async function because the core `Output` methods are async.
 ///

@@ -17,13 +17,11 @@
 //! [`process_event`]: Output::process_event
 //! [`prompt`]: Output::prompt
 
-use std::fmt::{Debug, Display};
-
-use serde::Serialize;
+use std::fmt::Display;
 
 use crate::event::process::ProcessEvent;
 use crate::event::prompt::PromptRequest;
-use crate::event::{Event, EventSender, SendError};
+use crate::event::{Artifact, Event, EventSender, SendError};
 
 /// Command output interface that wraps an event channel sender
 ///
@@ -136,8 +134,11 @@ impl Output {
     /// Sends a structured artifact event
     ///
     /// Wraps the value in a [`Box`] and sends it as an [`Event::Artifact`]. The value must
-    /// implement [`Display`] (for text rendering), [`Serialize`] (for JSON rendering), and
-    /// [`Debug`] (for diagnostics).
+    /// implement [`Artifact`]. Any value that implements [`Display`] (for text rendering),
+    /// [`Serialize`] (for JSON rendering), and [`Debug`] (for diagnostics) does. A value with a
+    /// styled text form implements [`TextForm`] instead of [`Display`], and the presenter chooses
+    /// which form it writes. A `Box<dyn Artifact>` is an artifact as well, so a command can pass
+    /// on an artifact that it received as a box.
     ///
     /// # Errors
     ///
@@ -173,10 +174,13 @@ impl Output {
     /// # }
     /// ```
     ///
+    /// [`Debug`]: std::fmt::Debug
     /// [`EventReceiver`]: crate::event::EventReceiver
+    /// [`Serialize`]: serde::Serialize
+    /// [`TextForm`]: crate::event::TextForm
     pub async fn artifact<T>(&self, value: T) -> Result<(), SendError>
     where
-        T: Display + Serialize + Debug + Send + Sync + 'static,
+        T: Artifact + 'static,
     {
         self.sender.send(Event::Artifact(Box::new(value))).await
     }
@@ -266,10 +270,11 @@ mod tests {
     use serde::Serialize;
 
     use super::*;
-    use crate::event::event_channel;
     use crate::event::process::RunId;
+    use crate::event::{Styling, TextForm, event_channel};
     use crate::process::Invocation;
     use crate::prompt::Confirm;
+    use crate::test_support::Bold;
 
     #[derive(Clone, Debug, Serialize)]
     struct TestArtifact {
@@ -296,7 +301,25 @@ mod tests {
 
         let event = receiver.recv().await.expect("should receive");
 
-        assert!(matches!(event, Event::Artifact(ref a) if a.to_string() == "result"));
+        let Event::Artifact(artifact) = event else {
+            panic!("expected Event::Artifact, received {event:?}");
+        };
+        assert_eq!(artifact.to_text(Styling::Plain), "result");
+    }
+
+    #[tokio::test]
+    async fn artifact_with_a_boxed_artifact_sends_the_styled_form_of_the_value() {
+        let (sender, mut receiver) = event_channel();
+        let output = Output::new(sender);
+        let boxed: Box<dyn Artifact> = Box::new(Bold::new("result"));
+
+        output.artifact(boxed).await.expect("should send");
+
+        let event = receiver.recv().await.expect("should receive");
+        let Event::Artifact(artifact) = event else {
+            panic!("expected Event::Artifact, received {event:?}");
+        };
+        assert_eq!(artifact.to_text(Styling::Styled), "\x1b[1mresult\x1b[0m");
     }
 
     #[tokio::test]
@@ -351,7 +374,7 @@ mod tests {
                 Event::Process(event) => event.to_string(),
                 Event::Message(text) => text,
                 Event::Detail(text) => text,
-                Event::Artifact(artifact) => artifact.to_string(),
+                Event::Artifact(artifact) => artifact.to_text(Styling::Plain),
                 Event::Prompt(request) => format!("{request:?}"),
             }),
             Some(format!("$ {invocation}"))
@@ -372,7 +395,7 @@ mod tests {
                 Event::Process(event) => event.to_string(),
                 Event::Message(text) => text,
                 Event::Detail(text) => text,
-                Event::Artifact(artifact) => artifact.to_string(),
+                Event::Artifact(artifact) => artifact.to_text(Styling::Plain),
             }),
             Some("Release?".to_owned())
         );

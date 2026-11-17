@@ -1,8 +1,8 @@
 use std::fmt;
 use std::sync::Arc;
 
-use clawless_core::event::Artifact;
 use clawless_core::event::process::ProcessEvent;
+use clawless_core::event::{Artifact, Styling};
 
 /// User-facing representation of a single event
 ///
@@ -11,7 +11,14 @@ use clawless_core::event::process::ProcessEvent;
 /// [`Event`] variant but uses [`Arc`] for artifact values so that entries can be cheaply cloned
 /// when returned from queries.
 ///
+/// An entry implements [`Display`], and an artifact entry writes the [`Styling::Plain`] form of
+/// its artifact. A TUI draws text into the cells of its frame and styles those cells itself, so
+/// the escape sequences of a [`Styling::Styled`] form do not belong in that text. An application
+/// that wants a styled form calls [`TextForm::fmt_text`] on the artifact itself.
+///
+/// [`Display`]: std::fmt::Display
 /// [`Event`]: clawless_core::event::Event
+/// [`TextForm::fmt_text`]: clawless_core::event::TextForm::fmt_text
 #[derive(Clone, Debug)]
 pub enum Entry {
     /// Informational message
@@ -32,7 +39,7 @@ impl fmt::Display for Entry {
         match self {
             Entry::Message(text) => f.write_str(text),
             Entry::Detail(text) => f.write_str(text),
-            Entry::Artifact(artifact) => fmt::Display::fmt(artifact, f),
+            Entry::Artifact(artifact) => artifact.fmt_text(f, Styling::Plain),
             Entry::Process(event) => fmt::Display::fmt(event, f),
         }
     }
@@ -48,6 +55,7 @@ mod tests {
 
     use clawless_core::event::process::RunId;
     use clawless_core::process::{Line, Stream};
+    use clawless_core::test_support::Bold;
     use serde::Serialize;
 
     use super::*;
@@ -96,6 +104,15 @@ mod tests {
     #[test]
     fn display_artifact_renders_via_display_trait() {
         let entry = Entry::Artifact(Arc::new(test_artifact()));
+
+        let text = entry.to_string();
+
+        assert_eq!(text, "result");
+    }
+
+    #[test]
+    fn display_artifact_with_a_styled_form_renders_the_plain_form() {
+        let entry = Entry::Artifact(Arc::new(Bold::new("result")));
 
         let text = entry.to_string();
 

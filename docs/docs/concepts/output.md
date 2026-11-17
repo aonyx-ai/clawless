@@ -95,6 +95,61 @@ output.artifact(&WordCount { words: 42 });
 Artifacts are always written, regardless of verbosity. This ensures that machine
 consumers always get the data they need.
 
+### Styled Artifacts
+
+An artifact can offer a styled form next to its plain form, for example a
+diagnostic with colors. The presenter chooses the form, because only the
+presenter knows where the text goes. The artifact implements
+[`TextForm`][text-form] in place of [`Display`][display] and writes the form
+that the [`Styling`][styling] asks for. A type with `TextForm`, `Serialize`,
+and `Debug` is an [`Artifact`][artifact-trait]:
+
+```rust
+use std::fmt;
+
+use clawless::event::{Styling, TextForm};
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
+struct Verdict {
+    passed: bool,
+}
+
+impl TextForm for Verdict {
+    fn fmt_text(&self, f: &mut fmt::Formatter<'_>, styling: Styling) -> fmt::Result {
+        let word = match self.passed {
+            true => "passed",
+            false => "failed",
+        };
+
+        match styling {
+            Styling::Styled => write!(f, "\x1b[1m{word}\x1b[0m"),
+            Styling::Plain => f.write_str(word),
+        }
+    }
+}
+
+artifact!(Verdict { passed: true });
+```
+
+Such a type does not implement `Display`, because every type with `Display`
+already has a `TextForm` with one form. A value that contains another value
+calls `fmt_text` on it with the same styling.
+
+That same rule limits the wrappers of a styled type:
+
+- `Box<dyn Artifact>` is an artifact and writes the styled form of its value,
+  so a command can pass on an artifact that it received as a box.
+- `Box<Verdict>`, `&'static Verdict`, and `Arc<Verdict>` are not artifacts.
+  Clawless cannot forward `TextForm` through them, because each of them has
+  `Display` when its value has it. Your crate can implement `TextForm` for
+  `Box<Verdict>` or `&Verdict` itself and forward to the value. An `Arc` needs a
+  newtype of your crate around it.
+- `Arc<dyn Artifact>` is not an artifact either. Keep the artifact in a `Box`
+  if a command passes it on.
+- A styled value cannot be an argument of `format!`, because it has no
+  `Display`. Pass the value on whole, or call `to_text` with a styling.
+
 ## Behavior matrix
 
 The interaction of method, verbosity, and mode:
@@ -146,7 +201,8 @@ Raw inputs, resolved paths, retry attempts, and timing information belong here.
 
 **`artifact`** for the primary output of the command. If your command produces
 data that another program might consume, use `artifact`. The value must implement
-both [`Display`][display] and [`Serialize`][serialize].
+both [`Display`][display] and [`Serialize`][serialize], or implement
+[`TextForm`][text-form] in place of `Display` to offer a styled form.
 
 Most commands only need `message`. Commands that produce structured data use
 `artifact`. Commands with complex internals add `detail` for observability.
@@ -161,6 +217,9 @@ Most commands only need `message`. Commands that produce structured data use
   cancellation tokens
 
 [output-type]: https://docs.rs/clawless/latest/clawless/output/struct.Output.html
+[artifact-trait]: https://docs.rs/clawless-core/latest/clawless_core/event/trait.Artifact.html
 [context]: ./context
 [display]: https://doc.rust-lang.org/std/fmt/trait.Display.html
 [serialize]: https://docs.rs/serde/latest/serde/trait.Serialize.html
+[styling]: https://docs.rs/clawless-core/latest/clawless_core/event/enum.Styling.html
+[text-form]: https://docs.rs/clawless-core/latest/clawless_core/event/trait.TextForm.html

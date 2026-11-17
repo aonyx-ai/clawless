@@ -24,7 +24,7 @@ use bon::Builder;
 use clawless_core::context::Interactivity;
 use clawless_core::event::process::ProcessEvent;
 use clawless_core::event::prompt::PromptRequest;
-use clawless_core::event::{Event, EventReceiver};
+use clawless_core::event::{Event, EventReceiver, Styling, TextForm};
 use clawless_core::exit::Exit;
 use clawless_core::process::Stream;
 
@@ -153,7 +153,7 @@ fn render_event(
         },
         Event::Artifact(artifact) => {
             let line = match mode {
-                OutputMode::Text => artifact.to_string(),
+                OutputMode::Text => artifact.to_text(Styling::Plain),
                 OutputMode::Json => {
                     serde_json::to_string(&artifact).expect("should serialize artifact to JSON")
                 }
