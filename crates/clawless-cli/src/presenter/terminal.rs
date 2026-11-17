@@ -18,12 +18,14 @@
 use std::future::Future;
 use std::io::Write;
 use std::pin::Pin;
+use std::process::Stdio;
 
 use async_trait::async_trait;
 use bon::Builder;
 use clawless_core::context::Interactivity;
 use clawless_core::event::process::ProcessEvent;
 use clawless_core::event::prompt::PromptRequest;
+use clawless_core::event::terminal::{Refusal, TerminalRequest};
 use clawless_core::event::{Event, EventReceiver};
 use clawless_core::exit::Exit;
 use clawless_core::process::Stream;
@@ -31,6 +33,7 @@ use clawless_core::process::Stream;
 use super::Presenter;
 use super::line_question;
 use super::line_reader::LineReader;
+use super::screen::{Attachment, Screen};
 use crate::error::CommandResult;
 use crate::output::OutputMode;
 use crate::output::Verbosity;
@@ -45,6 +48,12 @@ use crate::output::Verbosity;
 /// stderr in both modes, and the user answers with one line on stdin. Verbosity and output mode
 /// do not suppress a question. A presenter that is not built as interactive drops every
 /// question.
+///
+/// The presenter lends the terminal to a program that takes it over, such as an editor. It
+/// writes nothing while the program runs. The program draws on the standard error, or on the
+/// standard output when only that one is a terminal. The presenter refuses the terminal when
+/// the standard input or both output streams are not terminals, as in CI or in a pipe. A
+/// program there would wait for a user who is not present.
 ///
 /// `TerminalPresenter` is constructed once via its [builder], consumed by a single call to
 /// [`present`], and dropped when the command completes. The presenter holds the [`EventReceiver`]
@@ -118,8 +127,8 @@ fn is_diagnostic(event: &ProcessEvent) -> bool {
 /// and appears only when the user asks for verbose output. A command that wants a program to be
 /// visible at the default verbosity says so itself with a message.
 ///
-/// The presenter handles a prompt before it renders an event. This function drops a prompt that
-/// reaches it, and it drops a request for the terminal as well.
+/// The presenter handles a prompt and a request for the terminal before it renders an event.
+/// This function drops either of them if it reaches it.
 ///
 /// # Panics
 ///
@@ -204,12 +213,45 @@ async fn ask_user(request: PromptRequest, input: &mut LineReader, display: &mut 
     }
 }
 
+/// Lends the terminal to a program of the command, and waits until the command gives it back
+///
+/// `screen` returns the stream for the standard output of the program, or the refusal of an
+/// application without a terminal. The presenter flushes both streams first, because the program
+/// draws over the terminal as soon as it starts. A stream that cannot be flushed fails the next
+/// write, which reports it.
+///
+/// The presenter handles no further event until the terminal is back, so the events that the
+/// command sends in the meantime appear after the program.
+async fn lend_terminal(
+    request: TerminalRequest,
+    screen: Result<&impl Fn() -> Stdio, Refusal>,
+    stdout: &mut impl Write,
+    stderr: &mut impl Write,
+) {
+    let screen = match screen {
+        Ok(screen) => screen,
+        Err(refusal) => {
+            request.refuse(refusal);
+            return;
+        }
+    };
+
+    drop(stdout.flush());
+    drop(stderr.flush());
+
+    request.lend(screen()).await;
+}
+
 impl TerminalPresenter {
     /// Presents the output of a command on the given streams
     ///
     /// [`Presenter::present`] passes the standard output and the standard error of the
     /// application, and the standard input if a user is present. A test passes buffers and
     /// scripted input.
+    ///
+    /// `screen` returns the stream for a program that borrows the terminal, or the refusal of an
+    /// application without a terminal. [`Presenter::present`] chooses it from the streams of the
+    /// application. A test passes a file.
     ///
     /// Each write locks its stream for one line only, so the presenter does not block other
     /// writers for the whole presentation.
@@ -232,6 +274,7 @@ impl TerminalPresenter {
         stdout: &mut impl Write,
         stderr: &mut impl Write,
         mut input: Option<LineReader>,
+        screen: Result<impl Fn() -> Stdio, Refusal>,
     ) -> CommandResult<Exit> {
         let Self {
             verbosity,
@@ -248,11 +291,11 @@ impl TerminalPresenter {
                     Some(input) => ask_user(*request, input, stderr).await,
                     None => drop(request),
                 },
-                Event::Message(_)
-                | Event::Detail(_)
-                | Event::Artifact(_)
-                | Event::Process(_)
-                | Event::Terminal(_) => {
+                Event::Terminal(request) => {
+                    let screen = screen.as_ref().map_err(|refusal| *refusal);
+                    lend_terminal(*request, screen, stdout, stderr).await;
+                }
+                Event::Message(_) | Event::Detail(_) | Event::Artifact(_) | Event::Process(_) => {
                     render_event(event, verbosity, mode, stdout, stderr);
                 }
             }
@@ -267,6 +310,10 @@ impl TerminalPresenter {
 
 #[async_trait(?Send)]
 impl Presenter for TerminalPresenter {
+    #[allow(
+        clippy::expect_used,
+        reason = "a copy of the standard error fails only when the application has no handles left, and the program could then not start either"
+    )]
     async fn present(
         self,
         command: Pin<Box<dyn Future<Output = CommandResult<Exit>> + Send>>,
@@ -276,13 +323,24 @@ impl Presenter for TerminalPresenter {
             Interactivity::NonInteractive => None,
         };
 
-        self.present_on(
-            command,
-            &mut std::io::stdout(),
-            &mut std::io::stderr(),
-            input,
-        )
-        .await
+        let stdout = std::io::stdout();
+        let stderr = std::io::stderr();
+        let screen = Screen::for_streams()
+            .input(Attachment::of(&std::io::stdin()))
+            .error(Attachment::of(&stderr))
+            .output(Attachment::of(&stdout))
+            .choose()
+            .map(|screen| {
+                let stderr = &stderr;
+                move || {
+                    screen
+                        .stream(stderr)
+                        .expect("should copy the standard error")
+                }
+            });
+
+        self.present_on(command, &mut &stdout, &mut &stderr, input, screen)
+            .await
     }
 }
 
@@ -293,6 +351,8 @@ mod tests {
     #![allow(clippy::missing_panics_doc)]
 
     use std::collections::VecDeque;
+    #[cfg(unix)]
+    use std::fs::{File, read_to_string};
     use std::process::ExitCode;
     use std::sync::{Arc, Mutex};
     use std::time::Duration;
@@ -302,9 +362,11 @@ mod tests {
     use clawless_core::event::prompt::PromptRequest;
     use clawless_core::event::{EventSender, event_channel};
     use clawless_core::output::Output;
-    use clawless_core::process::Invocation;
-    use clawless_core::process::Line;
+    use clawless_core::process::{Invocation, Line, Process};
     use clawless_core::prompt::{Confirm, Confirmation, Prompt, Select};
+    #[cfg(unix)]
+    use tempfile::TempDir;
+    use tokio::task::yield_now;
 
     use super::*;
 
@@ -369,6 +431,46 @@ mod tests {
             let line = lines.pop_front().unwrap_or_default();
             buffer.push_str(&line);
             Ok(line.len())
+        })
+    }
+
+    /// Asks the presenter for the terminal, gives it back at once, and returns the refusal
+    async fn ask_for_the_terminal(sender: &EventSender) -> Option<Refusal> {
+        let (request, pending) = TerminalRequest::new(Invocation::new("vi"));
+        sender
+            .send(Event::Terminal(Box::new(request)))
+            .await
+            .expect("should send");
+
+        pending.wait().await.err()
+    }
+
+    /// Returns a command that writes before, while, and after it holds the terminal
+    ///
+    /// While it holds the terminal, the command sends one more message and then records what the
+    /// presenter has written so far in `seen`. The test runs on one thread, so the yields give
+    /// the presenter every chance to write that message if it would.
+    fn borrowing(
+        sender: EventSender,
+        transcript: Transcript,
+        seen: Arc<Mutex<String>>,
+    ) -> Pin<Box<dyn Future<Output = CommandResult<Exit>> + Send>> {
+        Box::pin(async move {
+            let output = Output::new(sender.clone());
+            let (request, pending) = TerminalRequest::new(Invocation::new("vi"));
+
+            output.message("before").await?;
+            sender.send(Event::Terminal(Box::new(request))).await?;
+            let loan = pending.wait().await.expect("the presenter should lend");
+            output.message("while").await?;
+            for _ in 0..16 {
+                yield_now().await;
+            }
+            *seen.lock().expect("should lock") = transcript.text();
+            drop(loan);
+            output.message("after").await?;
+
+            Ok(Exit::from(()))
         })
     }
 
@@ -477,6 +579,51 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn present_on_with_a_lent_terminal_holds_later_events_back() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+        let transcript = Transcript::default();
+        let seen = Arc::new(Mutex::new(String::new()));
+
+        drop(
+            presenter
+                .present_on(
+                    borrowing(sender, transcript.clone(), Arc::clone(&seen)),
+                    &mut transcript.clone(),
+                    &mut transcript.clone(),
+                    None,
+                    Ok(Stdio::null),
+                )
+                .await
+                .expect("should succeed"),
+        );
+
+        assert_eq!(*seen.lock().expect("should lock"), "before\n");
+    }
+
+    #[tokio::test]
+    async fn present_on_with_a_lent_terminal_writes_the_held_events_afterwards() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+        let transcript = Transcript::default();
+
+        drop(
+            presenter
+                .present_on(
+                    borrowing(sender, transcript.clone(), Arc::default()),
+                    &mut transcript.clone(),
+                    &mut transcript.clone(),
+                    None,
+                    Ok(Stdio::null),
+                )
+                .await
+                .expect("should succeed"),
+        );
+
+        assert_eq!(transcript.text(), "before\nwhile\nafter\n");
+    }
+
+    #[tokio::test]
     async fn present_on_with_a_prompt_asks_after_the_earlier_output() {
         let (sender, receiver) = event_channel();
         let presenter = TerminalPresenter::builder().receiver(receiver).build();
@@ -489,6 +636,7 @@ mod tests {
                     &mut transcript.clone(),
                     &mut transcript.clone(),
                     Some(typed(&["y\n"])),
+                    Ok(Stdio::null),
                 )
                 .await
                 .expect("should succeed"),
@@ -516,6 +664,7 @@ mod tests {
                     &mut stdout,
                     &mut stderr,
                     Some(typed(&["y\n"])),
+                    Ok(Stdio::null),
                 )
                 .await
                 .expect("should succeed"),
@@ -540,6 +689,7 @@ mod tests {
                     &mut stdout,
                     &mut stderr,
                     Some(typed(&["y\n"])),
+                    Ok(Stdio::null),
                 )
                 .await
                 .expect("should succeed"),
@@ -561,6 +711,7 @@ mod tests {
                     &mut stdout,
                     &mut stderr,
                     Some(typed(&["y\n"])),
+                    Ok(Stdio::null),
                 )
                 .await
                 .expect("should succeed"),
@@ -593,6 +744,7 @@ mod tests {
                     &mut transcript.clone(),
                     &mut transcript.clone(),
                     Some(typed(&["2\n"])),
+                    Ok(Stdio::null),
                 )
                 .await
                 .expect("should succeed"),
@@ -623,6 +775,7 @@ mod tests {
                 &mut stdout,
                 &mut stderr,
                 Some(typed(&["1\n"])),
+                Ok(Stdio::null),
             )
             .await
             .expect_err("should fail");
@@ -657,12 +810,82 @@ mod tests {
                     &mut transcript.clone(),
                     &mut transcript.clone(),
                     Some(typed(&["Fix the race\n"])),
+                    Ok(Stdio::null),
                 )
                 .await
                 .expect("should succeed"),
         );
 
         assert_eq!(transcript.text(), "Title: The title is Fix the race.\n");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn present_on_with_an_interactive_run_sends_its_output_to_the_screen() {
+        let directory = TempDir::new().expect("should create a directory");
+        let path = directory.path().join("screen");
+        let screen = File::create(&path).expect("should create the screen");
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+
+        drop(
+            presenter
+                .present_on(
+                    Box::pin(async move {
+                        Process::builder()
+                            .output(Output::new(sender))
+                            .build()
+                            .run_interactive(Invocation::new("sh").arg("-c").arg("echo hello"))
+                            .await?;
+
+                        Ok(Exit::from(()))
+                    }),
+                    &mut stdout,
+                    &mut stderr,
+                    None,
+                    Ok(move || Stdio::from(screen.try_clone().expect("should clone the screen"))),
+                )
+                .await
+                .expect("should succeed"),
+        );
+
+        assert_eq!(
+            read_to_string(&path).expect("should read the screen"),
+            "hello\n"
+        );
+    }
+
+    #[tokio::test]
+    async fn present_on_without_a_screen_refuses_the_terminal() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+        let refusal = Arc::new(Mutex::new(None));
+        let recorded = Arc::clone(&refusal);
+
+        drop(
+            presenter
+                .present_on(
+                    Box::pin(async move {
+                        *recorded.lock().expect("should lock") =
+                            ask_for_the_terminal(&sender).await;
+
+                        Ok(Exit::from(()))
+                    }),
+                    &mut stdout,
+                    &mut stderr,
+                    None,
+                    Err::<fn() -> Stdio, _>(Refusal::MissingTerminal),
+                )
+                .await
+                .expect("should succeed"),
+        );
+
+        assert_eq!(
+            *refusal.lock().expect("should lock"),
+            Some(Refusal::MissingTerminal)
+        );
     }
 
     #[tokio::test]
@@ -672,7 +895,13 @@ mod tests {
         let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
 
         let error = presenter
-            .present_on(confirming(sender), &mut stdout, &mut stderr, None)
+            .present_on(
+                confirming(sender),
+                &mut stdout,
+                &mut stderr,
+                None,
+                Ok(Stdio::null),
+            )
             .await
             .expect_err("should fail");
 
@@ -701,6 +930,7 @@ mod tests {
                     &mut stdout,
                     &mut stderr,
                     None,
+                    Ok(Stdio::null),
                 )
                 .await
                 .expect("should succeed"),
