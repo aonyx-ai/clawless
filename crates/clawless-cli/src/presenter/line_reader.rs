@@ -6,6 +6,7 @@
 use std::io;
 use std::sync::mpsc as blocking;
 
+use tokio::sync::mpsc::error::TryRecvError;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
 /// The name of the thread that reads the input
@@ -32,10 +33,11 @@ type Read = io::Result<Option<String>>;
 ///
 /// If a caller drops [`next_line`] before it returns, the read stays open, because a blocked
 /// read cannot be cancelled. The next call starts no second read and returns the line of the
-/// open read.
+/// open read. [`is_reading`] reports such a read, and it keeps a line that arrived meanwhile.
 ///
 /// The thread starts with the first request.
 ///
+/// [`is_reading`]: LineReader::is_reading
 /// [`next_line`]: LineReader::next_line
 pub(super) struct LineReader {
     /// The state of the reader
@@ -58,7 +60,7 @@ enum State {
         /// The channel that carries each read back
         reads: UnboundedReceiver<Read>,
 
-        /// Whether a read is requested and not yet returned to a caller
+        /// The read that is requested and not yet returned to a caller
         open: OpenRead,
     },
 
@@ -66,14 +68,17 @@ enum State {
     Stopped,
 }
 
-/// Whether a read is requested and not yet returned to a caller
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+/// The read that is requested and not yet returned to a caller
+#[derive(Debug)]
 enum OpenRead {
     /// No read is open
     No,
 
-    /// A read is requested, and no caller has received its result
-    Yes,
+    /// A read is requested, and the thread still waits for its line
+    Pending,
+
+    /// The thread has read the line, and no caller has received it yet
+    Arrived(Read),
 }
 
 impl LineReader {
@@ -117,13 +122,12 @@ impl LineReader {
             return Err(stopped());
         };
 
-        match open {
-            OpenRead::Yes => {}
-            OpenRead::No => {
-                requests.send(()).map_err(|_closed| stopped())?;
-                *open = OpenRead::Yes;
-            }
+        match std::mem::replace(open, OpenRead::No) {
+            OpenRead::Arrived(read) => return read,
+            OpenRead::Pending => {}
+            OpenRead::No => requests.send(()).map_err(|_closed| stopped())?,
         }
+        *open = OpenRead::Pending;
 
         let Some(read) = reads.recv().await else {
             self.state = State::Stopped;
@@ -132,6 +136,35 @@ impl LineReader {
         *open = OpenRead::No;
 
         read
+    }
+
+    /// Reports whether a read of the input waits for a line
+    ///
+    /// A caller that drops [`next_line`] before it returns leaves its read open. The thread
+    /// then waits for a line, and a program that reads the terminal in the meantime loses keys
+    /// to it. A read whose line has arrived waits no more. The reader keeps that line for the
+    /// next call to [`next_line`], and the read no longer counts.
+    ///
+    /// [`next_line`]: LineReader::next_line
+    pub(super) fn is_reading(&mut self) -> bool {
+        let (reads, open) = match &mut self.state {
+            State::Started { reads, open, .. } => (reads, open),
+            State::Idle { .. } => return false,
+            State::Stopped => return false,
+        };
+
+        match open {
+            OpenRead::Pending => match reads.try_recv() {
+                Ok(read) => {
+                    *open = OpenRead::Arrived(read);
+                    false
+                }
+                Err(TryRecvError::Empty) => true,
+                Err(TryRecvError::Disconnected) => false,
+            },
+            OpenRead::Arrived(_) => false,
+            OpenRead::No => false,
+        }
     }
 
     /// Starts the thread that reads the input, unless it runs already
@@ -216,6 +249,9 @@ mod tests {
     use std::task::Poll;
     use std::time::Duration;
 
+    use tokio::time::error::Elapsed;
+    use tokio::time::{sleep, timeout};
+
     use super::*;
 
     /// Returns a reader over the given lines, and the count of the reads that it has started
@@ -242,6 +278,79 @@ mod tests {
         std::thread::sleep(Duration::from_millis(50));
     }
 
+    /// Returns a reader whose input waits for the lines that the sender feeds it
+    fn fed() -> (LineReader, mpsc::Sender<String>) {
+        let (feed, source) = mpsc::channel::<String>();
+        let reader = LineReader::new(move |buffer| {
+            let line = source.recv().unwrap_or_default();
+            buffer.push_str(&line);
+            Ok(line.len())
+        });
+
+        (reader, feed)
+    }
+
+    /// Requests a line and drops the request before the line arrives
+    async fn abandon_a_read(reader: &mut LineReader) {
+        let mut abandoned = pin!(reader.next_line());
+        std::future::poll_fn(|context| Poll::Ready(abandoned.as_mut().poll(context).is_pending()))
+            .await;
+    }
+
+    /// Waits until the reader no longer reads, which it reports once the line has arrived
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Elapsed`] when the line does not arrive within five seconds.
+    async fn wait_for_the_line(reader: &mut LineReader) -> Result<(), Elapsed> {
+        timeout(Duration::from_secs(5), async {
+            while reader.is_reading() {
+                sleep(Duration::from_millis(5)).await;
+            }
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn is_reading_after_a_returned_line_returns_false() {
+        let (mut reader, _reads) = scripted(&["y\n"]);
+        drop(reader.next_line().await);
+
+        let reading = reader.is_reading();
+
+        assert!(!reading);
+    }
+
+    #[tokio::test]
+    async fn is_reading_after_an_abandoned_read_returns_true() {
+        let (mut reader, _feed) = fed();
+        abandon_a_read(&mut reader).await;
+
+        let reading = reader.is_reading();
+
+        assert!(reading);
+    }
+
+    #[tokio::test]
+    async fn is_reading_after_the_line_of_an_abandoned_read_arrived_returns_false() {
+        let (mut reader, feed) = fed();
+        abandon_a_read(&mut reader).await;
+        feed.send("late\n".to_owned()).expect("should feed");
+
+        let waited = wait_for_the_line(&mut reader).await;
+
+        assert!(waited.is_ok());
+    }
+
+    #[test]
+    fn is_reading_before_the_first_read_returns_false() {
+        let (mut reader, _reads) = scripted(&["y\n"]);
+
+        let reading = reader.is_reading();
+
+        assert!(!reading);
+    }
+
     #[tokio::test]
     async fn new_starts_no_read() {
         let (_reader, reads) = scripted(&["y\n"]);
@@ -253,20 +362,23 @@ mod tests {
 
     #[tokio::test]
     async fn next_line_after_an_abandoned_read_returns_the_line_of_that_read() {
-        let (feed, source) = mpsc::channel::<String>();
-        let mut reader = LineReader::new(move |buffer| {
-            let line = source.recv().unwrap_or_default();
-            buffer.push_str(&line);
-            Ok(line.len())
-        });
-        {
-            let mut abandoned = pin!(reader.next_line());
-            std::future::poll_fn(|context| {
-                Poll::Ready(abandoned.as_mut().poll(context).is_pending())
-            })
-            .await;
-        }
+        let (mut reader, feed) = fed();
+        abandon_a_read(&mut reader).await;
         feed.send("late\n".to_owned()).expect("should feed");
+
+        let line = reader.next_line().await.expect("should read");
+
+        assert_eq!(line, Some("late".to_owned()));
+    }
+
+    #[tokio::test]
+    async fn next_line_after_is_reading_kept_a_line_returns_that_line() {
+        let (mut reader, feed) = fed();
+        abandon_a_read(&mut reader).await;
+        feed.send("late\n".to_owned()).expect("should feed");
+        wait_for_the_line(&mut reader)
+            .await
+            .expect("the line should arrive");
 
         let line = reader.next_line().await.expect("should read");
 

@@ -222,9 +222,13 @@ async fn ask_user(request: PromptRequest, input: &mut LineReader, display: &mut 
 ///
 /// The presenter handles no further event until the terminal is back, so the events that the
 /// command sends in the meantime appear after the program.
+///
+/// The presenter refuses the terminal while a read of the input waits for a line. A prompt that
+/// the command abandoned leaves such a read, which would take the keys of the program.
 async fn lend_terminal(
     request: TerminalRequest,
     screen: Result<&impl Fn() -> Stdio, Refusal>,
+    input: Option<&mut LineReader>,
     stdout: &mut impl Write,
     stderr: &mut impl Write,
 ) {
@@ -235,6 +239,15 @@ async fn lend_terminal(
             return;
         }
     };
+
+    let reading = match input {
+        Some(input) => input.is_reading(),
+        None => false,
+    };
+    if reading {
+        request.refuse(Refusal::PendingRead);
+        return;
+    }
 
     drop(stdout.flush());
     drop(stderr.flush());
@@ -293,7 +306,7 @@ impl TerminalPresenter {
                 },
                 Event::Terminal(request) => {
                     let screen = screen.as_ref().map_err(|refusal| *refusal);
-                    lend_terminal(*request, screen, stdout, stderr).await;
+                    lend_terminal(*request, screen, input.as_mut(), stdout, stderr).await;
                 }
                 Event::Message(_) | Event::Detail(_) | Event::Artifact(_) | Event::Process(_) => {
                     render_event(event, verbosity, mode, stdout, stderr);
@@ -354,7 +367,7 @@ mod tests {
     #[cfg(unix)]
     use std::fs::{File, read_to_string};
     use std::process::ExitCode;
-    use std::sync::{Arc, Mutex};
+    use std::sync::{Arc, Mutex, mpsc};
     use std::time::Duration;
 
     use clawless_core::context::Interactivity;
@@ -366,7 +379,9 @@ mod tests {
     use clawless_core::prompt::{Confirm, Confirmation, Prompt, Select};
     #[cfg(unix)]
     use tempfile::TempDir;
+    use tokio::sync::mpsc::{UnboundedReceiver, unbounded_channel};
     use tokio::task::yield_now;
+    use tokio::time::sleep;
 
     use super::*;
 
@@ -432,6 +447,36 @@ mod tests {
             buffer.push_str(&line);
             Ok(line.len())
         })
+    }
+
+    /// Returns an input whose reads wait for the lines that the sender feeds it
+    ///
+    /// The receiver hears of every read when it starts, which lets a command abandon a prompt
+    /// while its read is open.
+    fn fed() -> (LineReader, mpsc::Sender<String>, UnboundedReceiver<()>) {
+        let (reading, started) = unbounded_channel();
+        let (feed, source) = mpsc::channel::<String>();
+        let input = LineReader::new(move |buffer| {
+            let _signaled = reading.send(());
+            let line = source.recv().unwrap_or_default();
+            buffer.push_str(&line);
+            Ok(line.len())
+        });
+
+        (input, feed, started)
+    }
+
+    /// Asks a prompt of the presenter and abandons it once the presenter reads the input
+    async fn abandon_a_prompt(output: &Output, started: &mut UnboundedReceiver<()>) {
+        let prompt = Prompt::builder()
+            .output(output.clone())
+            .interactivity(Interactivity::Interactive)
+            .build();
+
+        tokio::select! {
+            answer = prompt.confirm("Release?") => drop(answer),
+            _started = started.recv() => {}
+        }
     }
 
     /// Asks the presenter for the terminal, gives it back at once, and returns the refusal
@@ -817,6 +862,78 @@ mod tests {
         );
 
         assert_eq!(transcript.text(), "Title: The title is Fix the race.\n");
+    }
+
+    #[tokio::test]
+    async fn present_on_with_an_abandoned_prompt_lends_the_terminal_once_its_line_arrived() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+        let (input, feed, mut started) = fed();
+        let refusal = Arc::new(Mutex::new(Some(Refusal::PendingRead)));
+        let recorded = Arc::clone(&refusal);
+
+        drop(
+            presenter
+                .present_on(
+                    Box::pin(async move {
+                        abandon_a_prompt(&Output::new(sender.clone()), &mut started).await;
+                        feed.send("y\n".to_owned()).expect("should feed");
+                        for _ in 0..500 {
+                            let answer = ask_for_the_terminal(&sender).await;
+                            *recorded.lock().expect("should lock") = answer;
+                            if answer.is_none() {
+                                break;
+                            }
+                            sleep(Duration::from_millis(10)).await;
+                        }
+
+                        Ok(Exit::from(()))
+                    }),
+                    &mut stdout,
+                    &mut stderr,
+                    Some(input),
+                    Ok(Stdio::null),
+                )
+                .await
+                .expect("should succeed"),
+        );
+
+        assert_eq!(*refusal.lock().expect("should lock"), None);
+    }
+
+    #[tokio::test]
+    async fn present_on_with_an_abandoned_prompt_refuses_the_terminal() {
+        let (sender, receiver) = event_channel();
+        let presenter = TerminalPresenter::builder().receiver(receiver).build();
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+        let (input, _feed, mut started) = fed();
+        let refusal = Arc::new(Mutex::new(None));
+        let recorded = Arc::clone(&refusal);
+
+        drop(
+            presenter
+                .present_on(
+                    Box::pin(async move {
+                        abandon_a_prompt(&Output::new(sender.clone()), &mut started).await;
+                        *recorded.lock().expect("should lock") =
+                            ask_for_the_terminal(&sender).await;
+
+                        Ok(Exit::from(()))
+                    }),
+                    &mut stdout,
+                    &mut stderr,
+                    Some(input),
+                    Ok(Stdio::null),
+                )
+                .await
+                .expect("should succeed"),
+        );
+
+        assert_eq!(
+            *refusal.lock().expect("should lock"),
+            Some(Refusal::PendingRead)
+        );
     }
 
     #[cfg(unix)]
