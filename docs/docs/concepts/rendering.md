@@ -119,10 +119,11 @@ The key query methods are:
 Query results are cloned snapshots, so the render loop never blocks the
 background drain task.
 
-An `Entry` writes the plain form of a [styled artifact][styled-artifacts]. A TUI
-styles the cells of its frame itself, and escape sequences in its text would
-break that layout. An application that wants the styled form of an artifact
-calls `fmt_text` on it.
+An `Entry` holds the plain form of a [styled message][styled-messages] and
+writes the plain form of a [styled artifact][styled-artifacts]. A TUI styles
+the cells of its frame itself, and escape sequences in its text would break
+that layout. An application that wants the styled form of an artifact calls
+`fmt_text` on it.
 
 [`ApplicationRunner`][application-runner] wires this for `#[application]`
 functions. It creates the event channel, builds the context, creates the
@@ -164,4 +165,5 @@ later embed them in a TUI dashboard without changing any command code.
 [output-type]: https://docs.rs/clawless/latest/clawless/output/struct.Output.html
 [projection]: https://docs.rs/clawless-tui/latest/clawless_tui/projection/struct.Projection.html
 [styled-artifacts]: ./output#styled-artifacts
+[styled-messages]: ./output#styled-messages
 [terminal-presenter]: https://docs.rs/clawless-cli/latest/clawless_cli/presenter/struct.TerminalPresenter.html

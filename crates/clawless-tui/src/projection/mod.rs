@@ -26,7 +26,7 @@
 //! let (sender, receiver) = event_channel();
 //! let projection = Projection::new(receiver);
 //!
-//! sender.send(Event::Message("hello".to_string()))
+//! sender.send(Event::Message("hello".into()))
 //!     .await
 //!     .expect("should send");
 //! drop(sender);
@@ -43,7 +43,7 @@
 
 use std::sync::{Arc, RwLock};
 
-use clawless_core::event::{Event, EventReceiver};
+use clawless_core::event::{Event, EventReceiver, Styling};
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 
@@ -99,7 +99,7 @@ mod state;
 /// let (sender, receiver) = event_channel();
 /// let projection = Projection::new(receiver);
 ///
-/// sender.send(Event::Message("processing".to_string()))
+/// sender.send(Event::Message("processing".into()))
 ///     .await
 ///     .expect("should send");
 /// drop(sender);
@@ -294,7 +294,7 @@ impl Projection {
     /// let (sender, receiver) = event_channel();
     /// let projection = Projection::new(receiver);
     ///
-    /// sender.send(Event::Message("last word".to_string()))
+    /// sender.send(Event::Message("last word".into()))
     ///     .await
     ///     .expect("should send");
     /// drop(sender);
@@ -353,8 +353,8 @@ async fn drain(
 ) {
     while let Some(event) = receiver.recv().await {
         let entry = match event {
-            Event::Message(text) => Entry::Message(text),
-            Event::Detail(text) => Entry::Detail(text),
+            Event::Message(text) => Entry::Message(text.into_form(Styling::Plain)),
+            Event::Detail(text) => Entry::Detail(text.into_form(Styling::Plain)),
             Event::Artifact(artifact) => Entry::Artifact(Arc::from(artifact)),
             Event::Process(event) => Entry::Process(Arc::from(event)),
             Event::Prompt(request) => {
@@ -382,9 +382,10 @@ mod tests {
 
     use clawless_core::event::process::{ProcessEvent, RunId};
     use clawless_core::event::prompt::PromptRequest;
-    use clawless_core::event::{Styling, event_channel};
+    use clawless_core::event::{FormattedText, Styling, event_channel};
     use clawless_core::process::{Line, Stream};
     use clawless_core::prompt::Confirm;
+    use clawless_core::test_support::Bold;
     use serde::Serialize;
 
     use super::*;
@@ -406,7 +407,7 @@ mod tests {
         let projection = Projection::new(receiver);
 
         sender
-            .send(Event::Message("msg".to_string()))
+            .send(Event::Message("msg".into()))
             .await
             .expect("should send");
         sender
@@ -433,15 +434,15 @@ mod tests {
         let projection = Projection::new(receiver);
 
         sender
-            .send(Event::Detail("dtl".to_string()))
+            .send(Event::Detail("dtl".into()))
             .await
             .expect("should send");
         sender
-            .send(Event::Message("msg".to_string()))
+            .send(Event::Message("msg".into()))
             .await
             .expect("should send");
         sender
-            .send(Event::Detail("dtl2".to_string()))
+            .send(Event::Detail("dtl2".into()))
             .await
             .expect("should send");
         drop(sender);
@@ -483,7 +484,7 @@ mod tests {
         let (sender, receiver) = event_channel();
 
         sender
-            .send(Event::Message("buffered".to_string()))
+            .send(Event::Message("buffered".into()))
             .await
             .expect("should send");
         drop(sender);
@@ -529,7 +530,7 @@ mod tests {
         let projection = Projection::new(receiver);
 
         sender
-            .send(Event::Detail("info".to_string()))
+            .send(Event::Detail("info".into()))
             .await
             .expect("should send");
         drop(sender);
@@ -550,7 +551,7 @@ mod tests {
         let projection = Projection::new(receiver);
 
         sender
-            .send(Event::Message("hello".to_string()))
+            .send(Event::Message("hello".into()))
             .await
             .expect("should send");
         drop(sender);
@@ -566,20 +567,40 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn entries_returns_the_plain_form_of_a_styled_message() {
+        let (sender, receiver) = event_channel();
+        let projection = Projection::new(receiver);
+
+        sender
+            .send(Event::Message(FormattedText::new(&Bold::new("done"))))
+            .await
+            .expect("should send");
+        drop(sender);
+        projection.wait_until_complete().await;
+
+        let entries = projection.entries();
+
+        let Entry::Message(s) = &entries[0] else {
+            panic!("expected Entry::Message");
+        };
+        assert_eq!(s, "done");
+    }
+
+    #[tokio::test]
     async fn entries_preserves_receive_order() {
         let (sender, receiver) = event_channel();
         let projection = Projection::new(receiver);
 
         sender
-            .send(Event::Message("first".to_string()))
+            .send(Event::Message("first".into()))
             .await
             .expect("should send");
         sender
-            .send(Event::Detail("second".to_string()))
+            .send(Event::Detail("second".into()))
             .await
             .expect("should send");
         sender
-            .send(Event::Message("third".to_string()))
+            .send(Event::Message("third".into()))
             .await
             .expect("should send");
         drop(sender);
@@ -634,15 +655,15 @@ mod tests {
         let projection = Projection::new(receiver);
 
         sender
-            .send(Event::Message("msg".to_string()))
+            .send(Event::Message("msg".into()))
             .await
             .expect("should send");
         sender
-            .send(Event::Detail("dtl".to_string()))
+            .send(Event::Detail("dtl".into()))
             .await
             .expect("should send");
         sender
-            .send(Event::Message("msg2".to_string()))
+            .send(Event::Message("msg2".into()))
             .await
             .expect("should send");
         drop(sender);
@@ -688,7 +709,7 @@ mod tests {
         let projection = Projection::new(receiver);
 
         sender
-            .send(Event::Message("msg".to_string()))
+            .send(Event::Message("msg".into()))
             .await
             .expect("should send");
         sender
@@ -763,7 +784,7 @@ mod tests {
             let (sender, receiver) = event_channel();
             let projection = Projection::new(receiver);
             sender
-                .send(Event::Message("last word".to_string()))
+                .send(Event::Message("last word".into()))
                 .await
                 .expect("should send");
             drop(sender);
@@ -789,7 +810,7 @@ mod tests {
             let (sender, receiver) = event_channel();
             let projection = Projection::new(receiver);
             sender
-                .send(Event::Message("last word".to_string()))
+                .send(Event::Message("last word".into()))
                 .await
                 .expect("should send");
             drop(sender);

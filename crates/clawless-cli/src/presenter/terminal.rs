@@ -137,18 +137,28 @@ fn render_event(
     stderr: &mut impl Write,
 ) {
     match event {
-        Event::Message(msg) => match verbosity {
+        Event::Message(text) => match verbosity {
             Verbosity::Quiet => {}
             Verbosity::Default | Verbosity::Verbose => match mode {
-                OutputMode::Text => writeln!(stdout, "{msg}").expect("should write message"),
-                OutputMode::Json => writeln!(stderr, "{msg}").expect("should write message"),
+                OutputMode::Text => {
+                    writeln!(stdout, "{}", text.form(Styling::Plain))
+                        .expect("should write message");
+                }
+                OutputMode::Json => {
+                    writeln!(stderr, "{}", text.form(Styling::Plain))
+                        .expect("should write message");
+                }
             },
         },
-        Event::Detail(msg) => match verbosity {
+        Event::Detail(text) => match verbosity {
             Verbosity::Quiet | Verbosity::Default => {}
             Verbosity::Verbose => match mode {
-                OutputMode::Text => writeln!(stdout, "{msg}").expect("should write detail"),
-                OutputMode::Json => writeln!(stderr, "{msg}").expect("should write detail"),
+                OutputMode::Text => {
+                    writeln!(stdout, "{}", text.form(Styling::Plain)).expect("should write detail");
+                }
+                OutputMode::Json => {
+                    writeln!(stderr, "{}", text.form(Styling::Plain)).expect("should write detail");
+                }
             },
         },
         Event::Artifact(artifact) => {
@@ -461,7 +471,7 @@ mod tests {
             presenter
                 .present(Box::pin(async move {
                     sender
-                        .send(Event::Message("consumed".to_string()))
+                        .send(Event::Message("consumed".into()))
                         .await
                         .expect("should send");
                     Ok(Exit::from(()))
@@ -688,7 +698,7 @@ mod tests {
                 .present_on(
                     Box::pin(async move {
                         sender
-                            .send(Event::Message("hello".to_owned()))
+                            .send(Event::Message("hello".into()))
                             .await
                             .expect("should send");
                         Ok(Exit::from(()))
@@ -769,7 +779,7 @@ mod tests {
             presenter
                 .present(Box::pin(async move {
                     sender
-                        .send(clawless_core::event::Event::Message("hello".to_string()))
+                        .send(clawless_core::event::Event::Message("hello".into()))
                         .await
                         .expect("should send while presenter holds receiver");
                     Ok(Exit::from(()))
@@ -784,7 +794,7 @@ mod tests {
         let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
 
         render_event(
-            Event::Detail("reading".to_owned()),
+            Event::Detail("reading".into()),
             Verbosity::Default,
             OutputMode::Text,
             &mut stdout,
@@ -799,7 +809,7 @@ mod tests {
         let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
 
         render_event(
-            Event::Detail("reading".to_owned()),
+            Event::Detail("reading".into()),
             Verbosity::Verbose,
             OutputMode::Text,
             &mut stdout,
@@ -814,7 +824,7 @@ mod tests {
         let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
 
         render_event(
-            Event::Message("hello".to_owned()),
+            Event::Message("hello".into()),
             Verbosity::Quiet,
             OutputMode::Text,
             &mut stdout,
@@ -829,7 +839,7 @@ mod tests {
         let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
 
         render_event(
-            Event::Message("hello".to_owned()),
+            Event::Message("hello".into()),
             Verbosity::Default,
             OutputMode::Json,
             &mut stdout,
@@ -844,7 +854,7 @@ mod tests {
         let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
 
         render_event(
-            Event::Message("hello".to_owned()),
+            Event::Message("hello".into()),
             Verbosity::Default,
             OutputMode::Text,
             &mut stdout,

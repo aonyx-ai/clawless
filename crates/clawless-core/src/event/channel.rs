@@ -48,11 +48,11 @@ mod tests {
         let (sender, mut receiver) = event_channel();
 
         sender
-            .send(Event::Message("first".to_string()))
+            .send(Event::Message("first".into()))
             .await
             .expect("should send");
         sender
-            .send(Event::Message("second".to_string()))
+            .send(Event::Message("second".into()))
             .await
             .expect("should send");
         drop(sender);
@@ -84,7 +84,7 @@ mod tests {
         drop(receiver);
 
         let error = sender
-            .send(Event::Message("hello".to_string()))
+            .send(Event::Message("hello".into()))
             .await
             .expect_err("should fail");
 
@@ -96,7 +96,7 @@ mod tests {
         let (sender, mut receiver) = event_channel();
 
         sender
-            .send(Event::Message("hello".to_string()))
+            .send(Event::Message("hello".into()))
             .await
             .expect("should send");
 
@@ -107,7 +107,7 @@ mod tests {
 
     #[test]
     fn send_error_display_shows_closed_message() {
-        let error = SendError(Event::Message("lost".to_string()));
+        let error = SendError(Event::Message("lost".into()));
 
         let message = error.to_string();
 

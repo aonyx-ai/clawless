@@ -11,10 +11,11 @@ use clawless_core::event::{Artifact, Styling};
 /// [`Event`] variant but uses [`Arc`] for artifact values so that entries can be cheaply cloned
 /// when returned from queries.
 ///
-/// An entry implements [`Display`], and an artifact entry writes the [`Styling::Plain`] form of
-/// its artifact. A TUI draws text into the cells of its frame and styles those cells itself, so
-/// the escape sequences of a [`Styling::Styled`] form do not belong in that text. An application
-/// that wants a styled form calls [`TextForm::fmt_text`] on the artifact itself.
+/// A message or a detail entry holds the [`Styling::Plain`] form of its text. An entry implements
+/// [`Display`], and an artifact entry writes the plain form of its artifact. A TUI draws text into
+/// the cells of its frame and styles those cells itself, so the escape sequences of a
+/// [`Styling::Styled`] form do not belong in that text. An application that wants the styled form
+/// of an artifact calls [`TextForm::fmt_text`] on the artifact itself.
 ///
 /// [`Display`]: std::fmt::Display
 /// [`Event`]: clawless_core::event::Event

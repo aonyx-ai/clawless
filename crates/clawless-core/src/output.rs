@@ -17,11 +17,9 @@
 //! [`process_event`]: Output::process_event
 //! [`prompt`]: Output::prompt
 
-use std::fmt::Display;
-
 use crate::event::process::ProcessEvent;
 use crate::event::prompt::PromptRequest;
-use crate::event::{Artifact, Event, EventSender, SendError};
+use crate::event::{Artifact, Event, EventSender, FormattedText, SendError, TextForm};
 
 /// Command output interface that wraps an event channel sender
 ///
@@ -74,7 +72,10 @@ impl Output {
 
     /// Sends an informational message event
     ///
-    /// Converts the value to a string via [`Display`] and sends it as an [`Event::Message`].
+    /// Writes the [`TextForm`] of the value in every [`Styling`] and sends the text as an
+    /// [`Event::Message`]. Every value with [`Display`] has one form. A value with a styled form
+    /// implements [`TextForm`] itself, and the presenter chooses which form it writes. The value
+    /// does not have to outlive the call, because the text is written before the event is sent.
     ///
     /// # Errors
     ///
@@ -96,16 +97,21 @@ impl Output {
     /// # }
     /// ```
     ///
+    /// [`Display`]: std::fmt::Display
     /// [`EventReceiver`]: crate::event::EventReceiver
-    pub async fn message(&self, message: impl Display) -> Result<(), SendError> {
-        self.sender.send(Event::Message(message.to_string())).await
+    /// [`Styling`]: crate::event::Styling
+    /// [`TextForm`]: crate::event::TextForm
+    pub async fn message(&self, message: impl TextForm) -> Result<(), SendError> {
+        let message = FormattedText::new(&message);
+
+        self.sender.send(Event::Message(message)).await
     }
 
     /// Sends a supplementary detail event
     ///
-    /// Converts the value to a string via [`Display`] and sends it as an [`Event::Detail`].
-    /// Details carry lower-priority information that the Presenter may suppress at default
-    /// verbosity.
+    /// Writes the [`TextForm`] of the value in every [`Styling`] and sends the text as an
+    /// [`Event::Detail`], as [`message`] does. Details carry lower-priority information that the
+    /// Presenter may suppress at default verbosity.
     ///
     /// # Errors
     ///
@@ -127,8 +133,13 @@ impl Output {
     /// ```
     ///
     /// [`EventReceiver`]: crate::event::EventReceiver
-    pub async fn detail(&self, detail: impl Display) -> Result<(), SendError> {
-        self.sender.send(Event::Detail(detail.to_string())).await
+    /// [`Styling`]: crate::event::Styling
+    /// [`TextForm`]: crate::event::TextForm
+    /// [`message`]: Output::message
+    pub async fn detail(&self, detail: impl TextForm) -> Result<(), SendError> {
+        let detail = FormattedText::new(&detail);
+
+        self.sender.send(Event::Detail(detail)).await
     }
 
     /// Sends a structured artifact event
@@ -175,6 +186,7 @@ impl Output {
     /// ```
     ///
     /// [`Debug`]: std::fmt::Debug
+    /// [`Display`]: std::fmt::Display
     /// [`EventReceiver`]: crate::event::EventReceiver
     /// [`Serialize`]: serde::Serialize
     /// [`TextForm`]: crate::event::TextForm
@@ -271,7 +283,7 @@ mod tests {
 
     use super::*;
     use crate::event::process::RunId;
-    use crate::event::{Styling, TextForm, event_channel};
+    use crate::event::{Styling, event_channel};
     use crate::process::Invocation;
     use crate::prompt::Confirm;
     use crate::test_support::Bold;
@@ -372,8 +384,8 @@ mod tests {
         assert_eq!(
             receiver.recv().await.map(|event| match event {
                 Event::Process(event) => event.to_string(),
-                Event::Message(text) => text,
-                Event::Detail(text) => text,
+                Event::Message(text) => text.into_form(Styling::Plain),
+                Event::Detail(text) => text.into_form(Styling::Plain),
                 Event::Artifact(artifact) => artifact.to_text(Styling::Plain),
                 Event::Prompt(request) => format!("{request:?}"),
             }),
@@ -393,8 +405,8 @@ mod tests {
             receiver.recv().await.map(|event| match event {
                 Event::Prompt(request) => request.question().to_owned(),
                 Event::Process(event) => event.to_string(),
-                Event::Message(text) => text,
-                Event::Detail(text) => text,
+                Event::Message(text) => text.into_form(Styling::Plain),
+                Event::Detail(text) => text.into_form(Styling::Plain),
                 Event::Artifact(artifact) => artifact.to_text(Styling::Plain),
             }),
             Some("Release?".to_owned())
@@ -414,6 +426,23 @@ mod tests {
         let event = receiver.recv().await.expect("should receive");
 
         assert!(matches!(event, Event::Detail(ref s) if s == "supplementary info"));
+    }
+
+    #[tokio::test]
+    async fn detail_with_a_styled_value_sends_its_styled_form() {
+        let (sender, mut receiver) = event_channel();
+        let output = Output::new(sender);
+
+        output
+            .detail(Bold::new("supplementary"))
+            .await
+            .expect("should send");
+
+        let event = receiver.recv().await.expect("should receive");
+        let Event::Detail(text) = event else {
+            panic!("expected Event::Detail, received {event:?}");
+        };
+        assert_eq!(text.form(Styling::Styled), "\x1b[1msupplementary\x1b[0m");
     }
 
     #[tokio::test]
@@ -448,6 +477,55 @@ mod tests {
         let error = output.message("lost").await.expect_err("should fail");
 
         assert_eq!(error.to_string(), "event channel closed");
+    }
+
+    #[tokio::test]
+    async fn message_with_a_borrowed_string_sends_the_string() {
+        let (sender, mut receiver) = event_channel();
+        let output = Output::new(sender);
+        let name = String::from("hello");
+
+        output.message(&name).await.expect("should send");
+
+        let event = receiver.recv().await.expect("should receive");
+        let Event::Message(text) = event else {
+            panic!("expected Event::Message, received {event:?}");
+        };
+        assert_eq!(text, FormattedText::from("hello"));
+    }
+
+    #[tokio::test]
+    async fn message_with_a_styled_value_sends_its_plain_form() {
+        let (sender, mut receiver) = event_channel();
+        let output = Output::new(sender);
+
+        output
+            .message(Bold::new("done"))
+            .await
+            .expect("should send");
+
+        let event = receiver.recv().await.expect("should receive");
+        let Event::Message(text) = event else {
+            panic!("expected Event::Message, received {event:?}");
+        };
+        assert_eq!(text.form(Styling::Plain), "done");
+    }
+
+    #[tokio::test]
+    async fn message_with_a_styled_value_sends_its_styled_form() {
+        let (sender, mut receiver) = event_channel();
+        let output = Output::new(sender);
+
+        output
+            .message(Bold::new("done"))
+            .await
+            .expect("should send");
+
+        let event = receiver.recv().await.expect("should receive");
+        let Event::Message(text) = event else {
+            panic!("expected Event::Message, received {event:?}");
+        };
+        assert_eq!(text.form(Styling::Styled), "\x1b[1mdone\x1b[0m");
     }
 
     #[tokio::test]
