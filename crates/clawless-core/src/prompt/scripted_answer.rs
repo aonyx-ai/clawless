@@ -1,8 +1,22 @@
+//! One answer in the script of a scripted user
+
 use super::Confirmation;
 
 /// One answer in the script of a [`ScriptedUser`]
 ///
 /// Each variant answers one kind of prompt, and it matches no other kind.
+///
+/// # Examples
+///
+/// ```
+/// use clawless_core::prompt::{Confirmation, ScriptedAnswer, ScriptedUser};
+///
+/// let user = ScriptedUser::new([
+///     ScriptedAnswer::Confirm(Confirmation::No),
+///     ScriptedAnswer::Select(1),
+///     ScriptedAnswer::Text("Add prompts".to_string()),
+/// ]);
+/// ```
 ///
 /// [`ScriptedUser`]: super::ScriptedUser
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]

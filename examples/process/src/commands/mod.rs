@@ -1,4 +1,5 @@
-/// Runs another program and reports what it produced
+//! The commands of this example
+
 mod run;
 
 clawless::commands!();

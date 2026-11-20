@@ -1,3 +1,5 @@
+//! Checks that a version is a stable release
+
 use clawless::prelude::*;
 
 /// Arguments for the `check` command
@@ -7,7 +9,7 @@ pub struct CheckArgs {
     version: String,
 }
 
-/// Check that a version is a stable release
+/// Checks that a version is a stable release
 ///
 /// A stable release has a major version of 1 or more. The command exits with one of these codes:
 ///
@@ -15,9 +17,10 @@ pub struct CheckArgs {
 /// - 1 when the version cannot be read
 /// - 3 when the version is not a stable release
 #[command]
-// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
-// raw Markdown heading in the terminal rather than documenting an API.
-#[allow(clippy::missing_errors_doc)]
+#[allow(
+    clippy::missing_errors_doc,
+    reason = "a command's doc comment is its `--help` text, so an `# Errors` section would render as a raw Markdown heading in the terminal"
+)]
 pub async fn check(args: CheckArgs, context: Context) -> CommandResult<Exit> {
     let CheckArgs { version } = args;
 
@@ -45,13 +48,13 @@ pub async fn check(args: CheckArgs, context: Context) -> CommandResult<Exit> {
 ///
 /// Returns an error if a part is not a number, or if the version does not have three parts.
 fn major_version(version: &str) -> Result<u64, Error> {
-    let numbers = version
-        .split('.')
-        .map(|part| {
-            part.parse::<u64>()
-                .with_context(|| format!("read the part {part}"))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let mut numbers = Vec::new();
+    for part in version.split('.') {
+        let number = part
+            .parse::<u64>()
+            .with_context(|| format!("read the part {part}"))?;
+        numbers.push(number);
+    }
 
     let [major, _minor, _patch] = numbers.as_slice() else {
         return Err(Error::msg("a version has three parts, such as 1.4.0"));
@@ -62,11 +65,19 @@ fn major_version(version: &str) -> Result<u64, Error> {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
+
+    fn assert_auto_traits<T: Send + Sync + Unpin>() {}
+
+    #[test]
+    fn check_args_is_send_sync_and_unpin() {
+        assert_auto_traits::<CheckArgs>();
+    }
 
     #[test]
     fn major_version_with_a_part_that_is_not_a_number_returns_error() {

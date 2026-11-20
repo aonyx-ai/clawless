@@ -7,12 +7,12 @@ use std::process::ExitStatus;
 ///
 /// Every run that starts also ends, and a consumer that shows a running program
 /// needs to know how. The variants separate the three ends that a consumer
-/// treats differently: the program ran to its end, cancellation stopped it, or
+/// treats differently. The program ran to its end, cancellation stopped it, or
 /// Clawless could not collect a result for it.
 ///
 /// A program that ended without success is [`Exited`], not a failure. The check
 /// mode of a formatter ends with a non-zero code when it finds a file to
-/// format, and that is an answer and not a fault.
+/// format. That is an answer and not a fault.
 ///
 /// # Examples
 ///
@@ -39,9 +39,10 @@ pub enum Outcome {
 
     /// The run started and produced no result
     ///
-    /// A stream of the program could not be read, the end of the program could
-    /// not be waited for, or the events of the run could no longer be reported.
-    /// The program itself may well have done its work.
+    /// This variant covers three causes. A stream of the program could not be
+    /// read. The end of the program could not be waited for. The events of the
+    /// run could no longer be reported. The program itself may well have done
+    /// its work.
     Incomplete,
 }
 
@@ -66,9 +67,10 @@ impl Display for Outcome {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
 

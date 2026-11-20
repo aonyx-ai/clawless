@@ -1,3 +1,5 @@
+//! Whether a user is present who can answer the application
+
 /// Whether a user is present who can answer the application
 ///
 /// The code that builds the [`Context`] sets this value. The default is [`NonInteractive`], so
@@ -25,9 +27,10 @@ pub enum Interactivity {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
 

@@ -1,3 +1,5 @@
+//! Asks the user to select one of several options
+
 use std::fmt;
 
 use clawless::prelude::*;
@@ -37,14 +39,15 @@ impl fmt::Display for Kind {
     }
 }
 
-/// Ask the user to select one of several options
+/// Asks the user to select one of several options
 ///
 /// The command asks for the kind of a change. The options are the variants of an enum. Type the
 /// number of an option and press Enter.
 #[command]
-// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
-// raw Markdown heading in the terminal rather than documenting an API.
-#[allow(clippy::missing_errors_doc)]
+#[allow(
+    clippy::missing_errors_doc,
+    reason = "a command's doc comment is its `--help` text, so an `# Errors` section would render as a raw Markdown heading in the terminal"
+)]
 pub async fn select(_args: SelectArgs, context: Context) -> CommandResult {
     match ask(&context.prompt()).await {
         Ok(kind) => message!("The kind of the change is \"{kind}\"."),
@@ -71,14 +74,17 @@ async fn ask(prompt: &Prompt) -> Result<Kind, PromptUserError> {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use clawless::event::event_channel;
     use clawless::prompt::{ScriptedAnswer, ScriptedUser};
 
     use super::*;
+
+    fn assert_auto_traits<T: Send + Sync + Unpin>() {}
 
     #[tokio::test]
     async fn ask_with_a_user_who_selects_the_last_option_returns_fixed() {
@@ -93,5 +99,15 @@ mod tests {
         let kind = ask(&prompt).await.expect("should answer");
 
         assert_eq!(kind, Kind::Fixed);
+    }
+
+    #[test]
+    fn kind_is_send_sync_and_unpin() {
+        assert_auto_traits::<Kind>();
+    }
+
+    #[test]
+    fn select_args_is_send_sync_and_unpin() {
+        assert_auto_traits::<SelectArgs>();
     }
 }

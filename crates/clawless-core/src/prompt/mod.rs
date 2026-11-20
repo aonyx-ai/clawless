@@ -2,8 +2,8 @@
 //!
 //! [`Prompt`] is the interface that asks. [`Confirm`] is a question that the user answers with
 //! yes or no, and [`Confirmation`] is the answer. [`Text`] is a question that the user answers
-//! with one line of text, and [`Select`] is one that the user answers with one of several
-//! options. [`PromptUserError`] is the reason why a command received no answer.
+//! with one line of text. [`Select`] is one that the user answers with one of several options.
+//! [`PromptUserError`] is the reason why a command received no answer.
 //!
 //! A question reaches the presenter as a [`PromptRequest`], and the presenter answers it.
 //! [`AnswerPromptError`] is the reason that the presenter reports when it has no answer.
@@ -45,21 +45,13 @@ use crate::context::Interactivity;
 use crate::event::prompt::{PendingAnswer, PromptRequest};
 use crate::output::Output;
 
-/// The error that ends a prompt without an answer from the user
 mod answer_prompt_error;
-/// A question that a user answers with yes or no
 mod confirm;
-/// The answer of a user to a confirmation
 mod confirmation;
-/// The error returned when a command cannot get an answer from its user
 mod prompt_user_error;
-/// One answer in the script of a scripted user
 mod scripted_answer;
-/// A user for tests, who answers every prompt from a script
 mod scripted_user;
-/// A question that a user answers with one of several options
 mod select;
-/// A question that a user answers with one line of text
 mod text;
 
 /// Asks the user of the application a question and waits for the answer
@@ -183,7 +175,10 @@ impl Prompt {
             return Err(PromptUserError::MissingOptions { question });
         }
 
-        let select = Select::new(question.clone(), options.iter().map(ToString::to_string));
+        let select = Select::builder()
+            .question(question.clone())
+            .options(options.iter().map(ToString::to_string))
+            .build();
         let (request, pending) = PromptRequest::select(select);
         let index = self.ask(question.clone(), request, pending).await?;
 
@@ -281,9 +276,10 @@ impl Prompt {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
     use crate::event::{Event, EventReceiver, event_channel};
@@ -542,7 +538,12 @@ mod tests {
                 PromptRequest::Select { question, .. } => Some(question),
                 PromptRequest::Confirm { .. } | PromptRequest::Text { .. } => None,
             }),
-            Some(Select::new("Port", ["80", "443"]))
+            Some(
+                Select::builder()
+                    .question("Port")
+                    .options(["80", "443"])
+                    .build()
+            )
         );
     }
 

@@ -2,8 +2,8 @@
 //!
 //! After parsing CLI arguments, the subcommand tree is walked to find the leaf node.
 //! [`ResolvedLeaf`] carries typed information about whether the leaf is a stateless CLI command or a
-//! stateful TUI application, along with the parsed argument matches and a function pointer to
-//! execute it.
+//! stateful TUI application. It also carries the parsed argument matches and a function pointer to
+//! execute the leaf.
 //!
 //! This type is used by the `main!()` macro expansion to dispatch to the appropriate runner.
 //! Application authors do not interact with it directly.
@@ -22,6 +22,17 @@ use clawless_tui::projection::Projection;
 /// [`Exit`] of the command. The `#[command]` macro turns a command that returns `()` into the
 /// [`Exit`] with the exit code 0.
 ///
+/// # Examples
+///
+/// A function pointer of this type resolves to an exit with the exit code 0:
+///
+/// ```
+/// use clawless::resolved_leaf::CommandExec;
+/// use clawless_core::exit::Exit;
+///
+/// let exec: CommandExec = |_matches, _context| Box::pin(async { Ok(Exit::from(())) });
+/// ```
+///
 /// [`ArgMatches`]: clap::ArgMatches
 /// [`Context`]: clawless_core::context::Context
 /// [`Exit`]: clawless_core::exit::Exit
@@ -33,6 +44,18 @@ pub type CommandExec =
 /// Accepts parsed [`ArgMatches`], a [`Context`], and a [`Projection`], returning a pinned future
 /// that produces the [`Exit`] of the application. The `#[application]` macro turns an
 /// application that returns `()` into the [`Exit`] with the exit code 0.
+///
+/// # Examples
+///
+/// A function pointer of this type resolves to an exit with the exit code 0:
+///
+/// ```
+/// use clawless::resolved_leaf::ApplicationExec;
+/// use clawless_core::exit::Exit;
+///
+/// let exec: ApplicationExec =
+///     |_matches, _context, _projection| Box::pin(async { Ok(Exit::from(())) });
+/// ```
 ///
 /// [`ArgMatches`]: clap::ArgMatches
 /// [`Context`]: clawless_core::context::Context
@@ -53,6 +76,21 @@ pub type ApplicationExec = fn(
 /// `main!()` matches on this enum to choose between [`CommandRunner`] (for commands) and
 /// [`ApplicationRunner`] (for applications). This separation allows each leaf type to have its own
 /// lifecycle without requiring a uniform function signature in the inventory.
+///
+/// # Examples
+///
+/// ```
+/// use clawless::resolved_leaf::{CommandExec, ResolvedLeaf};
+/// use clawless_core::exit::Exit;
+///
+/// let exec: CommandExec = |_matches, _context| Box::pin(async { Ok(Exit::from(())) });
+/// let leaf = ResolvedLeaf::Command {
+///     matches: clawless::clap::ArgMatches::default(),
+///     exec,
+/// };
+///
+/// assert!(matches!(leaf, ResolvedLeaf::Command { .. }));
+/// ```
 ///
 /// [`ArgMatches`]: clap::ArgMatches
 /// [`ApplicationRunner`]: clawless_tui::runner::ApplicationRunner
@@ -91,9 +129,10 @@ pub enum ResolvedLeaf {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design. A `# Panics` section on every test would repeat that and give the reader no information"
+    )]
 
     use super::*;
 

@@ -1,3 +1,5 @@
+//! Counts words and emits the result as an artifact
+
 use std::fmt;
 
 use clawless::prelude::*;
@@ -28,14 +30,15 @@ impl fmt::Display for Count {
     }
 }
 
-/// Count whitespace-separated words in a sentence
+/// Counts whitespace-separated words in a sentence
 ///
 /// Demonstrates all three [`Output`] methods: [`Output::detail`] logs the raw input,
 /// [`Output::message`] describes the operation, and [`Output::artifact`] emits the word count.
 #[command]
-// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
-// raw Markdown heading in the terminal rather than documenting an API.
-#[allow(clippy::missing_errors_doc)]
+#[allow(
+    clippy::missing_errors_doc,
+    reason = "a command's doc comment is its `--help` text, so an `# Errors` section would render as a raw Markdown heading in the terminal"
+)]
 pub async fn count(args: CountArgs, context: Context) -> CommandResult {
     let count = Count {
         words: args.sentence.split_whitespace().count(),
@@ -46,4 +49,21 @@ pub async fn count(args: CountArgs, context: Context) -> CommandResult {
     artifact!(count);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_auto_traits<T: Send + Sync + Unpin>() {}
+
+    #[test]
+    fn count_args_is_send_sync_and_unpin() {
+        assert_auto_traits::<CountArgs>();
+    }
+
+    #[test]
+    fn count_is_send_sync_and_unpin() {
+        assert_auto_traits::<Count>();
+    }
 }

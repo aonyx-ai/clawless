@@ -1,3 +1,5 @@
+//! Runs another program and reports what it produced
+
 use std::fmt;
 use std::path::PathBuf;
 
@@ -40,11 +42,12 @@ impl fmt::Display for Captured {
     }
 }
 
-/// Run another program and report what it produced
+/// Runs another program and reports what it produced
 ///
-/// Clawless sends every line that the program writes into the event system as the line arrives,
-/// so `--verbose` shows a long-running program while it runs instead of after it ended. The same
-/// output also reaches the command in the result, which is what this command measures.
+/// Clawless sends every line that the program writes into the event system as the line arrives.
+/// The `--verbose` flag therefore shows a long-running program while it runs, instead of after
+/// it ended. The same output also reaches the command in the result, which is what this command
+/// measures.
 ///
 /// Press Ctrl+C while the program runs to see cooperative shutdown kill it.
 ///
@@ -52,9 +55,10 @@ impl fmt::Display for Captured {
 /// process --verbose run echo hello
 /// ```
 #[command]
-// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
-// raw Markdown heading in the terminal rather than documenting an API.
-#[allow(clippy::missing_errors_doc)]
+#[allow(
+    clippy::missing_errors_doc,
+    reason = "a command's doc comment is its `--help` text, so an `# Errors` section would render as a raw Markdown heading in the terminal"
+)]
 pub async fn run(args: RunArgs, context: Context) -> CommandResult {
     let RunArgs { program, arguments } = args;
 
@@ -76,4 +80,21 @@ pub async fn run(args: RunArgs, context: Context) -> CommandResult {
     });
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_auto_traits<T: Send + Sync + Unpin>() {}
+
+    #[test]
+    fn captured_is_send_sync_and_unpin() {
+        assert_auto_traits::<Captured>();
+    }
+
+    #[test]
+    fn run_args_is_send_sync_and_unpin() {
+        assert_auto_traits::<RunArgs>();
+    }
 }

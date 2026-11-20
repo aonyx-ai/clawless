@@ -7,11 +7,8 @@ use syn::{ItemFn, parse_macro_input};
 use crate::generator::{ApplicationGenerator, CommandGenerator, Generator};
 use crate::inventory::InventoryGenerator;
 
-/// Translation from the name of a function to the name of a command
 mod command_name;
-/// Code generators shared by the `#[command]` and `#[application]` macros
 mod generator;
-/// Compile-time code that links a subcommand to its parent module
 mod inventory;
 
 /// Writes an informational message via the `Output` on `Context`
@@ -66,7 +63,7 @@ pub fn detail(input: TokenStream) -> TokenStream {
 ///
 /// Expands to `context.output().artifact(...).await.expect("event channel closed")`, where
 /// `context` resolves to the local variable in the calling function's scope. Unlike `message!`
-/// and `detail!`, this macro does not use `format!` — it takes an expression that implements
+/// and `detail!`, this macro does not use `format!`. It takes an expression that implements
 /// `Display`, `Serialize`, and `Debug`. This is the macro equivalent of `Output::artifact`.
 ///
 /// The macro must be called from an async function because the core `Output` methods are async.
@@ -116,7 +113,7 @@ fn output_format_macro(input: TokenStream, method: &str) -> TokenStream {
     .into()
 }
 
-/// Set up the commands module for a Clawless application
+/// Sets up the commands module for a Clawless application
 ///
 /// This macro generates the root command for the command-line application and allows subcommands to
 /// be registered under it. It should be called inside `src/commands.rs` or `src/commands/mod.rs` to
@@ -146,10 +143,10 @@ pub fn commands(_input: TokenStream) -> TokenStream {
     output.into()
 }
 
-/// Initialize and run a Clawless application
+/// Initializes and runs a Clawless application
 ///
 /// This macro generates the `main` function for a Clawless application. It uses two-phase
-/// dispatch: first it parses arguments and resolves the subcommand tree to find the leaf, then
+/// dispatch. First it parses arguments and resolves the subcommand tree to find the leaf. Then
 /// it matches on the `ResolvedLeaf` variant to delegate to the appropriate runner.
 ///
 /// The generated `main` function returns the `Exit` of the leaf as a `ProcessExit`. After `main`
@@ -188,12 +185,11 @@ pub fn main(_input: TokenStream) -> TokenStream {
     output.into()
 }
 
-/// Add a command to a Clawless application
+/// Adds a command to a Clawless application
 ///
-/// This macro attribute can be used to register a function as a (sub)command in
-/// a Clawless application. The name of the function will be used as the name of
-/// the command, and it will be automatically registered as a subcommand under
-/// its parent module.
+/// This macro attribute can be used to register a function as a (sub)command in a
+/// Clawless application. The name of the function will be used as the name of the
+/// command. It will be automatically registered as a subcommand under its parent module.
 ///
 /// Command functions must accept exactly two parameters:
 /// 1. An `args` parameter: a `clap::Args` struct with the command's arguments
@@ -206,8 +202,8 @@ pub fn main(_input: TokenStream) -> TokenStream {
 ///
 /// # Attributes
 ///
-/// - `alias = "name"` - Add a visible alias for the command. Can be repeated for multiple aliases.
-/// - `require_subcommand` - Require a subcommand; show help if the command is invoked without one.
+/// - `alias = "name"`: Adds a visible alias for the command. Can be repeated for multiple aliases.
+/// - `require_subcommand`: Requires a subcommand; shows help if the command is invoked without one.
 ///
 /// # Requiring Subcommands
 ///
@@ -271,7 +267,11 @@ pub fn main(_input: TokenStream) -> TokenStream {
 pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
     let input_function = parse_macro_input!(input as ItemFn);
 
-    let command_generator = match CommandGenerator::new(attrs.into(), input_function.clone()) {
+    let command_generator = match CommandGenerator::builder()
+        .attrs(attrs.into())
+        .input(input_function.clone())
+        .build()
+    {
         Ok(generator) => generator,
         Err(e) => return e.into_compile_error().into(),
     };
@@ -298,7 +298,7 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
     output.into()
 }
 
-/// Add a TUI application to a Clawless project
+/// Adds a TUI application to a Clawless project
 ///
 /// This macro attribute registers a function as a TUI application in a Clawless project. Unlike
 /// `#[command]`, which creates a stateless CLI command rendered through a push-based presenter,
@@ -316,7 +316,7 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
 /// # Projection Visibility
 ///
 /// A projection trails the events that an application emits. Emitting puts an event in the
-/// channel and returns; the projection picks it up afterwards, so a query that follows an emit
+/// channel and returns. The projection picks it up afterwards, so a query that follows an emit
 /// straight away does not yet show it. A render loop absorbs the lag, because the next frame
 /// shows what the previous frame missed.
 ///
@@ -326,8 +326,8 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// # Attributes
 ///
-/// - `alias = "name"` - Add a visible alias for the application. Can be repeated.
-/// - `require_subcommand` - Require a subcommand; show help if invoked without one.
+/// - `alias = "name"`: Adds a visible alias for the application. Can be repeated.
+/// - `require_subcommand`: Requires a subcommand; shows help if invoked without one.
 ///
 /// # Examples
 ///
@@ -356,11 +356,14 @@ pub fn command(attrs: TokenStream, input: TokenStream) -> TokenStream {
 pub fn application(attrs: TokenStream, input: TokenStream) -> TokenStream {
     let input_function = parse_macro_input!(input as ItemFn);
 
-    let application_generator =
-        match ApplicationGenerator::new(attrs.into(), input_function.clone()) {
-            Ok(generator) => generator,
-            Err(e) => return e.into_compile_error().into(),
-        };
+    let application_generator = match ApplicationGenerator::builder()
+        .attrs(attrs.into())
+        .input(input_function.clone())
+        .build()
+    {
+        Ok(generator) => generator,
+        Err(e) => return e.into_compile_error().into(),
+    };
     let inventory_generator = InventoryGenerator::new(&application_generator);
 
     let inventory_struct_for_subcommands = inventory_generator.inventory();

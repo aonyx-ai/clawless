@@ -6,8 +6,8 @@
 //!
 //! Application authors do not interact with this module directly. The `main!()` macro calls
 //! [`CommandRunner::run`] with the resolved matches and the leaf's exec function. The runner takes
-//! any callable, so a caller that builds its command tree at run time can dispatch to a closure
-//! that owns the command it resolved.
+//! any callable. A caller that builds its command tree at run time can therefore dispatch to a
+//! closure that owns the command it resolved.
 
 use std::future::Future;
 use std::io::IsTerminal;
@@ -76,19 +76,34 @@ impl CommandRunner {
     ///
     /// The runner returns the [`Exit`] of the command, and only after the presenter has rendered
     /// every event of the command. If the command fails, or if the runner cannot build the
-    /// [`Context`] or the Tokio runtime, the [`Exit`] has the exit code 1 and the text of the
-    /// error. The `main` function returns the [`Exit`] in a `ProcessExit`, and the process then
-    /// writes its text and exits with its code. The text therefore comes after all the output of
-    /// the command.
+    /// [`Context`] or the Tokio runtime, the [`Exit`] has the exit code 1. Its text is the text
+    /// of the error. The `main` function returns the [`Exit`] in a `ProcessExit`, and the
+    /// process then writes its text and exits with its code. The text therefore comes after all
+    /// the output of the command.
     ///
     /// # Arguments
     ///
-    /// * `matches` — The parsed [`ArgMatches`] for this command leaf, as resolved by the
+    /// * `matches`: The parsed [`ArgMatches`] for this command leaf, as resolved by the
     ///   subcommand tree walk.
-    /// * `exec` — Executes the command with the given matches and context. The `#[command]` macro
+    /// * `exec`: Executes the command with the given matches and context. The `#[command]` macro
     ///   generates a function for this, and any other callable works. A caller that builds its
     ///   command tree at run time passes a closure that owns the command it resolved. The command
     ///   returns `()` for the exit code 0, or an [`Exit`] to choose the exit code and the text.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_cli::output::OutputFlags;
+    /// use clawless_cli::runner::CommandRunner;
+    /// use clawless_core::exit::Exit;
+    ///
+    /// let command = OutputFlags::augment_command(clap::Command::new("greet"));
+    /// let matches = command.get_matches_from(["greet"]);
+    ///
+    /// let exit = CommandRunner::run(matches, |_matches, _context| async { Ok(()) });
+    ///
+    /// assert_eq!(exit, Exit::from(()));
+    /// ```
     ///
     /// [`ArgMatches`]: clap::ArgMatches
     /// [`Cancellation`]: clawless_core::cancellation::Cancellation
@@ -125,7 +140,8 @@ impl CommandRunner {
     /// # Errors
     ///
     /// Returns an error if context construction fails (e.g., the current working directory cannot
-    /// be determined), if the Tokio runtime cannot be created, or if the command itself fails.
+    /// be determined). Returns an error if the Tokio runtime cannot be created, or if the command
+    /// itself fails.
     fn try_run<E, F, T>(
         matches: clap::ArgMatches,
         exec: E,
@@ -170,9 +186,10 @@ impl CommandRunner {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use std::fs::File;
     use std::path::Path;

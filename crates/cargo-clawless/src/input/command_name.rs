@@ -1,6 +1,8 @@
+//! Parsed command name and its parent modules
+
 use std::path::{Path, PathBuf};
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use convert_case::{Case, Casing};
 use getset::Getters;
 
@@ -45,6 +47,15 @@ pub struct CommandName {
 
 impl CommandName {
     /// Returns the filename for this command (e.g., "greet.rs")
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use crate::input::CommandName;
+    ///
+    /// let cmd = CommandName::try_from(&"greet".to_string()).unwrap();
+    /// assert_eq!(cmd.filename(), "greet.rs");
+    /// ```
     pub fn filename(&self) -> String {
         format!("{}.rs", self.name)
     }
@@ -75,12 +86,13 @@ impl TryFrom<&String> for CommandName {
             None => (Vec::new(), value.as_str()),
         };
 
-        let name = parse_segment(name)?;
+        let name = parse_segment(name).context("parse command name")?;
 
         let parent_modules = parents
             .into_iter()
             .map(parse_segment)
-            .collect::<Result<Vec<String>>>()?;
+            .collect::<Result<Vec<String>>>()
+            .context("parse parent modules")?;
 
         Ok(Self {
             name,
@@ -91,16 +103,14 @@ impl TryFrom<&String> for CommandName {
 
 /// Returns one segment of a command name in the snake case form that Rust needs
 ///
-/// The segment arrives in the spelling that the user typed, which can be kebab case, snake
-/// case, or camel case. The conversion to snake case therefore accepts each of them.
+/// The segment arrives in the spelling that the user typed, which can be kebab case, snake case, or camel case.
+/// The conversion to snake case therefore accepts each of them.
 ///
 /// # Errors
 ///
-/// Returns an error if the segment does not become a name that a Rust function can carry and
-/// that the `#[command]` macro accepts. The generator writes the segment into a module
-/// declaration, a file name, and a function signature, and each of the three needs a name that
-/// starts with a letter, that ends with a letter or a digit, and that has one hyphen between two
-/// words.
+/// Returns an error if the segment does not become a name that a Rust function can carry and that the `#[command]` macro accepts.
+/// The generator writes the segment into a module declaration, a file name, and a function signature.
+/// Each of the three needs a name that starts with a letter, ends with a letter or digit, and has one underscore between words.
 fn parse_segment(segment: &str) -> Result<String> {
     let name = segment.to_case(Case::Snake);
 
@@ -134,9 +144,10 @@ fn is_name_character(character: char) -> bool {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design. A `# Panics` section on every test would repeat that and give the reader no information"
+    )]
 
     use super::*;
 
@@ -148,7 +159,7 @@ mod tests {
 
         assert_eq!(
             "the command name `2fa` must start with a letter",
-            error.to_string()
+            error.root_cause().to_string()
         );
     }
 
@@ -158,7 +169,10 @@ mod tests {
 
         let error = CommandName::try_from(&value).expect_err("should fail");
 
-        assert_eq!("the command name must not be empty", error.to_string());
+        assert_eq!(
+            "the command name must not be empty",
+            error.root_cause().to_string()
+        );
     }
 
     #[test]
@@ -167,7 +181,10 @@ mod tests {
 
         let error = CommandName::try_from(&value).expect_err("should fail");
 
-        assert_eq!("the command name must not be empty", error.to_string());
+        assert_eq!(
+            "the command name must not be empty",
+            error.root_cause().to_string()
+        );
     }
 
     #[test]
@@ -187,7 +204,7 @@ mod tests {
 
         assert_eq!(
             "the command name `_deploy` must start with a letter",
-            error.to_string()
+            error.root_cause().to_string()
         );
     }
 
@@ -226,7 +243,7 @@ mod tests {
 
         assert_eq!(
             "the command name `deploy_` must end with a letter or a digit",
-            error.to_string()
+            error.root_cause().to_string()
         );
     }
 
@@ -238,7 +255,7 @@ mod tests {
 
         assert_eq!(
             "the command name `deploy__staging` must have one hyphen between two words",
-            error.to_string()
+            error.root_cause().to_string()
         );
     }
 

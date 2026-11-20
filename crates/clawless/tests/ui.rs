@@ -6,13 +6,15 @@
 //! The `fail-*.rs` cases must not compile. A test compares their stderr against a `.stderr`
 //! file in the repository, which keeps the diagnostics helpful as the macros change.
 
-// An assertion in a test panics by design. A `# Panics` section on every test
-// would repeat that and give the reader no information.
-#![allow(clippy::missing_panics_doc)]
+#![allow(
+    clippy::missing_panics_doc,
+    reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+)]
 
 #[test]
 fn ui() {
     let t = trybuild::TestCases::new();
+
     t.pass("tests/ui/pass-*.rs");
     t.compile_fail("tests/ui/fail-*.rs");
 }

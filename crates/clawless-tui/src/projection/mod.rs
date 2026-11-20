@@ -50,9 +50,7 @@ use tokio::task::JoinHandle;
 pub use self::entry::Entry;
 use self::state::ProjectionState;
 
-/// The form of an [`Event`] that a TUI application reads
 mod entry;
-/// The state that the projection lock protects
 mod state;
 
 /// Pull-based, queryable view of the event stream
@@ -78,8 +76,9 @@ mod state;
 /// frame, not on the current one.
 ///
 /// A render loop absorbs this, because the next frame shows what the previous frame missed. The
-/// last frame has no next frame, so an application that wants its closing state on screen drops
-/// its [`Context`] to close the channel, awaits [`wait_until_complete`], and draws once more:
+/// last frame has no next frame. An application that wants its closing state on screen
+/// therefore drops its [`Context`] to close the channel, awaits [`wait_until_complete`], and
+/// draws once more:
 ///
 /// ```rust,ignore
 /// message!("shutting down");
@@ -123,8 +122,8 @@ pub struct Projection {
     completion: watch::Receiver<bool>,
     /// Handle to the drain task, which the runner takes so that it can await the drain
     ///
-    /// Dropping a [`JoinHandle`] detaches its task rather than stopping it, so the drain outlives
-    /// the projection and ends when the event channel closes or the runtime shuts down.
+    /// Dropping a [`JoinHandle`] detaches its task rather than stopping it. The drain therefore
+    /// outlives the projection and ends when the event channel closes or the runtime shuts down.
     drain: Option<JoinHandle<()>>,
 }
 
@@ -188,8 +187,30 @@ impl Projection {
     /// # Panics
     ///
     /// Panics if the internal lock is poisoned.
-    // Panics only on a poisoned lock, as documented above.
-    #[allow(clippy::expect_used)]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::{Event, event_channel};
+    /// use clawless_tui::projection::Projection;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// let (sender, receiver) = event_channel();
+    /// let projection = Projection::new(receiver);
+    ///
+    /// sender.send(Event::Message("compiling".to_string())).await.expect("should send");
+    /// sender.send(Event::Detail("3 crates".to_string())).await.expect("should send");
+    /// drop(sender);
+    /// projection.wait_until_complete().await;
+    ///
+    /// assert_eq!(projection.entries().len(), 2);
+    /// # }
+    /// ```
+    #[allow(
+        clippy::expect_used,
+        reason = "Panics only on a poisoned lock, as documented above."
+    )]
     pub fn entries(&self) -> Vec<Entry> {
         self.state.read().expect("lock poisoned").entries()
     }
@@ -202,9 +223,31 @@ impl Projection {
     ///
     /// Panics if the internal lock is poisoned.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::{Event, event_channel};
+    /// use clawless_tui::projection::Projection;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// let (sender, receiver) = event_channel();
+    /// let projection = Projection::new(receiver);
+    ///
+    /// sender.send(Event::Message("compiling".to_string())).await.expect("should send");
+    /// sender.send(Event::Detail("3 crates".to_string())).await.expect("should send");
+    /// drop(sender);
+    /// projection.wait_until_complete().await;
+    ///
+    /// assert_eq!(projection.messages().len(), 1);
+    /// # }
+    /// ```
+    ///
     /// [`entries`]: Projection::entries
-    // Panics only on a poisoned lock, as documented above.
-    #[allow(clippy::expect_used)]
+    #[allow(
+        clippy::expect_used,
+        reason = "Panics only on a poisoned lock, as documented above."
+    )]
     pub fn messages(&self) -> Vec<Entry> {
         self.state.read().expect("lock poisoned").messages()
     }
@@ -217,9 +260,31 @@ impl Projection {
     ///
     /// Panics if the internal lock is poisoned.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::{Event, event_channel};
+    /// use clawless_tui::projection::Projection;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// let (sender, receiver) = event_channel();
+    /// let projection = Projection::new(receiver);
+    ///
+    /// sender.send(Event::Message("compiling".to_string())).await.expect("should send");
+    /// sender.send(Event::Detail("3 crates".to_string())).await.expect("should send");
+    /// drop(sender);
+    /// projection.wait_until_complete().await;
+    ///
+    /// assert_eq!(projection.details().len(), 1);
+    /// # }
+    /// ```
+    ///
     /// [`entries`]: Projection::entries
-    // Panics only on a poisoned lock, as documented above.
-    #[allow(clippy::expect_used)]
+    #[allow(
+        clippy::expect_used,
+        reason = "Panics only on a poisoned lock, as documented above."
+    )]
     pub fn details(&self) -> Vec<Entry> {
         self.state.read().expect("lock poisoned").details()
     }
@@ -232,26 +297,75 @@ impl Projection {
     ///
     /// Panics if the internal lock is poisoned.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::{Event, event_channel};
+    /// use clawless_tui::projection::Projection;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// let (sender, receiver) = event_channel();
+    /// let projection = Projection::new(receiver);
+    ///
+    /// sender.send(Event::Message("compiling".to_string())).await.expect("should send");
+    /// sender.send(Event::Artifact(Box::new("report".to_string()))).await.expect("should send");
+    /// drop(sender);
+    /// projection.wait_until_complete().await;
+    ///
+    /// assert_eq!(projection.artifacts().len(), 1);
+    /// # }
+    /// ```
+    ///
     /// [`entries`]: Projection::entries
-    // Panics only on a poisoned lock, as documented above.
-    #[allow(clippy::expect_used)]
+    #[allow(
+        clippy::expect_used,
+        reason = "Panics only on a poisoned lock, as documented above."
+    )]
     pub fn artifacts(&self) -> Vec<Entry> {
         self.state.read().expect("lock poisoned").artifacts()
     }
 
     /// Returns accumulated entries for the runs of external programs only
     ///
-    /// The entries arrive while a program runs, so a view that shows the last few lines of a
-    /// build reads them from here and takes the tail it has room for. Every entry carries the
-    /// [`ProcessId`] of its run, which is what separates two programs that run at the same time.
+    /// The entries arrive while a program runs. A view that shows the last few lines of a build
+    /// therefore reads them from here and takes the tail it has room for. Every entry carries
+    /// the [`ProcessId`] of its run, which is what separates two programs that run at the same
+    /// time.
     ///
     /// # Panics
     ///
     /// Panics if the internal lock is poisoned.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::process::{ProcessEvent, RunId};
+    /// use clawless_core::event::{Event, event_channel};
+    /// use clawless_core::process::{Line, Stream};
+    /// use clawless_tui::projection::Projection;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// let (sender, receiver) = event_channel();
+    /// let projection = Projection::new(receiver);
+    ///
+    /// sender.send(Event::Message("compiling".to_string())).await.expect("should send");
+    /// let line = Line::new(Stream::StandardOutput, "3 crates");
+    /// let event = ProcessEvent::Line { id: RunId::next(), line };
+    /// sender.send(Event::Process(Box::new(event))).await.expect("should send");
+    /// drop(sender);
+    /// projection.wait_until_complete().await;
+    ///
+    /// assert_eq!(projection.processes().len(), 1);
+    /// # }
+    /// ```
+    ///
     /// [`ProcessId`]: clawless_core::event::process::RunId
-    // Panics only on a poisoned lock, as documented above.
-    #[allow(clippy::expect_used)]
+    #[allow(
+        clippy::expect_used,
+        reason = "Panics only on a poisoned lock, as documented above."
+    )]
     pub fn processes(&self) -> Vec<Entry> {
         self.state.read().expect("lock poisoned").processes()
     }
@@ -265,9 +379,30 @@ impl Projection {
     ///
     /// Panics if the internal lock is poisoned.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::event_channel;
+    /// use clawless_tui::projection::Projection;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() {
+    /// let (sender, receiver) = event_channel();
+    /// let projection = Projection::new(receiver);
+    /// assert!(!projection.is_complete());
+    ///
+    /// drop(sender);
+    /// projection.wait_until_complete().await;
+    ///
+    /// assert!(projection.is_complete());
+    /// # }
+    /// ```
+    ///
     /// [`EventSender`]: clawless_core::event::EventSender
-    // Panics only on a poisoned lock, as documented above.
-    #[allow(clippy::expect_used)]
+    #[allow(
+        clippy::expect_used,
+        reason = "Panics only on a poisoned lock, as documented above."
+    )]
     pub fn is_complete(&self) -> bool {
         self.state.read().expect("lock poisoned").is_complete()
     }
@@ -282,6 +417,11 @@ impl Projection {
     ///
     /// This is not a way to read back a single event during a run. It reports the end of the
     /// stream, not the arrival of one entry.
+    ///
+    /// The method also returns if the drain task ended without announcing completion, because no
+    /// announcement can arrive then. The drain announces completion before it ends, so ending
+    /// without an announcement takes a panic. Waiting for word that can no longer come would
+    /// never return.
     ///
     /// # Examples
     ///
@@ -317,9 +457,6 @@ impl Projection {
                 return;
             }
 
-            // A failure here means the sender is gone. The sender lives in the drain task and the
-            // drain announces completion before it ends, so its absence without an announcement
-            // takes a panic. Waiting for word that can no longer come would never return.
             if completion.changed().await.is_err() {
                 return;
             }
@@ -334,18 +471,23 @@ impl Projection {
 /// marked as complete and `completed` announces it to any waiter.
 ///
 /// The state is marked before the announcement, and never the other way round. A waiter that the
-/// announcement wakes therefore finds every entry already in place, rather than a projection that
-/// calls itself complete while the last entry is still missing.
+/// announcement wakes therefore finds every entry already in place. It never finds a projection
+/// that calls itself complete while the last entry is still missing.
 ///
 /// A prompt is not stored as an entry. The projection cannot ask a user, so it drops the
 /// request. The command then receives an error and does not wait.
 ///
+/// The announcement uses `send_replace` and not `send`. A drain that ends after its projection
+/// was dropped has no receiver left, and `send` would call that an error. Nothing can recover
+/// from it: the announcement has no audience, and the previous value is of no interest.
+///
 /// # Panics
 ///
 /// Panics if the internal lock is poisoned.
-// The lock is poisoned only if another thread panicked while holding it. The drain task has
-// no way to publish events into a state it cannot lock, so it fails loudly instead.
-#[allow(clippy::expect_used)]
+#[allow(
+    clippy::expect_used,
+    reason = "The lock is poisoned only if another thread panicked while holding it. The drain task has no way to publish events into a state it cannot lock, so it fails loudly instead."
+)]
 async fn drain(
     mut receiver: EventReceiver,
     state: Arc<RwLock<ProjectionState>>,
@@ -366,17 +508,15 @@ async fn drain(
     }
     state.write().expect("lock poisoned").set_complete();
 
-    // `send_replace` rather than `send`, because a drain that ends after its projection was
-    // dropped has no receiver left and `send` would call that an error. There is nothing to
-    // recover: the announcement has no audience, and the previous value is of no interest.
     completed.send_replace(true);
 }
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use std::fmt;
 
@@ -400,6 +540,19 @@ mod tests {
         }
     }
 
+    /// Returns the kind and the text of each entry, in order
+    fn describe(entries: &[Entry]) -> Vec<String> {
+        entries
+            .iter()
+            .map(|entry| match entry {
+                Entry::Message(text) => format!("message: {text}"),
+                Entry::Detail(text) => format!("detail: {text}"),
+                Entry::Artifact(artifact) => format!("artifact: {artifact}"),
+                Entry::Process(event) => format!("process: {event}"),
+            })
+            .collect()
+    }
+
     #[tokio::test]
     async fn artifacts_returns_artifact_entries_only() {
         let (sender, receiver) = event_channel();
@@ -420,11 +573,7 @@ mod tests {
 
         let artifacts = projection.artifacts();
 
-        assert_eq!(artifacts.len(), 1);
-        let Entry::Artifact(a) = &artifacts[0] else {
-            panic!("expected Entry::Artifact");
-        };
-        assert_eq!(a.to_string(), "art");
+        assert_eq!(describe(&artifacts), ["artifact: art"]);
     }
 
     #[tokio::test]
@@ -449,15 +598,23 @@ mod tests {
 
         let details = projection.details();
 
-        assert_eq!(details.len(), 2);
-        let Entry::Detail(s) = &details[0] else {
-            panic!("expected Entry::Detail");
-        };
-        assert_eq!(s, "dtl");
-        let Entry::Detail(s) = &details[1] else {
-            panic!("expected Entry::Detail");
-        };
-        assert_eq!(s, "dtl2");
+        assert_eq!(describe(&details), ["detail: dtl", "detail: dtl2"]);
+    }
+
+    #[tokio::test]
+    async fn drain_completes_after_processing_buffered_events() {
+        let (sender, receiver) = event_channel();
+
+        sender
+            .send(Event::Message("buffered".to_string()))
+            .await
+            .expect("should send");
+        drop(sender);
+
+        let projection = Projection::new(receiver);
+        projection.wait_until_complete().await;
+
+        assert!(projection.is_complete());
     }
 
     #[tokio::test]
@@ -491,78 +648,9 @@ mod tests {
         let projection = Projection::new(receiver);
         projection.wait_until_complete().await;
 
-        assert!(projection.is_complete());
-        let entries = projection.entries();
-        assert_eq!(entries.len(), 1);
-        let Entry::Message(s) = &entries[0] else {
-            panic!("expected Entry::Message");
-        };
-        assert_eq!(s, "buffered");
-    }
-
-    #[tokio::test]
-    async fn entries_returns_artifact_events_as_entries() {
-        let (sender, receiver) = event_channel();
-        let projection = Projection::new(receiver);
-
-        sender
-            .send(Event::Artifact(Box::new(TestArtifact {
-                value: "result".to_string(),
-            })))
-            .await
-            .expect("should send");
-        drop(sender);
-        projection.wait_until_complete().await;
-
         let entries = projection.entries();
 
-        assert_eq!(entries.len(), 1);
-        let Entry::Artifact(a) = &entries[0] else {
-            panic!("expected Entry::Artifact");
-        };
-        assert_eq!(a.to_string(), "result");
-    }
-
-    #[tokio::test]
-    async fn entries_returns_detail_events_as_entries() {
-        let (sender, receiver) = event_channel();
-        let projection = Projection::new(receiver);
-
-        sender
-            .send(Event::Detail("info".to_string()))
-            .await
-            .expect("should send");
-        drop(sender);
-        projection.wait_until_complete().await;
-
-        let entries = projection.entries();
-
-        assert_eq!(entries.len(), 1);
-        let Entry::Detail(s) = &entries[0] else {
-            panic!("expected Entry::Detail");
-        };
-        assert_eq!(s, "info");
-    }
-
-    #[tokio::test]
-    async fn entries_returns_message_events_as_entries() {
-        let (sender, receiver) = event_channel();
-        let projection = Projection::new(receiver);
-
-        sender
-            .send(Event::Message("hello".to_string()))
-            .await
-            .expect("should send");
-        drop(sender);
-        projection.wait_until_complete().await;
-
-        let entries = projection.entries();
-
-        assert_eq!(entries.len(), 1);
-        let Entry::Message(s) = &entries[0] else {
-            panic!("expected Entry::Message");
-        };
-        assert_eq!(s, "hello");
+        assert_eq!(describe(&entries), ["message: buffered"]);
     }
 
     #[tokio::test]
@@ -587,19 +675,63 @@ mod tests {
 
         let entries = projection.entries();
 
-        assert_eq!(entries.len(), 3);
-        let Entry::Message(s) = &entries[0] else {
-            panic!("expected Entry::Message");
-        };
-        assert_eq!(s, "first");
-        let Entry::Detail(s) = &entries[1] else {
-            panic!("expected Entry::Detail");
-        };
-        assert_eq!(s, "second");
-        let Entry::Message(s) = &entries[2] else {
-            panic!("expected Entry::Message");
-        };
-        assert_eq!(s, "third");
+        assert_eq!(
+            describe(&entries),
+            ["message: first", "detail: second", "message: third"]
+        );
+    }
+
+    #[tokio::test]
+    async fn entries_returns_artifact_events_as_entries() {
+        let (sender, receiver) = event_channel();
+        let projection = Projection::new(receiver);
+
+        sender
+            .send(Event::Artifact(Box::new(TestArtifact {
+                value: "result".to_string(),
+            })))
+            .await
+            .expect("should send");
+        drop(sender);
+        projection.wait_until_complete().await;
+
+        let entries = projection.entries();
+
+        assert_eq!(describe(&entries), ["artifact: result"]);
+    }
+
+    #[tokio::test]
+    async fn entries_returns_detail_events_as_entries() {
+        let (sender, receiver) = event_channel();
+        let projection = Projection::new(receiver);
+
+        sender
+            .send(Event::Detail("info".to_string()))
+            .await
+            .expect("should send");
+        drop(sender);
+        projection.wait_until_complete().await;
+
+        let entries = projection.entries();
+
+        assert_eq!(describe(&entries), ["detail: info"]);
+    }
+
+    #[tokio::test]
+    async fn entries_returns_message_events_as_entries() {
+        let (sender, receiver) = event_channel();
+        let projection = Projection::new(receiver);
+
+        sender
+            .send(Event::Message("hello".to_string()))
+            .await
+            .expect("should send");
+        drop(sender);
+        projection.wait_until_complete().await;
+
+        let entries = projection.entries();
+
+        assert_eq!(describe(&entries), ["message: hello"]);
     }
 
     #[tokio::test]
@@ -650,15 +782,7 @@ mod tests {
 
         let messages = projection.messages();
 
-        assert_eq!(messages.len(), 2);
-        let Entry::Message(s) = &messages[0] else {
-            panic!("expected Entry::Message");
-        };
-        assert_eq!(s, "msg");
-        let Entry::Message(s) = &messages[1] else {
-            panic!("expected Entry::Message");
-        };
-        assert_eq!(s, "msg2");
+        assert_eq!(describe(&messages), ["message: msg", "message: msg2"]);
     }
 
     #[tokio::test]
@@ -668,6 +792,14 @@ mod tests {
         let projection = Projection::new(receiver);
 
         assert!(projection.entries().is_empty());
+    }
+
+    #[tokio::test]
+    async fn new_returns_incomplete_projection() {
+        let (_sender, receiver) = event_channel();
+
+        let projection = Projection::new(receiver);
+
         assert!(!projection.is_complete());
     }
 
@@ -750,11 +882,13 @@ mod tests {
         assert!(projection.is_complete());
     }
 
-    // The announcement of completion is what wakes the waiter, so this is where an announcement
-    // that ran ahead of the state would show: the waiter would return and find a projection that
-    // still calls itself incomplete. The multi-threaded flavor is what gives the check teeth,
-    // because the drain runs on another worker and the two writes can be observed apart. A
-    // current-thread runtime hides the difference.
+    /// Shows that a waiter never returns ahead of the state
+    ///
+    /// The announcement of completion is what wakes the waiter, so this is where an announcement
+    /// that ran ahead of the state would show. The waiter would return and find a projection that
+    /// still calls itself incomplete. The multi-threaded flavor gives the check its teeth, because
+    /// the drain runs on another worker and the two writes can be observed apart. A
+    /// current-thread runtime hides the difference.
     #[tokio::test(flavor = "multi_thread")]
     async fn wait_until_complete_reports_completion_when_it_returns() {
         let mut torn = 0;
@@ -778,9 +912,11 @@ mod tests {
         assert_eq!(torn, 0);
     }
 
-    // Awaiting the send only puts an event in the channel, so a projection read straight after it
-    // is almost always still empty. This is the await that closes that gap, and the count is what
-    // a closing frame depends on.
+    /// Shows that a waiter sees the event that preceded the wait
+    ///
+    /// Awaiting the send only puts an event in the channel, so a projection read straight after
+    /// it is almost always still empty. This is the await that closes that gap, and the count is
+    /// what a closing frame depends on.
     #[tokio::test(flavor = "multi_thread")]
     async fn wait_until_complete_shows_the_event_that_preceded_it() {
         let mut incomplete = 0;

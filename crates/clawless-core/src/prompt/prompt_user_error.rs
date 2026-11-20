@@ -1,3 +1,5 @@
+//! The error returned when a command cannot get an answer from its user
+
 use thiserror::Error;
 
 use super::AnswerPromptError;
@@ -10,6 +12,24 @@ use crate::event::SendError;
 ///
 /// A later release can add variants, and it can add fields to a variant. Match with a wildcard
 /// arm, and bind the fields of a variant with `..`.
+///
+/// # Examples
+///
+/// ```
+/// use clawless_core::event::event_channel;
+/// use clawless_core::output::Output;
+/// use clawless_core::prompt::{Prompt, PromptUserError};
+///
+/// # #[tokio::main(flavor = "current_thread")]
+/// # async fn main() {
+/// let (sender, _receiver) = event_channel();
+/// let prompt = Prompt::builder().output(Output::new(sender)).build();
+///
+/// let error = prompt.confirm("Delete the branch?").await.expect_err("no user is present");
+///
+/// assert!(matches!(error, PromptUserError::AbsentUser { .. }));
+/// # }
+/// ```
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum PromptUserError {
@@ -91,9 +111,10 @@ pub enum PromptUserError {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
 

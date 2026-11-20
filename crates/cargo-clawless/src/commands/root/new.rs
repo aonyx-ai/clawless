@@ -1,3 +1,5 @@
+//! Creates a new Clawless project
+
 use std::fs::{create_dir_all, write};
 use std::path::{Path, PathBuf};
 
@@ -14,11 +16,10 @@ pub struct NewArgs {
     name: CrateName,
 }
 
-/// Create a new Clawless project with a complete setup
+/// Creates a new Clawless project with complete setup
 ///
-/// This command creates a new binary crate using `cargo new`, adds the Clawless
-/// framework as a dependency, and sets up the project structure with example code
-/// to get you started quickly.
+/// This command creates a new binary crate, adds Clawless as a dependency,
+/// and sets up the project structure with example code to start quickly.
 ///
 /// The generated project includes:
 /// - A `main.rs` file with the Clawless entry point
@@ -31,38 +32,32 @@ pub struct NewArgs {
 /// cargo clawless new my-app
 /// ```
 #[command(alias = "n")]
-// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
-// raw Markdown heading in the terminal rather than documenting an API.
-#[allow(clippy::missing_errors_doc)]
+#[allow(
+    clippy::missing_errors_doc,
+    reason = "a command's doc comment is its `--help` text, so an `# Errors` section would render as a raw Markdown heading in the terminal rather than documenting an API"
+)]
 pub async fn new(args: NewArgs, context: Context) -> CommandResult {
-    // Call `cargo new` to create a new binary crate
-    let crate_path = create_binary_crate(&context, &args.name).await?;
-
-    // Call `cargo add` to add Clawless as a dependency to the new crate
-    add_clawless_dependency(&context, &crate_path).await?;
-
-    // Update the main.rs file to use clawless
-    overwrite_main_rs(&crate_path)?;
-
-    // Create src/commands.rs and initialize clawless
-    create_commands_rs(&crate_path)?;
-
-    // Create src/commands/greet.rs with the greeting example
-    create_greeting_command(&crate_path)?;
+    let crate_path = create_binary_crate(&context, &args.name)
+        .await
+        .context("create binary crate")?;
+    add_clawless_dependency(&context, &crate_path)
+        .await
+        .context("add Clawless dependency")?;
+    overwrite_main_rs(&crate_path).context("overwrite main.rs")?;
+    create_commands_rs(&crate_path).context("create commands.rs")?;
+    create_greeting_command(&crate_path).context("create greeting command")?;
 
     Ok(())
 }
 
-/// Creates the binary crate with the `cargo new` command
+/// Creates the binary crate
 ///
-/// Cargo writes the manifest, not this tool. The new project therefore always matches the
-/// current toolchain.
+/// Cargo writes the manifest, not this tool.
+/// The new project therefore always matches the current toolchain.
 ///
 /// # Errors
 ///
-/// Returns an error if `cargo new` cannot start, if it is cancelled, or if it ends without
-/// success. The error of a status that is not a success names the command and repeats what Cargo
-/// wrote to its standard error, which is where Cargo states why it refused.
+/// Returns an error if `cargo new` cannot start, is cancelled, or fails.
 async fn create_binary_crate(context: &Context, crate_name: &CrateName) -> Result<PathBuf, Error> {
     context
         .process()
@@ -86,14 +81,11 @@ async fn create_binary_crate(context: &Context, crate_name: &CrateName) -> Resul
     Ok(crate_path)
 }
 
-/// Adds `clawless` to the dependencies of the new crate with the `cargo add` command
+/// Adds `clawless` to the new crate's dependencies
 ///
 /// # Errors
 ///
-/// Returns an error if `cargo add` cannot start, if it is cancelled, or if it ends without
-/// success. The error of a status that is not a success names the command and repeats what Cargo
-/// wrote to its standard error, which is where Cargo reports an unreachable registry or a crate
-/// that it cannot resolve.
+/// Returns an error if `cargo add` cannot start, is cancelled, or fails.
 async fn add_clawless_dependency(context: &Context, crate_path: &Path) -> Result<(), Error> {
     context
         .process()
@@ -192,9 +184,10 @@ fn create_greeting_command(crate_path: &Path) -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design. A `# Panics` section on every test would repeat that and give the reader no information"
+    )]
 
     use std::fs::{create_dir_all, read_to_string};
 
@@ -206,16 +199,38 @@ mod tests {
 
     /// Returns an output whose events a task reads and discards
     ///
-    /// A run reports every line that Cargo writes, and it fails once nobody
-    /// listens. No test here reads those events, so the reader stands in for
-    /// the presenter that a real application has: it keeps the channel open,
-    /// and it empties the buffer that a talkative Cargo would otherwise fill.
+    /// A run reports every line that Cargo writes and fails once nobody listens.
+    /// The reader discards these events since tests don't read them,
+    /// so the reader stands in for the real presenter that keeps the channel open.
     fn test_output() -> Output {
         let (sender, mut receiver) = event_channel();
 
         tokio::spawn(async move { while receiver.recv().await.is_some() {} });
 
         Output::new(sender)
+    }
+
+    #[tokio::test]
+    async fn add_clawless_dependency_adds_dependency() {
+        let cwd = TempDir::new().unwrap();
+
+        let context = Context::builder()
+            .current_working_directory(cwd.path())
+            .output(test_output())
+            .build()
+            .expect("failed to create context");
+
+        let crate_path = create_binary_crate(&context, &CrateName::new("my_crate"))
+            .await
+            .unwrap();
+
+        add_clawless_dependency(&context, &crate_path)
+            .await
+            .unwrap();
+
+        let cargo_toml_contents = read_to_string(crate_path.join("Cargo.toml")).unwrap();
+
+        assert!(cargo_toml_contents.contains("clawless"));
     }
 
     #[tokio::test]
@@ -245,7 +260,6 @@ mod tests {
             .build()
             .expect("failed to create context");
 
-        // Pre-create the directory to simulate an existing crate
         create_dir_all(cwd.path().join("crate-that-already-exists")).unwrap();
 
         let crate_name = CrateName::new("crate-that-already-exists");
@@ -263,7 +277,6 @@ mod tests {
             .build()
             .expect("failed to create context");
 
-        // Pre-create the directory to simulate an existing crate
         create_dir_all(cwd.path().join("crate-that-already-exists")).unwrap();
 
         let crate_name = CrateName::new("crate-that-already-exists");
@@ -275,51 +288,11 @@ mod tests {
         assert!(format!("{error:#}").contains("already exists"));
     }
 
-    #[tokio::test]
-    async fn add_clawless_dependency_adds_dependency() {
-        let cwd = TempDir::new().unwrap();
-
-        let context = Context::builder()
-            .current_working_directory(cwd.path())
-            .output(test_output())
-            .build()
-            .expect("failed to create context");
-
-        let crate_path = create_binary_crate(&context, &CrateName::new("my_crate"))
-            .await
-            .unwrap();
-
-        add_clawless_dependency(&context, &crate_path)
-            .await
-            .unwrap();
-
-        let cargo_toml_contents = read_to_string(crate_path.join("Cargo.toml")).unwrap();
-
-        assert!(cargo_toml_contents.contains("clawless"));
-    }
-
-    #[test]
-    fn overwrite_main_rs_updates_file() {
-        let cwd = TempDir::new().unwrap();
-        let main_rs_path = cwd.path().join("src").join("main.rs");
-
-        // Create a dummy crate structure and main.rs file
-        create_dir_all(cwd.path().join("src")).unwrap();
-        write(&main_rs_path, "// dummy main.rs").unwrap();
-
-        overwrite_main_rs(cwd.path()).unwrap();
-
-        let main_rs_contents = read_to_string(main_rs_path).unwrap();
-
-        assert!(main_rs_contents.contains("clawless::main!();"));
-    }
-
     #[test]
     fn create_commands_rs_creates_file() {
         let cwd = TempDir::new().unwrap();
         let src_path = cwd.path().join("src");
 
-        // Create the src directory
         create_dir_all(&src_path).unwrap();
 
         create_commands_rs(cwd.path()).unwrap();
@@ -334,7 +307,6 @@ mod tests {
         let cwd = TempDir::new().unwrap();
         let commands_dir_path = cwd.path().join("src").join("commands");
 
-        // Create the commands directory
         create_dir_all(&commands_dir_path).unwrap();
 
         create_greeting_command(cwd.path()).unwrap();
@@ -344,5 +316,38 @@ mod tests {
         assert!(
             greet_rs_contents.contains("pub async fn greet(args: GreetArgs, context: Context)")
         );
+    }
+
+    #[test]
+    fn overwrite_main_rs_updates_file() {
+        let cwd = TempDir::new().unwrap();
+        let main_rs_path = cwd.path().join("src").join("main.rs");
+
+        create_dir_all(cwd.path().join("src")).unwrap();
+        write(&main_rs_path, "// dummy main.rs").unwrap();
+
+        overwrite_main_rs(cwd.path()).unwrap();
+
+        let main_rs_contents = read_to_string(main_rs_path).unwrap();
+
+        assert!(main_rs_contents.contains("clawless::main!();"));
+    }
+
+    #[test]
+    fn trait_send() {
+        fn assert_send<T: Send>() {}
+        assert_send::<NewArgs>();
+    }
+
+    #[test]
+    fn trait_sync() {
+        fn assert_sync<T: Sync>() {}
+        assert_sync::<NewArgs>();
+    }
+
+    #[test]
+    fn trait_unpin() {
+        fn assert_unpin<T: Unpin>() {}
+        assert_unpin::<NewArgs>();
     }
 }

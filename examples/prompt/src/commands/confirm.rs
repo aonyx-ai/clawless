@@ -1,3 +1,5 @@
+//! Asks the user to confirm before a step that cannot be undone
+
 use clawless::prelude::*;
 use clawless::prompt::{Confirm, PromptUserError};
 
@@ -9,7 +11,7 @@ pub struct ConfirmArgs {
     version: String,
 }
 
-/// Ask the user to confirm before a step that cannot be undone
+/// Asks the user to confirm before a step that cannot be undone
 ///
 /// The command pretends to release a version. The default answer is No. Press Enter for the
 /// default, or type `y` and press Enter to release. Press Ctrl+C to cancel.
@@ -20,9 +22,10 @@ pub struct ConfirmArgs {
 /// prompt confirm < /dev/null
 /// ```
 #[command]
-// A command's doc comment is its `--help` text, so an `# Errors` section would render as a
-// raw Markdown heading in the terminal rather than documenting an API.
-#[allow(clippy::missing_errors_doc)]
+#[allow(
+    clippy::missing_errors_doc,
+    reason = "a command's doc comment is its `--help` text, so an `# Errors` section would render as a raw Markdown heading in the terminal"
+)]
 pub async fn confirm(args: ConfirmArgs, context: Context) -> CommandResult {
     let ConfirmArgs { version } = args;
 
@@ -59,14 +62,17 @@ async fn ask(prompt: &Prompt, version: &str) -> Result<Confirmation, PromptUserE
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use clawless::event::event_channel;
     use clawless::prompt::{ScriptedAnswer, ScriptedUser};
 
     use super::*;
+
+    fn assert_auto_traits<T: Send + Sync + Unpin>() {}
 
     #[tokio::test]
     async fn ask_with_a_user_who_agrees_returns_yes() {
@@ -81,5 +87,10 @@ mod tests {
         let answer = ask(&prompt, "1.4.0").await.expect("should answer");
 
         assert_eq!(answer, Confirmation::Yes);
+    }
+
+    #[test]
+    fn confirm_args_is_send_sync_and_unpin() {
+        assert_auto_traits::<ConfirmArgs>();
     }
 }

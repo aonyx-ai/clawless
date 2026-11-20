@@ -6,9 +6,10 @@
 //! The `README.md` case runs the examples from the README of the crate. The documentation
 //! therefore stays correct.
 
-// An assertion in a test panics by design. A `# Panics` section on every test
-// would repeat that and give the reader no information.
-#![allow(clippy::missing_panics_doc)]
+#![allow(
+    clippy::missing_panics_doc,
+    reason = "an assertion in a test panics by design. A `# Panics` section on every test would repeat that and give the reader no information"
+)]
 
 #[test]
 fn commands() {

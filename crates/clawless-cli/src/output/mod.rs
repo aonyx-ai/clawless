@@ -10,14 +10,13 @@
 //! [`Output`]: clawless_core::output::Output
 //! [`TerminalPresenter`]: crate::presenter::TerminalPresenter
 
+use bon::Builder;
 use clap::{Arg, ArgAction, ArgMatches};
 
 pub use self::output_mode::OutputMode;
 pub use self::verbosity::Verbosity;
 
-/// Whether events render as human-readable text or as JSON
 mod output_mode;
-/// How much detail the presenter renders
 mod verbosity;
 
 /// CLI flag configuration for output behavior
@@ -34,17 +33,17 @@ mod verbosity;
 /// ```
 /// use clawless_cli::output::OutputFlags;
 ///
-/// let flags = OutputFlags::new(
-///     clawless_cli::output::Verbosity::Default,
-///     clawless_cli::output::OutputMode::Text,
-/// );
+/// let flags = OutputFlags::builder()
+///     .verbosity(clawless_cli::output::Verbosity::Default)
+///     .mode(clawless_cli::output::OutputMode::Text)
+///     .build();
 /// assert_eq!(flags.verbosity(), clawless_cli::output::Verbosity::Default);
 /// assert_eq!(flags.mode(), clawless_cli::output::OutputMode::Text);
 /// ```
 ///
 /// [`Output`]: clawless_core::output::Output
 /// [`TerminalPresenter`]: crate::presenter::TerminalPresenter
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Builder)]
 pub struct OutputFlags {
     /// How much detail the presenter renders, from the `--quiet` and `--verbose` flags
     verbosity: Verbosity,
@@ -53,21 +52,6 @@ pub struct OutputFlags {
 }
 
 impl OutputFlags {
-    /// Creates a new [`OutputFlags`] with the given verbosity and mode
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use clawless_cli::output::{OutputFlags, OutputMode, Verbosity};
-    ///
-    /// let flags = OutputFlags::new(Verbosity::Default, OutputMode::Text);
-    /// assert_eq!(flags.verbosity(), Verbosity::Default);
-    /// assert_eq!(flags.mode(), OutputMode::Text);
-    /// ```
-    pub fn new(verbosity: Verbosity, mode: OutputMode) -> Self {
-        Self { verbosity, mode }
-    }
-
     /// Returns the verbosity level
     ///
     /// # Examples
@@ -75,7 +59,10 @@ impl OutputFlags {
     /// ```
     /// use clawless_cli::output::{OutputFlags, OutputMode, Verbosity};
     ///
-    /// let flags = OutputFlags::new(Verbosity::Verbose, OutputMode::Text);
+    /// let flags = OutputFlags::builder()
+    ///     .verbosity(Verbosity::Verbose)
+    ///     .mode(OutputMode::Text)
+    ///     .build();
     /// assert_eq!(flags.verbosity(), Verbosity::Verbose);
     /// ```
     pub fn verbosity(&self) -> Verbosity {
@@ -89,7 +76,10 @@ impl OutputFlags {
     /// ```
     /// use clawless_cli::output::{OutputFlags, OutputMode, Verbosity};
     ///
-    /// let flags = OutputFlags::new(Verbosity::Default, OutputMode::Json);
+    /// let flags = OutputFlags::builder()
+    ///     .verbosity(Verbosity::Default)
+    ///     .mode(OutputMode::Json)
+    ///     .build();
     /// assert_eq!(flags.mode(), OutputMode::Json);
     /// ```
     pub fn mode(&self) -> OutputMode {
@@ -176,26 +166,66 @@ impl OutputFlags {
             false => OutputMode::Text,
         };
 
-        Self::new(verbosity, mode)
+        Self::builder().verbosity(verbosity).mode(mode).build()
     }
 }
 
 impl Default for OutputFlags {
     fn default() -> Self {
-        Self::new(Verbosity::default(), OutputMode::default())
+        Self::builder()
+            .verbosity(Verbosity::default())
+            .mode(OutputMode::default())
+            .build()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
 
     fn test_command() -> clap::Command {
         OutputFlags::augment_command(clap::Command::new("test"))
+    }
+
+    #[test]
+    fn augment_command_adds_the_global_json_arg() {
+        let command = test_command();
+        let args: Vec<&str> = command
+            .get_arguments()
+            .filter(|a| a.is_global_set())
+            .map(|a| a.get_id().as_str())
+            .collect();
+
+        assert!(args.contains(&"json"));
+    }
+
+    #[test]
+    fn augment_command_adds_the_global_quiet_arg() {
+        let command = test_command();
+        let args: Vec<&str> = command
+            .get_arguments()
+            .filter(|a| a.is_global_set())
+            .map(|a| a.get_id().as_str())
+            .collect();
+
+        assert!(args.contains(&"quiet"));
+    }
+
+    #[test]
+    fn augment_command_adds_the_global_verbose_arg() {
+        let command = test_command();
+        let args: Vec<&str> = command
+            .get_arguments()
+            .filter(|a| a.is_global_set())
+            .map(|a| a.get_id().as_str())
+            .collect();
+
+        assert!(args.contains(&"verbose"));
     }
 
     #[test]
@@ -207,63 +237,101 @@ mod tests {
             .map(|a| a.get_id().as_str())
             .collect();
 
-        assert!(args.contains(&"quiet"));
-        assert!(args.contains(&"verbose"));
-        assert!(args.contains(&"json"));
         assert_eq!(args.len(), 3);
     }
 
     #[test]
-    fn default_is_text_with_default_verbosity() {
+    fn default_is_default_verbosity() {
         let flags = OutputFlags::default();
 
         assert_eq!(flags.verbosity(), Verbosity::Default);
+    }
+
+    #[test]
+    fn default_is_text_mode() {
+        let flags = OutputFlags::default();
+
         assert_eq!(flags.mode(), OutputMode::Text);
     }
 
     #[test]
-    fn from_arg_matches_with_defaults() {
+    fn from_arg_matches_with_defaults_uses_default_verbosity() {
         let matches = test_command().get_matches_from(vec!["test"]);
 
         let flags = OutputFlags::from_arg_matches(&matches);
 
         assert_eq!(flags.verbosity(), Verbosity::Default);
+    }
+
+    #[test]
+    fn from_arg_matches_with_defaults_uses_text_mode() {
+        let matches = test_command().get_matches_from(vec!["test"]);
+
+        let flags = OutputFlags::from_arg_matches(&matches);
+
         assert_eq!(flags.mode(), OutputMode::Text);
     }
 
     #[test]
-    fn from_arg_matches_with_json_flag() {
+    fn from_arg_matches_with_json_flag_keeps_default_verbosity() {
+        let matches = test_command().get_matches_from(vec!["test", "--json"]);
+
+        let flags = OutputFlags::from_arg_matches(&matches);
+
+        assert_eq!(flags.verbosity(), Verbosity::Default);
+    }
+
+    #[test]
+    fn from_arg_matches_with_json_flag_uses_json_mode() {
         let matches = test_command().get_matches_from(vec!["test", "--json"]);
 
         let flags = OutputFlags::from_arg_matches(&matches);
 
         assert_eq!(flags.mode(), OutputMode::Json);
-        assert_eq!(flags.verbosity(), Verbosity::Default);
     }
 
     #[test]
-    fn from_arg_matches_with_quiet_flag() {
+    fn from_arg_matches_with_quiet_flag_keeps_text_mode() {
+        let matches = test_command().get_matches_from(vec!["test", "--quiet"]);
+
+        let flags = OutputFlags::from_arg_matches(&matches);
+
+        assert_eq!(flags.mode(), OutputMode::Text);
+    }
+
+    #[test]
+    fn from_arg_matches_with_quiet_flag_uses_quiet_verbosity() {
         let matches = test_command().get_matches_from(vec!["test", "--quiet"]);
 
         let flags = OutputFlags::from_arg_matches(&matches);
 
         assert_eq!(flags.verbosity(), Verbosity::Quiet);
+    }
+
+    #[test]
+    fn from_arg_matches_with_verbose_flag_keeps_text_mode() {
+        let matches = test_command().get_matches_from(vec!["test", "--verbose"]);
+
+        let flags = OutputFlags::from_arg_matches(&matches);
+
         assert_eq!(flags.mode(), OutputMode::Text);
     }
 
     #[test]
-    fn from_arg_matches_with_verbose_flag() {
+    fn from_arg_matches_with_verbose_flag_uses_verbose_verbosity() {
         let matches = test_command().get_matches_from(vec!["test", "--verbose"]);
 
         let flags = OutputFlags::from_arg_matches(&matches);
 
         assert_eq!(flags.verbosity(), Verbosity::Verbose);
-        assert_eq!(flags.mode(), OutputMode::Text);
     }
 
     #[test]
     fn mode_returns_configured_mode() {
-        let flags = OutputFlags::new(Verbosity::Default, OutputMode::Json);
+        let flags = OutputFlags::builder()
+            .verbosity(Verbosity::Default)
+            .mode(OutputMode::Json)
+            .build();
 
         assert_eq!(flags.mode(), OutputMode::Json);
     }
@@ -288,7 +356,10 @@ mod tests {
 
     #[test]
     fn verbosity_returns_configured_verbosity() {
-        let flags = OutputFlags::new(Verbosity::Verbose, OutputMode::Text);
+        let flags = OutputFlags::builder()
+            .verbosity(Verbosity::Verbose)
+            .mode(OutputMode::Text)
+            .build();
 
         assert_eq!(flags.verbosity(), Verbosity::Verbose);
     }

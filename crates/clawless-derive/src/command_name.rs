@@ -1,3 +1,5 @@
+//! Translation from the name of a function to the name of a command
+
 use syn::ext::IdentExt;
 use syn::{Error, Ident, Result};
 
@@ -8,7 +10,7 @@ use syn::{Error, Ident, Result};
 /// command `deploy-staging`.
 ///
 /// The name reaches clap along two separate paths. It names the clap `Command` that parses the
-/// arguments and prints the help, and it is the key that the generated dispatch code looks up
+/// arguments and prints the help. It is also the key that the generated dispatch code looks up
 /// after parsing. Both paths read the name from this type, and the two therefore cannot drift
 /// apart. A command that the help shows but that never runs is thus impossible.
 ///
@@ -69,9 +71,10 @@ impl TryFrom<&Ident> for CommandName {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use proc_macro2::Span;
 

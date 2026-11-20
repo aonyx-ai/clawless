@@ -1,3 +1,5 @@
+//! The form of an [`Event`] that a TUI application reads
+
 use std::fmt;
 use std::sync::Arc;
 
@@ -8,8 +10,30 @@ use clawless_core::event::process::ProcessEvent;
 ///
 /// `Entry` is the projection's public vocabulary for events. TUI consumers query the projection
 /// and receive entries, never raw events. Each variant carries the same data as its corresponding
-/// [`Event`] variant but uses [`Arc`] for artifact values so that entries can be cheaply cloned
+/// [`Event`] variant. It uses [`Arc`] for artifact values, so that entries can be cheaply cloned
 /// when returned from queries.
+///
+/// # Examples
+///
+/// ```
+/// use clawless_core::event::{Event, event_channel};
+/// use clawless_tui::projection::{Entry, Projection};
+///
+/// # #[tokio::main]
+/// # async fn main() {
+/// let (sender, receiver) = event_channel();
+/// let projection = Projection::new(receiver);
+///
+/// sender.send(Event::Message("compiling".to_string())).await.expect("should send");
+/// drop(sender);
+/// projection.wait_until_complete().await;
+///
+/// match &projection.entries()[0] {
+///     Entry::Message(text) => assert_eq!(text, "compiling"),
+///     Entry::Detail(_) | Entry::Artifact(_) | Entry::Process(_) => panic!("expected a message"),
+/// }
+/// # }
+/// ```
 ///
 /// [`Event`]: clawless_core::event::Event
 #[derive(Clone, Debug)]
@@ -22,8 +46,8 @@ pub enum Entry {
     Artifact(Arc<dyn Artifact>),
     /// One step in the run of an external program
     ///
-    /// The event is behind an [`Arc`] because a run produces one entry per line of output, and a
-    /// TUI clones the whole entry list on every frame it draws.
+    /// A run produces one entry per line of output, and a TUI clones the whole entry list on
+    /// every frame it draws. The event is therefore behind an [`Arc`].
     Process(Arc<ProcessEvent>),
 }
 
@@ -40,9 +64,10 @@ impl fmt::Display for Entry {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use std::sync::Arc;
 

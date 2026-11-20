@@ -108,13 +108,13 @@ impl LineReader {
     pub(super) async fn next_line(&mut self) -> Read {
         self.start()?;
 
-        let State::Started {
-            requests,
-            reads,
-            open,
-        } = &mut self.state
-        else {
-            return Err(stopped());
+        let (requests, reads, open) = match &mut self.state {
+            State::Started {
+                requests,
+                reads,
+                open,
+            } => (requests, reads, open),
+            State::Idle { .. } | State::Stopped => return Err(stopped()),
         };
 
         match open {
@@ -202,9 +202,10 @@ fn stopped() -> io::Error {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use std::collections::VecDeque;
     use std::future::Future;
@@ -240,6 +241,25 @@ mod tests {
     /// Gives the thread of a reader the time to start a read that it must not start
     fn settle() {
         std::thread::sleep(Duration::from_millis(50));
+    }
+
+    /// Compiles for a type that is `Send` and `Unpin`
+    fn assert_send_and_unpin<T: Send + Unpin>() {}
+
+    /// Makes a type ambiguous when it is `Sync`, so that a use of it compiles only for a type
+    /// that is not
+    trait AmbiguousIfSync<Marker> {
+        /// Compiles only when the implementing type is not `Sync`
+        fn compiles_only_without_sync() {}
+    }
+
+    impl<T: ?Sized> AmbiguousIfSync<()> for T {}
+
+    impl<T: ?Sized + Sync> AmbiguousIfSync<u8> for T {}
+
+    #[test]
+    fn line_reader_is_send_and_unpin() {
+        assert_send_and_unpin::<LineReader>();
     }
 
     #[tokio::test]
@@ -327,5 +347,33 @@ mod tests {
         let line = reader.next_line().await.expect("should read");
 
         assert_eq!(line, Some("y".to_owned()));
+    }
+
+    #[test]
+    fn open_read_is_send_sync_and_unpin() {
+        fn assert_auto_traits<T: Send + Sync + Unpin>() {}
+        assert_auto_traits::<OpenRead>();
+    }
+
+    #[test]
+    fn state_is_send_and_unpin() {
+        assert_send_and_unpin::<State>();
+    }
+
+    /// `LineReader` is not `Sync`
+    ///
+    /// The reader owns a function that is `Send` and no more. The thread of the reader takes that
+    /// function, so nothing shares the reader between threads.
+    #[test]
+    fn trait_not_sync_line_reader() {
+        <LineReader as AmbiguousIfSync<_>>::compiles_only_without_sync();
+    }
+
+    /// `State` is not `Sync`
+    ///
+    /// The idle state owns a function that is `Send` and no more.
+    #[test]
+    fn trait_not_sync_state() {
+        <State as AmbiguousIfSync<_>>::compiles_only_without_sync();
     }
 }

@@ -4,9 +4,10 @@
 //! flags. The case then asserts the stdout and the stderr. Together the cases cover how
 //! verbosity and output mode interact.
 
-// An assertion in a test panics by design. A `# Panics` section on every test
-// would repeat that and give the reader no information.
-#![allow(clippy::missing_panics_doc)]
+#![allow(
+    clippy::missing_panics_doc,
+    reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+)]
 
 #[test]
 fn output() {

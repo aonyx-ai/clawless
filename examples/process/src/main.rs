@@ -4,12 +4,11 @@
 //! and reads what the program produced after it ended. Pass `--verbose` to see the output of
 //! the program itself, which Clawless streams through the event system as it arrives.
 
-// This crate compiles to a binary, so nothing in it is reachable from outside the crate
-// and `unreachable_pub` would demand `pub(crate)` on every item. The lint earns its keep
-// in the library crates, where the public API is a real boundary.
-#![allow(unreachable_pub)]
+#![allow(
+    unreachable_pub,
+    reason = "nothing in a binary crate is reachable from outside it, so the lint would demand `pub(crate)` on every item, and it earns its keep in the library crates, where the public API is a real boundary"
+)]
 
-/// The commands of this example
 mod commands;
 
 clawless::main!();

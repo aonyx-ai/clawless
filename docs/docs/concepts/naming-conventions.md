@@ -133,7 +133,7 @@ For multi-word commands:
 Doc comments on functions become command descriptions:
 
 ```rust
-/// Greet the user by name
+/// Greets the user by name
 ///
 /// This command prints a friendly greeting message.
 #[command]
@@ -145,7 +145,7 @@ pub async fn greet(args: GreetArgs, context: Context) -> CommandResult {
 Running `myapp greet --help` shows:
 
 ```text
-Greet the user by name
+Greets the user by name
 
 This command prints a friendly greeting message.
 ```

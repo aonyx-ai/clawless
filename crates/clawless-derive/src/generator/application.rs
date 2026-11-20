@@ -1,3 +1,6 @@
+//! Generator for `#[application]` functions
+
+use bon::bon;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Error, FnArg, Ident, ItemFn, PatType, Result, Type};
@@ -43,9 +46,10 @@ impl Generator for ApplicationGenerator {
         &self.input
     }
 
-    // `ApplicationGenerator::new` rejects any function whose signature does not match, so by the
-    // time this runs the extraction cannot fail.
-    #[allow(clippy::expect_used)]
+    #[allow(
+        clippy::expect_used,
+        reason = "`ApplicationGenerator::new` rejects any function whose signature does not match, so by the time this runs the extraction cannot fail."
+    )]
     fn args_type(&self) -> Box<Type> {
         extract_application_argument_type(&self.input)
             .expect("function arguments must be validated in ApplicationGenerator::new()")
@@ -71,17 +75,19 @@ impl Generator for ApplicationGenerator {
     }
 }
 
+#[bon]
 impl ApplicationGenerator {
     /// Validates the function signature and parses macro attributes
     ///
-    /// Signature validation happens eagerly here so that users get a clear compile error pointing
-    /// at the function definition rather than a cryptic error from generated code.
+    /// Signature validation happens eagerly here. Users therefore get a clear compile error
+    /// pointing at the function definition, rather than a cryptic error from generated code.
     ///
     /// # Errors
     ///
     /// Returns a compile error if the function does not accept exactly three parameters (args,
-    /// context, and projection), if the macro attributes are invalid, or if the name of the
-    /// function does not translate into a command name.
+    /// context, and projection). Returns a compile error if the macro attributes are invalid.
+    /// Returns one as well if the name of the function does not translate into a command name.
+    #[builder]
     pub(crate) fn new(attrs: TokenStream, input: ItemFn) -> Result<Self> {
         let attrs = parse_attributes(attrs, "application")?;
         let ident = input.sig.ident.clone();
@@ -171,13 +177,15 @@ fn extract_application_argument_type(input_fn: &ItemFn) -> Result<Box<Type>> {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use quote::ToTokens;
 
     use super::*;
+    use crate::generator::auto_traits::{AmbiguousIfSend, AmbiguousIfSync};
 
     fn generator_with_args() -> ApplicationGenerator {
         let input = quote! {
@@ -186,24 +194,17 @@ mod tests {
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
 
-        ApplicationGenerator::new(TokenStream::new(), input_function).unwrap()
+        ApplicationGenerator::builder()
+            .attrs(TokenStream::new())
+            .input(input_function)
+            .build()
+            .unwrap()
     }
 
     #[test]
-    fn application_generator_new_with_two_params_returns_error() {
-        let input = quote! {
-            fn foo(args: Args, context: Context) {}
-        };
-
-        let input_function = syn::parse2::<ItemFn>(input).unwrap();
-        let result = ApplicationGenerator::new(TokenStream::new(), input_function);
-
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(
-            err.to_string()
-                .contains("missing the `projection` parameter")
-        );
+    fn application_generator_is_unpin() {
+        fn assert_unpin<T: Unpin>() {}
+        assert_unpin::<ApplicationGenerator>();
     }
 
     #[test]
@@ -213,11 +214,13 @@ mod tests {
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
-        let result = ApplicationGenerator::new(TokenStream::new(), input_function);
+        let error = ApplicationGenerator::builder()
+            .attrs(TokenStream::new())
+            .input(input_function)
+            .build()
+            .expect_err("should fail");
 
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(err.to_string().contains("too many parameters"));
+        assert!(error.to_string().contains("too many parameters"));
     }
 
     #[test]
@@ -227,13 +230,36 @@ mod tests {
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
-        let result = ApplicationGenerator::new(TokenStream::new(), input_function);
+        let error = ApplicationGenerator::builder()
+            .attrs(TokenStream::new())
+            .input(input_function)
+            .build()
+            .expect_err("should fail");
 
-        assert!(result.is_err());
-        let err = result.unwrap_err();
         assert!(
-            err.to_string()
+            error
+                .to_string()
                 .contains("missing the `context` and `projection` parameters")
+        );
+    }
+
+    #[test]
+    fn application_generator_new_with_two_params_returns_error() {
+        let input = quote! {
+            fn foo(args: Args, context: Context) {}
+        };
+
+        let input_function = syn::parse2::<ItemFn>(input).unwrap();
+        let error = ApplicationGenerator::builder()
+            .attrs(TokenStream::new())
+            .input(input_function)
+            .build()
+            .expect_err("should fail");
+
+        assert!(
+            error
+                .to_string()
+                .contains("missing the `projection` parameter")
         );
     }
 
@@ -244,11 +270,13 @@ mod tests {
         };
 
         let input_function = syn::parse2::<ItemFn>(input).unwrap();
-        let result = ApplicationGenerator::new(TokenStream::new(), input_function);
+        let error = ApplicationGenerator::builder()
+            .attrs(TokenStream::new())
+            .input(input_function)
+            .build()
+            .expect_err("should fail");
 
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(err.to_string().contains("missing required parameters"));
+        assert!(error.to_string().contains("missing required parameters"));
     }
 
     #[test]
@@ -282,5 +310,23 @@ mod tests {
         };
 
         assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    /// `ApplicationGenerator` is not `Send`
+    ///
+    /// It owns a parsed function, and the syntax tree of the compiler holds handles that no other
+    /// thread may use.
+    #[test]
+    fn trait_not_send_application_generator() {
+        <ApplicationGenerator as AmbiguousIfSend<_>>::compiles_only_without_send();
+    }
+
+    /// `ApplicationGenerator` is not `Sync`
+    ///
+    /// It owns a parsed function, and the syntax tree of the compiler holds handles that no other
+    /// thread may use.
+    #[test]
+    fn trait_not_sync_application_generator() {
+        <ApplicationGenerator as AmbiguousIfSync<_>>::compiles_only_without_sync();
     }
 }

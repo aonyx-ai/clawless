@@ -1,3 +1,5 @@
+//! The way back to the command that asked one prompt
+
 use tokio::sync::oneshot;
 
 use super::PendingAnswer;
@@ -11,6 +13,26 @@ use crate::prompt::AnswerPromptError;
 /// [`answer`] and [`fail`] consume the reply. A reply that is dropped resolves the
 /// [`PendingAnswer`] with [`AnswerPromptError::DroppedRequest`], so the command does not wait
 /// for a reply that no longer exists.
+///
+/// # Examples
+///
+/// ```
+/// use clawless_core::event::prompt::PromptRequest;
+/// use clawless_core::prompt::Select;
+///
+/// # #[tokio::main(flavor = "current_thread")]
+/// # async fn main() {
+/// let question = Select::builder().question("Kind of change").options(["Added", "Fixed"]).build();
+/// let (request, pending) = PromptRequest::select(question);
+///
+/// match request {
+///     PromptRequest::Select { reply, .. } => reply.answer(1),
+///     PromptRequest::Confirm { .. } | PromptRequest::Text { .. } => {}
+/// }
+///
+/// assert_eq!(pending.wait().await.expect("should answer"), 1);
+/// # }
+/// ```
 ///
 /// [`PromptRequest`]: super::PromptRequest
 /// [`answer`]: Reply::answer
@@ -34,6 +56,24 @@ impl<T> Reply<T> {
     /// A command stops waiting when it drops its [`PendingAnswer`], which cancellation causes. A
     /// presenter awaits this method together with the input of the user, and stops asking when
     /// this method returns.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::prompt::PromptRequest;
+    /// use clawless_core::prompt::{Confirm, Confirmation};
+    ///
+    /// # #[tokio::main(flavor = "current_thread")]
+    /// # async fn main() {
+    /// let (request, pending) = PromptRequest::confirm(Confirm::new("Delete the branch?"));
+    /// drop(pending);
+    ///
+    /// match request {
+    ///     PromptRequest::Confirm { mut reply, .. } => reply.abandoned().await,
+    ///     PromptRequest::Select { .. } | PromptRequest::Text { .. } => {}
+    /// }
+    /// # }
+    /// ```
     pub async fn abandoned(&mut self) {
         self.sender.closed().await;
     }
@@ -41,6 +81,25 @@ impl<T> Reply<T> {
     /// Sends the answer of the user to the command
     ///
     /// If the command has stopped waiting, this method drops the answer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::prompt::PromptRequest;
+    /// use clawless_core::prompt::Text;
+    ///
+    /// # #[tokio::main(flavor = "current_thread")]
+    /// # async fn main() {
+    /// let (request, pending) = PromptRequest::text(Text::new("Title of the change"));
+    ///
+    /// match request {
+    ///     PromptRequest::Text { reply, .. } => reply.answer("Add prompts".to_string()),
+    ///     PromptRequest::Confirm { .. } | PromptRequest::Select { .. } => {}
+    /// }
+    ///
+    /// assert_eq!(pending.wait().await.expect("should answer"), "Add prompts");
+    /// # }
+    /// ```
     pub fn answer(self, answer: T) {
         drop(self.sender.send(Ok(answer)));
     }
@@ -48,11 +107,47 @@ impl<T> Reply<T> {
     /// Tells the command why the prompt has no answer
     ///
     /// If the command has stopped waiting, this method drops the error.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::prompt::PromptRequest;
+    /// use clawless_core::prompt::{AnswerPromptError, Text};
+    ///
+    /// # #[tokio::main(flavor = "current_thread")]
+    /// # async fn main() {
+    /// let (request, pending) = PromptRequest::text(Text::new("Title of the change"));
+    ///
+    /// match request {
+    ///     PromptRequest::Text { reply, .. } => reply.fail(AnswerPromptError::ClosedInput),
+    ///     PromptRequest::Confirm { .. } | PromptRequest::Select { .. } => {}
+    /// }
+    ///
+    /// let error = pending.wait().await.expect_err("the input closed");
+    ///
+    /// assert!(matches!(error, AnswerPromptError::ClosedInput));
+    /// # }
+    /// ```
     pub fn fail(self, error: AnswerPromptError) {
         drop(self.sender.send(Err(error)));
     }
 
     /// Reports whether the command has stopped waiting for the answer
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use clawless_core::event::prompt::PromptRequest;
+    /// use clawless_core::prompt::{Confirm, Confirmation};
+    ///
+    /// let (request, pending) = PromptRequest::confirm(Confirm::new("Delete the branch?"));
+    /// drop(pending);
+    ///
+    /// match request {
+    ///     PromptRequest::Confirm { reply, .. } => assert!(reply.is_abandoned()),
+    ///     PromptRequest::Select { .. } | PromptRequest::Text { .. } => {}
+    /// }
+    /// ```
     pub fn is_abandoned(&self) -> bool {
         self.sender.is_closed()
     }
@@ -60,9 +155,10 @@ impl<T> Reply<T> {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
     use crate::prompt::Confirmation;

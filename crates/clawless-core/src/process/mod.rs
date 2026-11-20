@@ -7,8 +7,8 @@
 //!
 //! A run reports itself as [`ProcessEvent`]s: one for the start, one for every
 //! line that the program writes, and one for the end. A presenter therefore
-//! shows a long build as it happens, and a TUI can keep the last few lines of
-//! the program in a corner of the screen. The command's own code is the same in
+//! shows a long build as it happens. A TUI can keep the last few lines of the
+//! program in a corner of the screen. The command's own code is the same in
 //! both cases.
 //!
 //! The description of a command is an [`Invocation`], and the result of a run
@@ -52,22 +52,21 @@ use crate::output::Output;
 
 /// The time a program gets to end itself before Clawless kills it
 ///
-/// A program that answers the request costs what it takes to answer, so this
-/// period is only ever paid in full by a program that ignores it. Five seconds
-/// is therefore generous where it costs nothing and still short enough that a
-/// user who pressed Ctrl+C on such a program does not think the application
-/// ignored them. A program that cleans up for longer says so through the
-/// builder.
+/// A program that answers the request costs what it takes to answer. This
+/// period is therefore only ever paid in full by a program that ignores it.
+/// Five seconds is generous where it costs nothing. It is still short enough
+/// that a user who pressed Ctrl+C on such a program does not think the
+/// application ignored them. A program that cleans up for longer says so
+/// through the builder.
 const DEFAULT_GRACE_PERIOD: Duration = Duration::from_secs(5);
 
-/// The error of running an external program from a command
 mod error;
 
 /// The way in which the reading of the output of a program ended
 ///
 /// A read that ends because the program closed its streams still owes the
-/// caller the exit status, and a read that ends because cancellation stopped
-/// the run owes nothing. The two ends therefore travel apart.
+/// caller the exit status. A read that ends because cancellation stopped the
+/// run owes nothing. The two ends therefore travel apart.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 enum Streamed {
     /// Cancellation stopped the run
@@ -86,15 +85,15 @@ enum Streamed {
 ///
 /// A run reports every line that the program writes as it arrives, so a
 /// presenter can render the progress of a program that takes minutes. The same
-/// lines also reach the caller in the [`Execution`], which means that a command
-/// can show the output and read it afterwards without running the program
-/// twice.
+/// lines also reach the caller in the [`Execution`]. A command can therefore
+/// show the output and read it afterwards without running the program twice.
 ///
-/// Cancellation ends the program. A command that observes its cancellation token
-/// therefore does not leave a build running after the user pressed Ctrl+C, and
-/// it needs no code of its own to achieve that. The program is asked to end
-/// first and killed only if it does not, so a build tool gets the moment it
-/// needs to remove its lock file. The [builder] names how long that moment is.
+/// Cancellation ends the program. A command that observes its cancellation
+/// token therefore does not leave a build running after the user pressed
+/// Ctrl+C. It needs no code of its own to achieve that. The program is asked to
+/// end first and killed only if it does not. A build tool therefore gets the
+/// moment it needs to remove its lock file. The [builder] names how long that
+/// moment is.
 ///
 /// [builder]: Process::builder
 ///
@@ -132,9 +131,9 @@ pub struct Process {
 impl Process {
     /// Runs a program and reports its output while it runs
     ///
-    /// The method starts the program, sends every line that it writes into the
-    /// event channel as the line arrives, waits for the program to end, and
-    /// returns what the program produced. The [`Execution`] holds the exit
+    /// The method starts the program and sends every line that it writes into
+    /// the event channel as the line arrives. It waits for the program to end
+    /// and returns what the program produced. The [`Execution`] holds the exit
     /// status, both output streams as the program wrote them, and the time that
     /// the run took.
     ///
@@ -154,15 +153,15 @@ impl Process {
     /// its name.
     ///
     /// The future of this method owns the program. A caller that drops it, in a
-    /// timeout of its own for example, kills the program with it and no event
+    /// timeout of its own for example, kills the program with it. No event
     /// reports the end of the run. Stop a run through the cancellation token
     /// instead, which asks the program to end and closes its events.
     ///
     /// # Errors
     ///
     /// Returns [`UnrunnableCommand`][unrunnable] when the program does not
-    /// start or the run produces no result, [`CancelledRun`][cancelled] when
-    /// cancellation stopped the program, and
+    /// start or the run produces no result. Returns [`CancelledRun`][cancelled]
+    /// when cancellation stopped the program. Returns
     /// [`UnreportableOutput`][unreportable] when the presenter stopped
     /// listening while the program ran.
     ///
@@ -227,21 +226,21 @@ impl Process {
     /// Ends a run that cancellation stopped and reports it
     ///
     /// The program is asked to end and killed only if it does not answer within
-    /// the grace period, so a build tool that holds a lock file gets the moment
-    /// it needs to remove it.
+    /// the grace period. A build tool that holds a lock file therefore gets the
+    /// moment it needs to remove it.
     ///
     /// What the program writes while it ends reaches the capture of the run and
     /// not the event channel, because the ending owns the streams. A consumer
     /// therefore sees the lines up to the cancellation and then the end of the
     /// run.
     ///
-    /// The grace period bounds the whole ending, so a program that ignores the
-    /// request costs that period and a program that answers costs what it takes
-    /// to answer.
+    /// The grace period bounds the whole ending. A program that ignores the
+    /// request therefore costs that period, and a program that answers costs
+    /// what it takes to answer.
     ///
     /// The result of the ending is dropped. The caller is cancelling, so it
-    /// discards the output of the run either way, and a program that could not
-    /// be waited for is no longer this application's concern.
+    /// discards the output of the run either way. A program that could not be
+    /// waited for is no longer this application's concern.
     async fn cancel(
         &self,
         id: RunId,
@@ -300,16 +299,18 @@ impl Process {
     /// A program can close both of its output streams and keep running, so the
     /// wait races the cancellation token as the read does.
     ///
-    /// The wait leaves the handle where it is, so cancellation here ends the
-    /// program the same way it does while the program is writing: a request,
-    /// the grace period, and a kill only if the program does not answer.
+    /// The wait leaves the handle where it is. Cancellation here therefore ends
+    /// the program the same way it does while the program is writing. First the
+    /// program gets a request and the grace period. A kill follows only if the
+    /// program does not answer.
     ///
     /// # Errors
     ///
     /// Returns [`CancelledRun`][cancelled] when cancellation stopped the
-    /// program, [`UnrunnableCommand`][unrunnable] when the end of the program
-    /// cannot be waited for, and [`UnreportableOutput`][unreportable] when the
-    /// end of the run cannot be reported.
+    /// program. Returns [`UnrunnableCommand`][unrunnable] when the end of the
+    /// program cannot be waited for. Returns
+    /// [`UnreportableOutput`][unreportable] when the end of the run cannot be
+    /// reported.
     ///
     /// [cancelled]: RunProcessError::CancelledRun
     /// [unreportable]: RunProcessError::UnreportableOutput
@@ -366,7 +367,8 @@ impl Process {
     ///
     /// A caller that already has an error to report drops the result of this
     /// method. The consumer that would have read the event is the one that is
-    /// gone, so a second failure says nothing that the first one does not.
+    /// gone. A second failure therefore says nothing that the first one does
+    /// not.
     ///
     /// # Errors
     ///
@@ -413,9 +415,10 @@ impl Process {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     #[cfg(unix)]
     use std::fs::read_to_string;
@@ -434,10 +437,10 @@ mod tests {
     /// A test that cancels a run needs a shell that answers `SIGTERM` as soon
     /// as the signal arrives. A shell that waits for a background program does
     /// not, because the signal can reach it while it enters that wait. The
-    /// shell then either records the signal and runs the trap when the wait
-    /// ends, which is long after the grace period, or it stops with a
-    /// segmentation fault, because it runs the trap in the handler of the
-    /// signal.
+    /// shell then does one of two things. It records the signal and runs the
+    /// trap when the wait ends, which is long after the grace period. Or it
+    /// stops with a segmentation fault, because it runs the trap in the handler
+    /// of the signal.
     ///
     /// A loop of builtins has no such moment. The shell runs a recorded trap
     /// on every turn of the loop, and it runs it outside the handler of the
@@ -448,8 +451,8 @@ mod tests {
 
     /// Returns the events of every run that the channel holds
     ///
-    /// The channel closes when the test drops the handle that sent the events,
-    /// so the drain reads to the end and needs no timeout of its own.
+    /// The channel closes when the test drops the handle that sent the events.
+    /// The drain therefore reads to the end and needs no timeout of its own.
     async fn drain(mut receiver: EventReceiver) -> Vec<ProcessEvent> {
         let mut events = Vec::new();
 
@@ -472,7 +475,8 @@ mod tests {
         }
     }
 
-    /// Returns every line of output that the events carry, in the order of arrival
+    /// Returns every line of output that the events carry, in the order of
+    /// arrival
     fn lines(events: &[ProcessEvent]) -> Vec<(Stream, String)> {
         events
             .iter()
@@ -495,7 +499,8 @@ mod tests {
         })
     }
 
-    /// Returns an invocation that gives the commands to the shell of the platform
+    /// Returns an invocation that gives the commands to the shell of the
+    /// platform
     ///
     /// A test needs a program that writes what the test expects, and the shell
     /// is the program that every machine has. The separator between two
@@ -542,6 +547,24 @@ mod tests {
                 ProcessEvent::Line { .. } => None,
             }),
             Some((invocation.to_string(), true))
+        );
+    }
+
+    #[tokio::test]
+    async fn run_reports_the_identifier_of_the_program() {
+        let (sender, receiver) = event_channel();
+        let process = Process::builder().output(Output::new(sender)).build();
+
+        process.run(shell(&["exit 0"])).await.expect("should run");
+        drop(process);
+
+        assert_eq!(
+            drain(receiver).await.iter().find_map(|event| match event {
+                ProcessEvent::Started { process_id, .. } => Some(process_id.is_some()),
+                ProcessEvent::Line { .. } => None,
+                ProcessEvent::Finished { .. } => None,
+            }),
+            Some(true)
         );
     }
 
@@ -605,24 +628,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn run_reports_the_identifier_of_the_program() {
-        let (sender, receiver) = event_channel();
-        let process = Process::builder().output(Output::new(sender)).build();
-
-        process.run(shell(&["exit 0"])).await.expect("should run");
-        drop(process);
-
-        assert_eq!(
-            drain(receiver).await.iter().find_map(|event| match event {
-                ProcessEvent::Started { process_id, .. } => Some(process_id.is_some()),
-                ProcessEvent::Line { .. } => None,
-                ProcessEvent::Finished { .. } => None,
-            }),
-            Some(true)
-        );
-    }
-
-    #[tokio::test]
     async fn run_reports_the_start_of_the_program() {
         let (sender, receiver) = event_channel();
         let process = Process::builder().output(Output::new(sender)).build();
@@ -675,6 +680,43 @@ mod tests {
 
     #[cfg(unix)]
     #[tokio::test]
+    async fn run_with_a_cancelled_token_kills_the_program() {
+        let directory = TempDir::new().expect("should create a directory");
+        let beats = directory.path().join("beats");
+        let cancellation = Cancellation::new();
+        let (sender, _receiver) = event_channel();
+        let process = Process::builder()
+            .output(Output::new(sender))
+            .cancellation(cancellation.clone())
+            .build();
+        let invocation = shell(&[&format!(
+            "while true; do echo beat >> '{}'; sleep 0.05; done",
+            beats.display()
+        )]);
+
+        let handle = tokio::spawn(async move { process.run(invocation).await });
+        sleep(Duration::from_millis(300)).await;
+        cancellation.cancel();
+        timeout(Duration::from_secs(30), handle)
+            .await
+            .expect("should not time out")
+            .expect("should join")
+            .expect_err("should fail");
+        let written = read_to_string(&beats).expect("should read the beats");
+        written
+            .lines()
+            .next()
+            .expect("the program should have written a beat");
+        sleep(Duration::from_millis(400)).await;
+
+        assert_eq!(
+            read_to_string(&beats).expect("should read the beats"),
+            written
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
     async fn run_with_a_cancelled_token_lets_the_program_end_itself() {
         let directory = TempDir::new().expect("should create a directory");
         let marker = directory.path().join("cleaned");
@@ -715,43 +757,6 @@ mod tests {
             .expect_err("should fail");
 
         assert!(marker.exists());
-    }
-
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn run_with_a_cancelled_token_kills_the_program() {
-        let directory = TempDir::new().expect("should create a directory");
-        let beats = directory.path().join("beats");
-        let cancellation = Cancellation::new();
-        let (sender, _receiver) = event_channel();
-        let process = Process::builder()
-            .output(Output::new(sender))
-            .cancellation(cancellation.clone())
-            .build();
-        let invocation = shell(&[&format!(
-            "while true; do echo beat >> '{}'; sleep 0.05; done",
-            beats.display()
-        )]);
-
-        let handle = tokio::spawn(async move { process.run(invocation).await });
-        sleep(Duration::from_millis(300)).await;
-        cancellation.cancel();
-        timeout(Duration::from_secs(30), handle)
-            .await
-            .expect("should not time out")
-            .expect("should join")
-            .expect_err("should fail");
-        let written = read_to_string(&beats).expect("should read the beats");
-        written
-            .lines()
-            .next()
-            .expect("the program should have written a beat");
-        sleep(Duration::from_millis(400)).await;
-
-        assert_eq!(
-            read_to_string(&beats).expect("should read the beats"),
-            written
-        );
     }
 
     #[tokio::test]
@@ -941,6 +946,12 @@ mod tests {
             .expect_err("should fail");
 
         assert!(is_cancelled(&error));
+    }
+
+    #[test]
+    fn streamed_is_send_sync_and_unpin() {
+        fn assert_auto_traits<T: Send + Sync + Unpin>() {}
+        assert_auto_traits::<Streamed>();
     }
 
     #[test]

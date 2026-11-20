@@ -1,16 +1,18 @@
-//! Integration tests for the name that a command has on the command line
+//! Integration tests for command names
 //!
-//! A function name travels two separate paths before a command runs: clap learns the name when
-//! the macros build the command tree, and the generated dispatch code looks the same name up
-//! after clap has parsed the arguments. These tests walk both paths, because a name that reaches
-//! only one of them produces a command that the help shows but that never runs.
+//! A function name travels two separate paths before a command runs.
+//! clap learns the name when the macros build the command tree.
+//! The generated dispatch code looks the same name up after clap has parsed the arguments.
+//! These tests walk both paths to ensure names reach both paths.
 
-// This test is a crate root that nothing links against, so `unreachable_pub` would demand
-// `pub(crate)` on every item that the macros generate without telling the reader anything.
-#![allow(unreachable_pub)]
-// An assertion in a test panics by design. A `# Panics` section on every test
-// would repeat that and give the reader no information.
-#![allow(clippy::missing_panics_doc)]
+#![allow(
+    unreachable_pub,
+    reason = "this test is a crate root that nothing links against, so `unreachable_pub` would demand `pub(crate)` on every item that the macros generate without telling the reader anything"
+)]
+#![allow(
+    clippy::missing_panics_doc,
+    reason = "an assertion in a test panics by design. A `# Panics` section on every test would repeat that and give the reader no information"
+)]
 
 use clawless::clap::error::ErrorKind;
 use clawless::resolved_leaf::ResolvedLeaf;
@@ -32,9 +34,10 @@ mod commands {
 
         /// Deploy to staging
         #[command]
-        // A command's doc comment is its `--help` text, so an `# Errors` section would render
-        // as a raw Markdown heading in the terminal rather than documenting an API.
-        #[allow(clippy::missing_errors_doc)]
+        #[allow(
+            clippy::missing_errors_doc,
+            reason = "a command's doc comment is its `--help` text, so an `# Errors` section would render as a raw Markdown heading in the terminal rather than documenting an API"
+        )]
         pub async fn deploy_staging(args: DeployStagingArgs, context: Context) -> CommandResult {
             message!("Deploying to {}!", args.target);
             Ok(())
@@ -54,9 +57,10 @@ mod commands {
 
         /// Print the contents of a file
         #[command]
-        // A command's doc comment is its `--help` text, so an `# Errors` section would render
-        // as a raw Markdown heading in the terminal rather than documenting an API.
-        #[allow(clippy::missing_errors_doc)]
+        #[allow(
+            clippy::missing_errors_doc,
+            reason = "a command's doc comment is its `--help` text, so an `# Errors` section would render as a raw Markdown heading in the terminal rather than documenting an API"
+        )]
         pub async fn r#type(args: TypeArgs, context: Context) -> CommandResult {
             message!("Reading {}!", args.file);
             Ok(())
@@ -66,7 +70,7 @@ mod commands {
 
 /// Returns the names under which clap knows the subcommands of the application under test
 fn subcommand_names() -> Vec<String> {
-    commands::clawless_init()
+    self::commands::clawless_init()
         .get_subcommands()
         .map(|subcommand| subcommand.get_name().to_string())
         .collect()
@@ -88,7 +92,7 @@ fn init_with_raw_identifier_command_uses_name_without_prefix() {
 
 #[test]
 fn parse_with_underscored_name_returns_error() {
-    let command = commands::clawless_init();
+    let command = self::commands::clawless_init();
 
     let error = command
         .try_get_matches_from(["app", "deploy_staging", "production"])
@@ -100,9 +104,9 @@ fn parse_with_underscored_name_returns_error() {
 #[test]
 fn resolve_with_hyphenated_name_returns_the_arguments_of_the_command() {
     let matches =
-        commands::clawless_init().get_matches_from(["app", "deploy-staging", "production"]);
+        self::commands::clawless_init().get_matches_from(["app", "deploy-staging", "production"]);
 
-    let leaf = commands::clawless_resolve(matches);
+    let leaf = self::commands::clawless_resolve(matches);
 
     let target = match leaf {
         ResolvedLeaf::Command { matches, .. } => matches

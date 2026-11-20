@@ -11,9 +11,7 @@ pub use self::pending_answer::PendingAnswer;
 pub use self::reply::Reply;
 use crate::prompt::{AnswerPromptError, Confirm, Confirmation, Select, Text};
 
-/// The answer to one prompt, which has not arrived yet
 mod pending_answer;
-/// The way back to the command that asked one prompt
 mod reply;
 
 /// One question for the user, with the [`Reply`] that answers it
@@ -105,7 +103,10 @@ impl PromptRequest {
     /// use clawless_core::event::prompt::PromptRequest;
     /// use clawless_core::prompt::Select;
     ///
-    /// let question = Select::new("Kind of change", ["Added", "Changed", "Fixed"]);
+    /// let question = Select::builder()
+    ///     .question("Kind of change")
+    ///     .options(["Added", "Changed", "Fixed"])
+    ///     .build();
     ///
     /// let (request, pending) = PromptRequest::select(question);
     /// ```
@@ -174,9 +175,10 @@ impl PromptRequest {
 
 #[cfg(test)]
 mod tests {
-    // An assertion in a test panics by design. A `# Panics` section on every test
-    // would repeat that and give the reader no information.
-    #![allow(clippy::missing_panics_doc)]
+    #![allow(
+        clippy::missing_panics_doc,
+        reason = "an assertion in a test panics by design, so a `# Panics` section would repeat it"
+    )]
 
     use super::*;
 
@@ -223,7 +225,12 @@ mod tests {
 
     #[test]
     fn question_with_a_selection_returns_its_text() {
-        let (request, _pending) = PromptRequest::select(Select::new("Category", ["Added"]));
+        let (request, _pending) = PromptRequest::select(
+            Select::builder()
+                .question("Category")
+                .options(["Added"])
+                .build(),
+        );
 
         let question = request.question();
 
@@ -232,7 +239,12 @@ mod tests {
 
     #[tokio::test]
     async fn select_with_an_answer_resolves_the_pending_answer() {
-        let (request, pending) = PromptRequest::select(Select::new("Category", ["Added", "Fixed"]));
+        let (request, pending) = PromptRequest::select(
+            Select::builder()
+                .question("Category")
+                .options(["Added", "Fixed"])
+                .build(),
+        );
         match request {
             PromptRequest::Select { reply, .. } => reply.answer(1),
             PromptRequest::Confirm { .. } | PromptRequest::Text { .. } => {}

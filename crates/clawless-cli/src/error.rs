@@ -36,10 +36,10 @@ pub use anyhow::Error;
 /// recover from the error, we do not need to provide a specific error type
 /// that a caller could handle gracefully.
 ///
-/// The success type defaults to `()`. A command that returns `Ok(())` ends the
-/// process with the exit code 0, and a command that returns an error ends it
-/// with the exit code 1 and the text of the error. A command that chooses its
-/// exit code and its text returns an [`Exit`] instead, as `CommandResult<Exit>`.
+/// The success type defaults to `()`. A command that returns `Ok(())` ends the process
+/// with the exit code 0. A command that returns an error ends it with the exit code 1 and
+/// the text of the error. A command that chooses its exit code and its text returns an
+/// [`Exit`] instead, as `CommandResult<Exit>`.
 ///
 /// # Examples
 ///
