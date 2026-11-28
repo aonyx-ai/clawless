@@ -19,7 +19,7 @@ rakko-cli = { git = "https://github.com/aonyx-ai/rakko", rev = "b37baacbe88841f4
 rakko-format-json = { git = "https://github.com/aonyx-ai/rakko", rev = "b37baacbe88841f4ad4eac106321ef57f3ba3381" }
 rakko-format-markdown = { git = "https://github.com/aonyx-ai/rakko", rev = "b37baacbe88841f4ad4eac106321ef57f3ba3381" }
 rakko-format-rust = { git = "https://github.com/aonyx-ai/rakko", rev = "b37baacbe88841f4ad4eac106321ef57f3ba3381" }
-rakko-format-toml = { git = "https://github.com/aonyx-ai/rakko", rev = "b37baacbe88841f4ad4eac106321ef57f3ba3381" }
+rakko-format-toml = { git = "https://github.com/aonyx-ai/rakko", rev = "5d52466dcf2c3afa78ab83ecba46a664c2c5aade" }
 rakko-format-yaml = { git = "https://github.com/aonyx-ai/rakko", rev = "b37baacbe88841f4ad4eac106321ef57f3ba3381" }
 rakko-lint-github-actions = { git = "https://github.com/aonyx-ai/rakko", rev = "b37baacbe88841f4ad4eac106321ef57f3ba3381" }
 rakko-lint-markdown = { git = "https://github.com/aonyx-ai/rakko", rev = "b37baacbe88841f4ad4eac106321ef57f3ba3381" }
